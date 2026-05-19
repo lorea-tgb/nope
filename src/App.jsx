@@ -287,17 +287,6 @@ const glitchWarnings = [
   "REALITY REFUSED",
 ];
 
-const moods = [
-  "legally not pepe",
-  "emotionally illiquid",
-  "refusing utility",
-  "terminally online",
-  "powered by bad decisions",
-  "absolutely not financial advice",
-  "checking vibes",
-  "no roadmap detected",
-];
-
 const ranks = [
   { count: 500, name: "final boss of nothing" },
   { count: 250, name: "operationally useless" },
@@ -448,6 +437,8 @@ export default function App() {
   );
   const [achievementQueue, setAchievementQueue] = useState([]);
   const [activeAchievement, setActiveAchievement] = useState(null);
+  const [activeDiscoveryPopup, setActiveDiscoveryPopup] = useState(null);
+  const [activeBreachOverlay, setActiveBreachOverlay] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [collectedIds, setCollectedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.collectedIds),
@@ -455,26 +446,20 @@ export default function App() {
   const [latestDiscoveryId, setLatestDiscoveryId] = useState(() =>
     readStoredString(STORAGE_KEYS.latestDiscoveryId),
   );
-  const [entityTransmission, setEntityTransmission] = useState(null);
-  const [breachFlash, setBreachFlash] = useState(null);
-  const [nopedexPulse, setNopedexPulse] = useState(null);
-  const [mood, setMood] = useState("legally not pepe");
   const [isBooting, setIsBooting] = useState(true);
   const [isGlitching, setIsGlitching] = useState(false);
   const [isAmbientGlitch, setIsAmbientGlitch] = useState(false);
   const [ambientWarning, setAmbientWarning] = useState(null);
   const [isNopeIdle, setIsNopeIdle] = useState(false);
-  const [rankUpgrade, setRankUpgrade] = useState(null);
   const [isStickerBookOpen, setIsStickerBookOpen] = useState(false);
   const [stickerTab, setStickerTab] = useState("all");
   const [stickerFilter, setStickerFilter] = useState("all");
   const [copiedShareId, setCopiedShareId] = useState(null);
   const [buttonText, setButtonText] = useState("NOPE");
   const glitchTimerRef = useRef(null);
-  const nopedexPulseTimerRef = useRef(null);
-  const rankUpgradeTimerRef = useRef(null);
-  const transmissionTimerRef = useRef(null);
+  const discoveryTimerRef = useRef(null);
   const breachTimerRef = useRef(null);
+  const achievementDelayTimerRef = useRef(null);
   const shareCopyTimerRef = useRef(null);
   const ambientTimerRef = useRef(null);
   const ambientClearTimerRef = useRef(null);
@@ -485,13 +470,14 @@ export default function App() {
   const collectedIdsRef = useRef(collectedIds);
   const achievementStatsRef = useRef(achievementStats);
   const unlockedAchievementsRef = useRef(unlockedAchievements);
+  const achievementQueueRef = useRef(achievementQueue);
+  const activeAchievementRef = useRef(activeAchievement);
   const bootRunRef = useRef(0);
 
   const formattedCount = useMemo(
     () => nopeCount.toString().padStart(6, "0"),
     [nopeCount],
   );
-  const currentRank = useMemo(() => getRank(nopeCount), [nopeCount]);
   const latestDiscovery = useMemo(
     () => allNopeEntities.find((entity) => entity.id === latestDiscoveryId),
     [latestDiscoveryId],
@@ -538,10 +524,9 @@ export default function App() {
   useEffect(() => {
     return () => {
       window.clearTimeout(glitchTimerRef.current);
-      window.clearTimeout(nopedexPulseTimerRef.current);
-      window.clearTimeout(rankUpgradeTimerRef.current);
-      window.clearTimeout(transmissionTimerRef.current);
+      window.clearTimeout(discoveryTimerRef.current);
       window.clearTimeout(breachTimerRef.current);
+      window.clearTimeout(achievementDelayTimerRef.current);
       window.clearTimeout(shareCopyTimerRef.current);
       window.clearTimeout(ambientTimerRef.current);
       window.clearTimeout(ambientClearTimerRef.current);
@@ -725,37 +710,133 @@ export default function App() {
     setShowIntro(false);
   }
 
-  function showTransmission(entity, signalType = "signal") {
-    setEntityTransmission({ ...entity, signalType });
-    window.clearTimeout(transmissionTimerRef.current);
-    transmissionTimerRef.current = window.setTimeout(() => {
-      setEntityTransmission(null);
-    }, randomBetween(1800, 2500));
+  function setAchievementQueueSynced(nextQueue) {
+    const queue = typeof nextQueue === "function" ? nextQueue(achievementQueueRef.current) : nextQueue;
+    achievementQueueRef.current = queue;
+    setAchievementQueue(queue);
   }
 
-  function showBreachFlash(entity) {
-    const flashEntity =
-      entity.type === "gif"
-        ? entity
-        : pickRandom(forbiddenNopeGifs);
-
-    setBreachFlash(flashEntity);
-    window.clearTimeout(breachTimerRef.current);
-    breachTimerRef.current = window.setTimeout(() => {
-      setBreachFlash(null);
-    }, randomBetween(1500, 2200));
+  function setActiveAchievementSynced(nextAchievement) {
+    activeAchievementRef.current = nextAchievement;
+    setActiveAchievement(nextAchievement);
   }
 
-  function pulseNopedex(type) {
-    if (!type) {
+  function startNextAchievement(delay = 0) {
+    window.clearTimeout(achievementDelayTimerRef.current);
+
+    achievementDelayTimerRef.current = window.setTimeout(() => {
+      if (activeAchievementRef.current || achievementQueueRef.current.length === 0) {
+        return;
+      }
+
+      const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
+      setAchievementQueueSynced(remainingAchievements);
+      setActiveAchievementSynced(nextAchievement);
+    }, delay);
+  }
+
+  function showDiscoveryPopup(event) {
+    if (!event) {
       return;
     }
 
-    setNopedexPulse(type);
-    window.clearTimeout(nopedexPulseTimerRef.current);
-    nopedexPulseTimerRef.current = window.setTimeout(() => {
-      setNopedexPulse(null);
-    }, type === "mythic" ? 1600 : type === "gif" ? 1250 : 900);
+    setActiveDiscoveryPopup(event);
+    window.clearTimeout(discoveryTimerRef.current);
+    discoveryTimerRef.current = window.setTimeout(() => {
+      setActiveDiscoveryPopup(null);
+    }, event.duration);
+  }
+
+  function showBreachOverlay(event) {
+    if (!event) {
+      return;
+    }
+
+    setActiveBreachOverlay(event);
+    window.clearTimeout(breachTimerRef.current);
+    breachTimerRef.current = window.setTimeout(() => {
+      setActiveBreachOverlay(null);
+    }, event.duration);
+  }
+
+  function showDiscoveryVisualEvent(event) {
+    if (!event) {
+      return;
+    }
+
+    if (event.type === "breach") {
+      showBreachOverlay(event);
+      return;
+    }
+
+    showDiscoveryPopup(event);
+  }
+
+  function getDiscoveryVisualEvent(entity, alreadyCollected) {
+    if (!alreadyCollected && entity.type === "mythic") {
+      return {
+        duration: randomBetween(3500, 4000),
+        entity,
+        signalType: "mythic",
+        type: "transmission",
+      };
+    }
+
+    if (!alreadyCollected && entity.type === "gif") {
+      return {
+        duration: randomBetween(900, 1400),
+        entity,
+        type: "breach",
+      };
+    }
+
+    if (!alreadyCollected) {
+      return {
+        duration: randomBetween(2500, 3000),
+        entity,
+        signalType: "new",
+        type: "transmission",
+      };
+    }
+
+    if (randomChance(0.1)) {
+      return {
+        duration: randomBetween(900, 1400),
+        entity,
+        signalType: entity.type === "mythic" ? "mythic" : entity.type === "gif" ? "forbidden" : "duplicate",
+        type: "transmission",
+      };
+    }
+
+    return null;
+  }
+
+  function getBreachVisualEvent(entity, alreadyCollected) {
+    if (entity.type === "mythic") {
+      return null;
+    }
+
+    if (entity.type === "gif") {
+      if (!alreadyCollected || randomChance(0.25)) {
+        return {
+          duration: randomBetween(900, 1400),
+          entity,
+          type: "breach",
+        };
+      }
+
+      return null;
+    }
+
+    if ((!alreadyCollected && randomChance(0.2)) || (alreadyCollected && randomChance(0.03))) {
+      return {
+        duration: randomBetween(900, 1400),
+        entity: pickRandom(forbiddenNopeGifs),
+        type: "breach",
+      };
+    }
+
+    return null;
   }
 
   function getDiscoveryMessage(entity, alreadyCollected) {
@@ -776,22 +857,6 @@ export default function App() {
     }
 
     return `new trash discovered: ${entity.name}. value gained: zero.`;
-  }
-
-  function maybeChangeMood(chance) {
-    if (!randomChance(chance)) {
-      return;
-    }
-
-    setMood((currentMood) => {
-      let nextMood = pickRandom(moods);
-
-      while (nextMood === currentMood && moods.length > 1) {
-        nextMood = pickRandom(moods);
-      }
-
-      return nextMood;
-    });
   }
 
   async function copyContract(event) {
@@ -840,7 +905,7 @@ export default function App() {
     };
   }
 
-  function queueAchievementUnlocks(snapshot) {
+  function queueAchievementUnlocks(snapshot, delay = 0) {
     const unlockedSet = new Set(unlockedAchievementsRef.current);
     const newAchievements = achievements.filter(
       (achievement) => !unlockedSet.has(achievement.id) && achievement.check(snapshot),
@@ -853,13 +918,10 @@ export default function App() {
     const nextUnlockedIds = [...unlockedAchievementsRef.current, ...newAchievements.map((achievement) => achievement.id)];
     unlockedAchievementsRef.current = nextUnlockedIds;
     setUnlockedAchievements(nextUnlockedIds);
+    setAchievementQueueSynced((currentQueue) => [...currentQueue, ...newAchievements]);
 
-    if (!activeAchievement) {
-      const [firstAchievement, ...remainingAchievements] = newAchievements;
-      setActiveAchievement(firstAchievement);
-      setAchievementQueue((currentQueue) => [...currentQueue, ...remainingAchievements]);
-    } else {
-      setAchievementQueue((currentQueue) => [...currentQueue, ...newAchievements]);
+    if (!activeAchievementRef.current) {
+      startNextAchievement(delay);
     }
   }
 
@@ -877,14 +939,14 @@ export default function App() {
   }
 
   function dismissAchievement() {
-    if (achievementQueue.length > 0) {
-      const [nextAchievement, ...remainingAchievements] = achievementQueue;
-      setActiveAchievement(nextAchievement);
-      setAchievementQueue(remainingAchievements);
+    if (achievementQueueRef.current.length > 0) {
+      const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
+      setActiveAchievementSynced(nextAchievement);
+      setAchievementQueueSynced(remainingAchievements);
       return;
     }
 
-    setActiveAchievement(null);
+    setActiveAchievementSynced(null);
   }
 
   function resetNopeProgress() {
@@ -923,22 +985,9 @@ export default function App() {
     const discoveredEntity = pickDiscoveryEntity();
     const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
     const discoveryResponse = getDiscoveryMessage(discoveredEntity, alreadyCollected);
-    const showDiscoveryOverlay = !alreadyCollected || randomChance(0.1);
-    const showFullScreenBreach =
-      discoveredEntity.type === "mythic"
-        ? false
-        : discoveredEntity.type === "gif"
-        ? !alreadyCollected || randomChance(0.25)
-        : alreadyCollected
-          ? randomChance(0.03)
-          : randomChance(0.2);
-    const signalType = alreadyCollected
-      ? "duplicate"
-      : discoveredEntity.type === "gif"
-        ? "forbidden"
-        : discoveredEntity.type === "mythic"
-          ? "mythic"
-          : "new";
+    const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
+    const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
+    const achievementDelay = visualEvent && !alreadyCollected ? randomBetween(700, 1000) : 0;
     const nextCount = nopeCountRef.current + 1;
     const nextRank = getRank(nextCount);
     const rankChanged = nextRank !== getRank(nopeCountRef.current);
@@ -948,13 +997,8 @@ export default function App() {
     nopeCountRef.current = nextCount;
     setNopeCount(nextCount);
 
-    if (showDiscoveryOverlay) {
-      showTransmission(discoveredEntity, signalType);
-    }
-
-    if (showFullScreenBreach) {
-      showBreachFlash(discoveredEntity);
-    }
+    showDiscoveryVisualEvent(visualEvent);
+    showBreachOverlay(breachEvent);
 
     setLatestDiscoveryId(discoveredEntity.id);
 
@@ -966,26 +1010,8 @@ export default function App() {
       nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
     }
 
-    pulseNopedex(
-      discoveredEntity.type === "mythic"
-        ? "mythic"
-        : discoveredEntity.type === "gif"
-          ? "gif"
-          : alreadyCollected
-            ? null
-            : "normal",
-    );
-    maybeChangeMood(0.55);
     setButtonText(nextLabel);
     setIsGlitching(true);
-
-    if (rankChanged) {
-      setRankUpgrade(nextRank);
-      window.clearTimeout(rankUpgradeTimerRef.current);
-      rankUpgradeTimerRef.current = window.setTimeout(() => {
-        setRankUpgrade(null);
-      }, 1200);
-    }
 
     window.clearTimeout(glitchTimerRef.current);
     glitchTimerRef.current = window.setTimeout(() => {
@@ -1005,6 +1031,7 @@ export default function App() {
         collectedIds: nextCollectedIds,
         nopeCount: nextCount,
       }),
+      achievementDelay,
     );
   }
 
@@ -1303,101 +1330,48 @@ ${siteUrl}`;
             <div className="event-feed-footer">NOPE OS event feed // input port sealed</div>
           </div>
 
-          {entityTransmission && (
+          {activeDiscoveryPopup && (
             <aside
-              className={`entity-transmission ${entityTransmission.type === "gif" ? "forbidden" : ""} ${entityTransmission.type === "mythic" ? "mythic" : ""}`}
+              className={`entity-transmission ${activeDiscoveryPopup.entity.type === "gif" ? "forbidden" : ""} ${activeDiscoveryPopup.entity.type === "mythic" ? "mythic" : ""}`}
               aria-label="NOPE entity transmission"
             >
               <p className="panel-label">
-                {entityTransmission.signalType === "forbidden"
+                {activeDiscoveryPopup.signalType === "forbidden"
                   ? "corrupted-nope-signal.gif"
-                  : entityTransmission.signalType === "mythic"
+                  : activeDiscoveryPopup.signalType === "mythic"
                     ? "mythic-relic-found.jpg"
-                  : entityTransmission.signalType === "new"
+                  : activeDiscoveryPopup.signalType === "new"
                     ? "new-trash-found.jpg"
-                    : entityTransmission.signalType === "duplicate"
+                    : activeDiscoveryPopup.signalType === "duplicate"
                       ? "duplicate-trash.tmp"
                       : "corrupted-nope-signal.gif"}
               </p>
               <span className="signal-status">
-                {entityTransmission.signalType === "forbidden"
+                {activeDiscoveryPopup.signalType === "forbidden"
                   ? "FORBIDDEN LOOP FOUND"
-                  : entityTransmission.signalType === "mythic"
+                  : activeDiscoveryPopup.signalType === "mythic"
                     ? "MYTHIC RELIC FOUND"
-                  : entityTransmission.signalType === "new"
+                  : activeDiscoveryPopup.signalType === "new"
                     ? "NEW TRASH ACQUIRED"
-                    : entityTransmission.signalType === "duplicate"
+                    : activeDiscoveryPopup.signalType === "duplicate"
                       ? "DUPLICATE TRASH"
                       : "NOPE SIGNAL"}
               </span>
               <div className="transmission-media">
                 <img
-                  src={entityTransmission.image}
-                  alt={entityTransmission.name}
+                  src={activeDiscoveryPopup.entity.image}
+                  alt={activeDiscoveryPopup.entity.name}
                   onError={(event) => {
                     event.currentTarget.classList.add("image-missing");
                   }}
                 />
               </div>
-              <h2>{entityTransmission.name}</h2>
-              <p>{entityTransmission.caption}</p>
+              <h2>{activeDiscoveryPopup.entity.name}</h2>
+              <p>{activeDiscoveryPopup.entity.caption}</p>
               <b>value: zero</b>
             </aside>
           )}
         </section>
-
-        <aside
-          className={`rank-card ${rankUpgrade ? "rank-upgraded" : ""}`}
-          aria-label="Current NOPE rank"
-        >
-          <p>{rankUpgrade ? "rank-upgrade.alert" : "rank.badge"}</p>
-          <small>{rankUpgrade ? "RANK UPGRADE DETECTED" : "RANK"}</small>
-          <strong>
-            [ {isBooting ? "UNVERIFIED" : (rankUpgrade ?? currentRank).toUpperCase()} ]
-          </strong>
-          <span>
-            status: {isBooting ? "booting nope machine" : rankUpgrade ? "achievement value zero" : mood}
-          </span>
-          {rankUpgrade && <em>&gt; refusing harder now</em>}
-        </aside>
-
-        <aside
-          className={`nopedex-card ${nopedexPulse ? `nopedex-${nopedexPulse}` : ""}`}
-          aria-label="NOPEDEX collection progress"
-        >
-          <p>nopedex.dat</p>
-          <small className="nopedex-alert">
-            {nopedexPulse === "gif"
-              ? "FORBIDDEN GIF BREACH"
-              : nopedexPulse === "mythic"
-                ? "MYTHIC RELIC DISCOVERED"
-              : nopedexPulse === "normal"
-                ? "NEW TRASH ACQUIRED"
-                : "NOPEDEX"}
-          </small>
-          <span>
-            worthless finds: {normalCollectedCount.toString().padStart(3, "0")} / {NORMAL_TOTAL}
-          </span>
-          <span>
-            forbidden loops: {gifCollectedCount.toString().padStart(3, "0")} / {GIF_TOTAL}
-          </span>
-          <span>
-            mythic relics: {mythicCollectedCount.toString().padStart(3, "0")} / {MYTHIC_TOTAL.toString().padStart(3, "0")}
-          </span>
-          <span>
-            achievements: {unlockedAchievementCount.toString().padStart(3, "0")} / {achievements.length.toString().padStart(3, "0")}
-          </span>
-          <span>portfolio impact: none</span>
-          <span>latest:</span>
-          <strong>
-            {latestDiscovery
-              ? `${latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}`
-              : "none. press the stupid button."}
-          </strong>
-          <button className="open-nopedex-button" type="button" onClick={() => setIsStickerBookOpen(true)}>
-            [ OPEN STICKER BOOK ]
-          </button>
-        </aside>
 
       </section>
 
@@ -1407,7 +1381,13 @@ ${siteUrl}`;
           {isBooting ? "BOOTING..." : buttonText}
         </button>
         <div className="status-panel">
-          <span>nopes submitted: {formattedCount}</span>
+          <span>nopes: {formattedCount}</span>
+          <span>
+            garbage: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL} · loops: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL} · mythic: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")} · achievements: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}
+          </span>
+          <span>
+            latest: {latestDiscovery ? `${latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "none. press the stupid button."}
+          </span>
         </div>
         <div className="main-actions">
           <button type="button" onClick={() => setIsStickerBookOpen(true)}>
@@ -1440,18 +1420,18 @@ ${siteUrl}`;
         </button>
       </footer>
 
-      {breachFlash && (
+      {activeBreachOverlay && (
         <section className="breach-overlay" aria-label="Forbidden loop breach">
           <div className="breach-card">
             <p>FORBIDDEN LOOP BREACH</p>
             <img
-              src={breachFlash.image}
-              alt={breachFlash.name}
+              src={activeBreachOverlay.entity.image}
+              alt={activeBreachOverlay.entity.name}
               onError={(event) => {
                 event.currentTarget.classList.add("image-missing");
               }}
             />
-            <strong>{breachFlash.name}</strong>
+            <strong>{activeBreachOverlay.entity.name}</strong>
             <span>value gained: zero</span>
           </div>
         </section>

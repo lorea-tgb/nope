@@ -930,6 +930,118 @@ button {
   animation: nopedexMythicPulse 1.6s steps(2, end);
 }
 
+.achievement-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.12) 0,
+      rgba(57, 255, 20, 0.12) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    rgba(0, 0, 0, 0.72);
+  animation: achievementOverlayFade 0.42s ease-out;
+}
+
+.achievement-modal-card {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 3px solid var(--pepe-green);
+  color: var(--text);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(0, 152, 234, 0.1) 0,
+      rgba(0, 152, 234, 0.1) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    #020806;
+  box-shadow:
+    0 0 0 4px #000,
+    -6px 0 0 var(--ton-blue),
+    6px 0 0 var(--glitch-pink),
+    0 0 34px rgba(57, 255, 20, 0.42);
+  text-align: center;
+  animation:
+    achievementTuneIn 0.78s ease-out,
+    achievementSoftGlitch 1.65s steps(2, end) 0.78s infinite,
+    achievementBorderPulse 1.9s ease-in-out 0.78s infinite;
+}
+
+.achievement-modal-card p,
+.achievement-modal-card small {
+  margin: 0;
+  font-weight: 900;
+}
+
+.achievement-modal-card p {
+  padding: 6px 8px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: var(--pepe-green);
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  text-shadow: 2px 0 rgba(0, 152, 234, 0.5);
+}
+
+.achievement-modal-card small {
+  color: #87ddff;
+  text-shadow: 2px 0 var(--glitch-pink);
+}
+
+.achievement-modal-card strong {
+  color: #fff;
+  font-size: clamp(1.3rem, 5vw, 2.1rem);
+  text-transform: uppercase;
+  text-shadow:
+    2px 0 var(--ton-blue),
+    -2px 0 var(--glitch-pink),
+    0 0 14px rgba(57, 255, 20, 0.48);
+  animation: achievementTextSplit 2.1s steps(2, end) 0.9s infinite;
+}
+
+.achievement-modal-card span,
+.achievement-modal-card em,
+.achievement-modal-card b {
+  display: block;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.achievement-modal-card span {
+  color: #d8ffe2;
+}
+
+.achievement-modal-card em {
+  color: var(--soft-green);
+}
+
+.achievement-modal-card b {
+  color: #89dcff;
+}
+
+.achievement-modal-card button {
+  justify-self: center;
+  margin-top: 4px;
+  padding: 8px 12px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: var(--pepe-green);
+  font-weight: 900;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    4px 4px 0 #000;
+}
+
 .rank-card p {
   margin: -8px -8px 7px;
   padding: 4px 7px;
@@ -1200,6 +1312,113 @@ button {
   text-decoration: underline;
 }
 
+.dev-reset-button {
+  padding: 0 8px;
+  border: 0;
+  color: rgba(216, 255, 226, 0.35);
+  background: transparent;
+  font-size: 0.72rem;
+  text-transform: lowercase;
+  box-shadow: none;
+}
+
+.dev-reset-button::before {
+  content: "·";
+  margin-right: 8px;
+  color: rgba(57, 255, 20, 0.45);
+}
+
+.dev-reset-button:hover,
+.dev-reset-button:focus-visible {
+  color: var(--pepe-green);
+  text-shadow:
+    1px 0 var(--glitch-pink),
+    0 0 10px rgba(57, 255, 20, 0.35);
+}
+
+.reset-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 43, 214, 0.11) 0,
+      rgba(255, 43, 214, 0.11) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    rgba(0, 0, 0, 0.76);
+}
+
+.reset-modal-card {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 3px solid var(--pepe-green);
+  color: var(--text);
+  background:
+    linear-gradient(90deg, rgba(255, 43, 214, 0.12), transparent 40%, rgba(0, 152, 234, 0.14)),
+    #020806;
+  box-shadow:
+    0 0 0 4px #000,
+    -5px 0 0 #b00024,
+    5px 0 0 var(--ton-blue),
+    0 0 30px rgba(255, 43, 214, 0.34);
+  text-align: center;
+  animation: achievementSoftGlitch 1.8s steps(2, end) infinite;
+}
+
+.reset-modal-card strong {
+  padding: 7px 8px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: var(--pepe-green);
+  font-size: clamp(1.1rem, 4vw, 1.65rem);
+  text-shadow:
+    2px 0 var(--ton-blue),
+    -2px 0 rgba(255, 43, 214, 0.6);
+}
+
+.reset-modal-card p {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.reset-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reset-modal-actions button {
+  padding: 8px 10px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: var(--panel-gray);
+  font-weight: 900;
+  box-shadow:
+    inset 2px 2px 0 var(--panel-light),
+    inset -2px -2px 0 var(--panel-dark),
+    3px 3px 0 #000;
+}
+
+.reset-modal-actions button:last-child {
+  color: #fff;
+  background: #b00024;
+  text-shadow: 1px 0 #000;
+}
+
+.reset-modal-actions button:hover,
+.reset-modal-actions button:focus-visible {
+  filter: brightness(1.16) saturate(1.2);
+}
+
 .breach-overlay {
   position: fixed;
   inset: 0;
@@ -1414,7 +1633,7 @@ button {
 
 .stickerbook-summary {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 6px;
   padding: 8px;
   border-bottom: 2px solid #000;
@@ -1481,17 +1700,144 @@ button {
   justify-content: start;
 }
 
+.achievement-section {
+  padding: 8px 8px 10px;
+  border-bottom: 2px solid #000;
+  background:
+    linear-gradient(90deg, rgba(0, 152, 234, 0.12) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(57, 255, 20, 0.09) 1px, transparent 1px),
+    #c9cbbc;
+  background-size: 18px 18px;
+}
+
+.achievement-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  padding: 5px 7px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: var(--ton-blue);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.44),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.34);
+}
+
+.achievement-section-title strong,
+.achievement-section-title span {
+  display: block;
+}
+
+.achievement-section-title strong {
+  color: #fff;
+  font-size: 0.9rem;
+  text-shadow: 1px 1px 0 #003c59;
+}
+
+.achievement-section-title span {
+  color: #00120a;
+  background: var(--pepe-green);
+  padding: 2px 5px;
+  border: 1px solid #000;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.achievement-card {
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px;
+  border: 2px solid #000;
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.48),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.22);
+}
+
+.achievement-card span {
+  width: fit-content;
+  padding: 2px 5px;
+  border: 1px solid #000;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.achievement-card strong {
+  color: #001c2a;
+  font-size: 0.82rem;
+  line-height: 1.1;
+}
+
+.achievement-card p,
+.achievement-card em {
+  margin: 0;
+  color: #222;
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+.achievement-card em {
+  margin-top: auto;
+  color: #004d75;
+  font-style: normal;
+}
+
+.achievement-card.achievement-unlocked {
+  background:
+    linear-gradient(135deg, rgba(57, 255, 20, 0.16), transparent 44%),
+    #f2f2e5;
+}
+
+.achievement-card.achievement-unlocked span {
+  color: #00120a;
+  background: var(--pepe-green);
+}
+
+.achievement-card.achievement-locked {
+  opacity: 0.68;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.08) 0,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    #a7ada2;
+}
+
+.achievement-card.achievement-locked span {
+  color: #00120a;
+  background: #8fa096;
+}
+
 .stickerbook-controls {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  padding: 8px 8px 0;
+  padding: 8px;
+  background: #bfc2b5;
+}
+
+.primary-controls {
+  border-bottom: 2px solid #000;
 }
 
 .filter-controls {
-  padding-top: 6px;
-  padding-bottom: 8px;
+  padding-top: 7px;
+  padding-bottom: 7px;
   border-bottom: 2px solid #000;
+  background: #aaafa4;
 }
 
 .stickerbook-controls button {
@@ -1502,6 +1848,10 @@ button {
 .stickerbook-controls button.active {
   color: #00120a;
   background: var(--pepe-green);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 2px var(--ton-blue);
 }
 
 .sticker-grid {
@@ -1531,6 +1881,40 @@ button {
   background:
     linear-gradient(135deg, rgba(57, 255, 20, 0.12), transparent 42%),
     #f7f7ea;
+}
+
+.sticker-card.rarity-common.collected {
+  border-color: #111;
+  background:
+    linear-gradient(135deg, rgba(120, 120, 110, 0.16), transparent 42%),
+    #f2f2e5;
+}
+
+.sticker-card.rarity-uncommon.collected {
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    0 0 13px rgba(57, 255, 20, 0.28),
+    inset 2px 2px 0 #fff,
+    inset -2px -2px 0 #8d9187;
+}
+
+.sticker-card.rarity-rare.collected {
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    -3px 0 0 var(--ton-blue),
+    0 0 15px rgba(0, 152, 234, 0.34),
+    inset 2px 2px 0 #fff,
+    inset -2px -2px 0 #8d9187;
+}
+
+.sticker-card.rarity-epic.collected {
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    -3px 0 0 var(--glitch-pink),
+    3px 0 0 #7f45ff,
+    0 0 18px rgba(255, 43, 214, 0.32),
+    inset 2px 2px 0 #fff,
+    inset -2px -2px 0 #8d9187;
 }
 
 .sticker-card.gif-card.collected {
@@ -1599,9 +1983,28 @@ button {
   font-weight: 900;
 }
 
-.sticker-card.gif-card span {
+.sticker-card.rarity-common span {
+  background: #d0d0c3;
+}
+
+.sticker-card.rarity-uncommon span {
+  background: var(--pepe-green);
+}
+
+.sticker-card.rarity-rare span {
+  color: #fff;
+  background: var(--ton-blue);
+}
+
+.sticker-card.rarity-epic span {
   color: #fff;
   background: var(--glitch-pink);
+}
+
+.sticker-card.gif-card span {
+  color: #fff;
+  background:
+    linear-gradient(90deg, #b00024, var(--glitch-pink), var(--pepe-green));
 }
 
 .sticker-card.mythic-card span {
@@ -2192,6 +2595,95 @@ button {
   100% {
     transform: translate(0, 0) skew(0deg);
     filter: brightness(1);
+  }
+}
+
+@keyframes achievementOverlayFade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes achievementTuneIn {
+  0% {
+    opacity: 0;
+    filter: blur(3px) brightness(1.6);
+    transform: translateY(18px) scale(0.94) skew(2deg);
+  }
+
+  28% {
+    opacity: 0.78;
+    filter: blur(1px) brightness(1.35) saturate(1.25);
+    transform: translateY(6px) scale(1.01) skew(-1deg);
+  }
+
+  58% {
+    opacity: 1;
+    filter: blur(0) brightness(1.12);
+    transform: translateY(-2px) scale(1) skew(0.5deg);
+  }
+
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: translateY(0) scale(1) skew(0deg);
+  }
+}
+
+@keyframes achievementSoftGlitch {
+  0%,
+  84%,
+  100% {
+    transform: translate(0, 0);
+  }
+
+  88% {
+    transform: translate(2px, -1px);
+  }
+
+  92% {
+    transform: translate(-2px, 1px);
+  }
+}
+
+@keyframes achievementBorderPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 4px #000,
+      -6px 0 0 var(--ton-blue),
+      6px 0 0 var(--glitch-pink),
+      0 0 24px rgba(57, 255, 20, 0.28);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px #000,
+      -7px 0 0 var(--ton-blue),
+      7px 0 0 var(--pepe-green),
+      0 0 38px rgba(57, 255, 20, 0.44);
+  }
+}
+
+@keyframes achievementTextSplit {
+  0%,
+  78%,
+  100% {
+    text-shadow:
+      2px 0 var(--ton-blue),
+      -2px 0 var(--glitch-pink),
+      0 0 14px rgba(57, 255, 20, 0.48);
+  }
+
+  84% {
+    text-shadow:
+      1px 0 var(--ton-blue),
+      -1px 0 var(--pepe-green),
+      0 0 10px rgba(57, 255, 20, 0.35);
   }
 }
 

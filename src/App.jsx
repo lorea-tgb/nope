@@ -9,8 +9,9 @@ const STORAGE_KEYS = {
   nopeCount: "nopeMachine.nopeCount",
 };
 
-const NORMAL_TOTAL = 139;
+const NORMAL_TOTAL = 137;
 const GIF_TOTAL = 20;
+const MYTHIC_TOTAL = 2;
 
 const normalNopeEntities = [
   { id: "00nope", name: "00 NOPE", image: "/images/00nope.jpg", type: "image", caption: "first contact with refusal" },
@@ -90,8 +91,6 @@ const normalNopeEntities = [
   { id: "nativenope", name: "NATIVE NOPE", image: "/images/nativenope.jpg", type: "image", caption: "chain-native denial" },
   { id: "ninjanope", name: "NINJA NOPE", image: "/images/ninjanope.jpg", type: "image", caption: "silent refusal" },
   { id: "nopenotpepe", name: "NOPE NOT PEPE", image: "/images/nopenotpepe.jpg", type: "image", caption: "definitely not pepe" },
-  { id: "nopeorno", name: "NOPE OR NO", image: "/images/nopeorno.jpg", type: "image", caption: "both are no" },
-  { id: "nopeornothing", name: "NOPE OR NOTHING", image: "/images/nopeornothing.jpg", type: "image", caption: "all or absolutely nothing" },
   { id: "notnope", name: "NOT NOPE", image: "/images/notnope.jpg", type: "image", caption: "double negative detected" },
   { id: "pheronope", name: "PHERO NOPE", image: "/images/pheronope.jpg", type: "image", caption: "pheromones rejected" },
   { id: "piratenope", name: "PIRATE NOPE", image: "/images/piratenope.jpg", type: "image", caption: "yarrr no" },
@@ -183,7 +182,25 @@ const forbiddenNopeGifs = [
   { id: "nope20", name: "FORBIDDEN NOPE 20", image: "/images/nope20.gif", type: "gif", caption: "final forbidden nope" },
 ];
 
-const allNopeEntities = [...normalNopeEntities, ...forbiddenNopeGifs];
+const mythicNopeRelics = [
+  {
+    id: "nopeorno",
+    name: "NOPE OR NO",
+    image: "/images/nopeorno.jpg",
+    type: "mythic",
+    caption: "both options were rejected",
+  },
+  {
+    id: "nopeornothing",
+    name: "NOPE OR NOTHING",
+    image: "/images/nopeornothing.jpg",
+    type: "mythic",
+    caption: "all or absolutely nope",
+  },
+];
+
+const stickerGridEntities = [...normalNopeEntities, ...forbiddenNopeGifs];
+const allNopeEntities = [...normalNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics];
 
 const bootLines = [
   { text: "NOT PEPE TERMINAL v0.0.1" },
@@ -208,6 +225,16 @@ const bootLines = [
 ];
 
 const nopeLabels = ["NOPE", "NOPE?", "NOOOOOPE", "ABSOLUTELY NOT", "STILL NOPE", "HARD PASS"];
+
+const glitchWarnings = [
+  "NOPE OS UNSTABLE",
+  "SIGNAL CONTAMINATED",
+  "VALUE GAINED: ZERO",
+  "PEPE DETECTED / REJECTED",
+  "NON HASH VERIFIED",
+  "DUPLICATE TRASH RESONANCE",
+  "REALITY REFUSED",
+];
 
 const moods = [
   "legally not pepe",
@@ -236,7 +263,13 @@ function getRank(count) {
 }
 
 function pickDiscoveryEntity() {
-  const pool = Math.random() < 0.12 ? forbiddenNopeGifs : normalNopeEntities;
+  const roll = Math.random();
+  const pool =
+    roll < 0.01
+      ? mythicNopeRelics
+      : roll < 0.13
+        ? forbiddenNopeGifs
+        : normalNopeEntities;
 
   return pool[Math.floor(Math.random() * pool.length)];
 }
@@ -302,16 +335,24 @@ export default function App() {
   const [mood, setMood] = useState("legally not pepe");
   const [isBooting, setIsBooting] = useState(true);
   const [isGlitching, setIsGlitching] = useState(false);
+  const [isAmbientGlitch, setIsAmbientGlitch] = useState(false);
+  const [ambientWarning, setAmbientWarning] = useState(null);
+  const [isNopeIdle, setIsNopeIdle] = useState(false);
   const [rankUpgrade, setRankUpgrade] = useState(null);
   const [isStickerBookOpen, setIsStickerBookOpen] = useState(false);
   const [stickerTab, setStickerTab] = useState("all");
   const [stickerFilter, setStickerFilter] = useState("all");
+  const [copiedShareId, setCopiedShareId] = useState(null);
   const [buttonText, setButtonText] = useState("NOPE");
   const glitchTimerRef = useRef(null);
   const nopedexPulseTimerRef = useRef(null);
   const rankUpgradeTimerRef = useRef(null);
   const transmissionTimerRef = useRef(null);
   const breachTimerRef = useRef(null);
+  const shareCopyTimerRef = useRef(null);
+  const ambientTimerRef = useRef(null);
+  const ambientClearTimerRef = useRef(null);
+  const nopeIdleTimerRef = useRef(null);
   const terminalLogRef = useRef(null);
   const lineIdRef = useRef(0);
   const nopeCountRef = useRef(nopeCount);
@@ -335,7 +376,11 @@ export default function App() {
     () => collectedIds.filter((id) => forbiddenNopeGifs.some((entity) => entity.id === id)).length,
     [collectedIds],
   );
-  const totalCollectedCount = normalCollectedCount + gifCollectedCount;
+  const mythicCollectedCount = useMemo(
+    () => collectedIds.filter((id) => mythicNopeRelics.some((entity) => entity.id === id)).length,
+    [collectedIds],
+  );
+  const totalCollectedCount = normalCollectedCount + gifCollectedCount + mythicCollectedCount;
 
   function createLine(speaker, text = "", isTypingLine = false, important = false) {
     const id = lineIdRef.current;
@@ -369,6 +414,10 @@ export default function App() {
       window.clearTimeout(rankUpgradeTimerRef.current);
       window.clearTimeout(transmissionTimerRef.current);
       window.clearTimeout(breachTimerRef.current);
+      window.clearTimeout(shareCopyTimerRef.current);
+      window.clearTimeout(ambientTimerRef.current);
+      window.clearTimeout(ambientClearTimerRef.current);
+      window.clearTimeout(nopeIdleTimerRef.current);
     };
   }, []);
 
@@ -461,10 +510,67 @@ export default function App() {
     };
   }, [showIntro]);
 
+  useEffect(() => {
+    if (showIntro || isBooting) {
+      return undefined;
+    }
+
+    let isCancelled = false;
+
+    function scheduleAmbientGlitch() {
+      ambientTimerRef.current = window.setTimeout(() => {
+        if (isCancelled) {
+          return;
+        }
+
+        const shouldShowWarning = Math.random() < 0.62;
+        const nextWarning = glitchWarnings[Math.floor(Math.random() * glitchWarnings.length)];
+        setAmbientWarning(shouldShowWarning ? nextWarning : null);
+        setIsAmbientGlitch(true);
+
+        ambientClearTimerRef.current = window.setTimeout(() => {
+          setIsAmbientGlitch(false);
+          setAmbientWarning(null);
+
+          if (!isCancelled) {
+            scheduleAmbientGlitch();
+          }
+        }, randomBetween(150, 350));
+      }, randomBetween(8000, 18000));
+    }
+
+    scheduleAmbientGlitch();
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(ambientTimerRef.current);
+      window.clearTimeout(ambientClearTimerRef.current);
+      setIsAmbientGlitch(false);
+      setAmbientWarning(null);
+    };
+  }, [showIntro, isBooting]);
+
+  useEffect(() => {
+    if (showIntro || isBooting) {
+      return undefined;
+    }
+
+    window.clearTimeout(nopeIdleTimerRef.current);
+    nopeIdleTimerRef.current = window.setTimeout(() => {
+      setIsNopeIdle(true);
+    }, randomBetween(6000, 8000));
+
+    return () => {
+      window.clearTimeout(nopeIdleTimerRef.current);
+    };
+  }, [showIntro, isBooting]);
+
   function replayIntro(event) {
     event?.preventDefault();
     setIntroChoice(null);
     setIsIntroExiting(false);
+    setIsNopeIdle(false);
+    window.clearTimeout(nopeIdleTimerRef.current);
     setShowIntro(true);
   }
 
@@ -499,7 +605,7 @@ export default function App() {
     window.clearTimeout(breachTimerRef.current);
     breachTimerRef.current = window.setTimeout(() => {
       setBreachFlash(null);
-    }, randomBetween(900, 1400));
+    }, randomBetween(1500, 2200));
   }
 
   function pulseNopedex(type) {
@@ -511,12 +617,20 @@ export default function App() {
     window.clearTimeout(nopedexPulseTimerRef.current);
     nopedexPulseTimerRef.current = window.setTimeout(() => {
       setNopedexPulse(null);
-    }, type === "gif" ? 1250 : 900);
+    }, type === "mythic" ? 1600 : type === "gif" ? 1250 : 900);
   }
 
   function getDiscoveryMessage(entity, alreadyCollected) {
+    if (alreadyCollected && entity.type === "mythic") {
+      return `duplicate mythic relic detected: ${entity.name}. probability wasted.`;
+    }
+
     if (alreadyCollected) {
       return `duplicate: ${entity.name}. disappointment increased.`;
+    }
+
+    if (entity.type === "mythic") {
+      return `MYTHIC NOPE RELIC DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
     }
 
     if (entity.type === "gif") {
@@ -561,10 +675,29 @@ export default function App() {
     addLine(createLine("nope", text));
   }
 
+  function resetNopeIdleTimer() {
+    window.clearTimeout(nopeIdleTimerRef.current);
+    setIsNopeIdle(false);
+
+    if (showIntro || isBooting) {
+      return;
+    }
+
+    nopeIdleTimerRef.current = window.setTimeout(() => {
+      setIsNopeIdle(true);
+
+      if (Math.random() < 0.35) {
+        addInstantNopeLine("button awaiting poor decision.");
+      }
+    }, randomBetween(6000, 8000));
+  }
+
   function pressNope() {
     if (isBooting) {
       return;
     }
+
+    resetNopeIdleTimer();
 
     const nextLabel = nopeLabels[Math.floor(Math.random() * nopeLabels.length)];
     const discoveredEntity = pickDiscoveryEntity();
@@ -572,7 +705,9 @@ export default function App() {
     const discoveryResponse = getDiscoveryMessage(discoveredEntity, alreadyCollected);
     const showDiscoveryOverlay = !alreadyCollected || Math.random() < 0.1;
     const showFullScreenBreach =
-      discoveredEntity.type === "gif"
+      discoveredEntity.type === "mythic"
+        ? false
+        : discoveredEntity.type === "gif"
         ? !alreadyCollected || Math.random() < 0.25
         : alreadyCollected
           ? Math.random() < 0.03
@@ -581,7 +716,9 @@ export default function App() {
       ? "duplicate"
       : discoveredEntity.type === "gif"
         ? "forbidden"
-        : "new";
+        : discoveredEntity.type === "mythic"
+          ? "mythic"
+          : "new";
     const nextCount = nopeCountRef.current + 1;
     const nextRank = getRank(nextCount);
     const rankChanged = nextRank !== getRank(nopeCountRef.current);
@@ -605,7 +742,15 @@ export default function App() {
       setCollectedIds(nextIds);
     }
 
-    pulseNopedex(discoveredEntity.type === "gif" ? "gif" : alreadyCollected ? null : "normal");
+    pulseNopedex(
+      discoveredEntity.type === "mythic"
+        ? "mythic"
+        : discoveredEntity.type === "gif"
+          ? "gif"
+          : alreadyCollected
+            ? null
+            : "normal",
+    );
     maybeChangeMood(0.55);
     setButtonText(nextLabel);
     setIsGlitching(true);
@@ -640,7 +785,7 @@ export default function App() {
       return forbiddenNopeGifs;
     }
 
-    return allNopeEntities;
+    return stickerGridEntities;
   }
 
   function getVisibleStickerEntities() {
@@ -659,13 +804,78 @@ export default function App() {
     });
   }
 
+  function getShareText(entity) {
+    const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+
+    if (entity.type === "mythic") {
+      return `MYTHIC NOPE RELIC FOUND:
+${entity.name}
+
+super rare trash.
+somehow still worth zero.
+
+$NOPE
+
+${siteUrl}`;
+    }
+
+    if (entity.type === "gif") {
+      return `FORBIDDEN NOPE LOOP DISCOVERED:
+${entity.name}
+
+this should not have happened.
+value gained: zero.
+
+$NOPE
+
+${siteUrl}`;
+    }
+
+    return `NOPEDEX discovery:
+${entity.name}
+
+value gained: zero.
+TON probably needed a Pepe.
+Turns out it was definitely NOT Pepe.
+
+$NOPE
+
+${siteUrl}`;
+  }
+
+  function openShareWindow(entity, destination) {
+    const shareText = getShareText(entity);
+    const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const shareUrl =
+      destination === "telegram"
+        ? `https://t.me/share/url?url=${encodeURIComponent(siteUrl)}&text=${encodeURIComponent(shareText)}`
+        : `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+
+    window.open(shareUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function copyShareText(entity) {
+    try {
+      await navigator.clipboard.writeText(getShareText(entity));
+      setCopiedShareId(entity.id);
+      window.clearTimeout(shareCopyTimerRef.current);
+      shareCopyTimerRef.current = window.setTimeout(() => {
+        setCopiedShareId(null);
+      }, 1200);
+      addInstantNopeLine("share text copied. influence not included.");
+    } catch {
+      addInstantNopeLine("share text refused to copy. very on brand.");
+    }
+  }
+
   function renderStickerCard(entity, index) {
     const isCollected = collectedIds.includes(entity.id);
     const isGif = entity.type === "gif";
+    const isMythic = entity.type === "mythic";
 
     return (
       <article
-        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""}`}
+        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""}`}
         key={entity.id}
         style={{ "--sticker-tilt": `${((index % 5) - 2) * 1.25}deg` }}
       >
@@ -681,16 +891,27 @@ export default function App() {
               />
             </div>
             <strong>{entity.name}</strong>
-            <span>{isGif ? "FORBIDDEN LOOP" : "COLLECTED"}</span>
+            <span>{isMythic ? "MYTHIC RELIC" : isGif ? "FORBIDDEN LOOP" : "COLLECTED"}</span>
             <p>{entity.caption}</p>
             <em>value: zero</em>
+            <div className="sticker-share-row" aria-label={`Share ${entity.name}`}>
+              <button type="button" onClick={() => openShareWindow(entity, "x")}>
+                X
+              </button>
+              <button type="button" onClick={() => openShareWindow(entity, "telegram")}>
+                TG
+              </button>
+              <button type="button" onClick={() => copyShareText(entity)}>
+                {copiedShareId === entity.id ? "COPIED" : "COPY"}
+              </button>
+            </div>
           </>
         ) : (
           <>
             <div className="sticker-locked-mark">???</div>
-            <strong>{isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
-            <span>LOCKED TRASH</span>
-            <p>{isGif ? "probability: disrespectful" : "press nope harder"}</p>
+            <strong>{isMythic ? "???" : isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
+            <span>{isMythic ? "MYTHIC NOPE MISSING" : "LOCKED TRASH"}</span>
+            <p>{isMythic ? "probability: emotionally illegal" : isGif ? "probability: disrespectful" : "press nope harder"}</p>
           </>
         )}
       </article>
@@ -738,8 +959,16 @@ export default function App() {
   }
 
   return (
-    <main className={`nope-page ${isGlitching ? "is-glitching" : ""}`}>
+    <main
+      className={`nope-page ${isGlitching ? "is-glitching" : ""} ${isAmbientGlitch ? "ambient-glitch" : ""} ${isNopeIdle ? "nope-idle" : ""}`}
+    >
       <div className="crt-noise" />
+      <div className="app-code-rain" aria-hidden="true">
+        {Array.from({ length: 36 }, (_, index) => (
+          <span key={index}>NOPE NON TON 404 REJECT NOTPEPE NOPE 0X00 NON</span>
+        ))}
+      </div>
+      {ambientWarning && <div className="glitch-warning">{ambientWarning}</div>}
       <header className="os-header" aria-label="NOPE OS">
         <strong>NOPE OS 0.0.1</strong>
         <span>press nope. collect garbage. close nothing.</span>
@@ -788,12 +1017,14 @@ export default function App() {
 
           {entityTransmission && (
             <aside
-              className={`entity-transmission ${entityTransmission.type === "gif" ? "forbidden" : ""}`}
+              className={`entity-transmission ${entityTransmission.type === "gif" ? "forbidden" : ""} ${entityTransmission.type === "mythic" ? "mythic" : ""}`}
               aria-label="NOPE entity transmission"
             >
               <p className="panel-label">
                 {entityTransmission.signalType === "forbidden"
                   ? "corrupted-nope-signal.gif"
+                  : entityTransmission.signalType === "mythic"
+                    ? "mythic-relic-found.jpg"
                   : entityTransmission.signalType === "new"
                     ? "new-trash-found.jpg"
                     : entityTransmission.signalType === "duplicate"
@@ -803,6 +1034,8 @@ export default function App() {
               <span className="signal-status">
                 {entityTransmission.signalType === "forbidden"
                   ? "FORBIDDEN LOOP FOUND"
+                  : entityTransmission.signalType === "mythic"
+                    ? "MYTHIC RELIC FOUND"
                   : entityTransmission.signalType === "new"
                     ? "NEW TRASH ACQUIRED"
                     : entityTransmission.signalType === "duplicate"
@@ -848,18 +1081,28 @@ export default function App() {
           <small className="nopedex-alert">
             {nopedexPulse === "gif"
               ? "FORBIDDEN GIF BREACH"
+              : nopedexPulse === "mythic"
+                ? "MYTHIC RELIC DISCOVERED"
               : nopedexPulse === "normal"
                 ? "NEW TRASH ACQUIRED"
                 : "NOPEDEX"}
           </small>
           <span>
-            trash: {normalCollectedCount.toString().padStart(3, "0")} / {NORMAL_TOTAL}
+            worthless finds: {normalCollectedCount.toString().padStart(3, "0")} / {NORMAL_TOTAL}
           </span>
           <span>
-            loops: {gifCollectedCount.toString().padStart(3, "0")} / {GIF_TOTAL}
+            forbidden loops: {gifCollectedCount.toString().padStart(3, "0")} / {GIF_TOTAL}
           </span>
+          <span>
+            mythic relics: {mythicCollectedCount.toString().padStart(3, "0")} / {MYTHIC_TOTAL.toString().padStart(3, "0")}
+          </span>
+          <span>portfolio impact: none</span>
           <span>latest:</span>
-          <strong>{latestDiscovery ? latestDiscovery.name : "none. press the stupid button."}</strong>
+          <strong>
+            {latestDiscovery
+              ? `${latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}`
+              : "none. press the stupid button."}
+          </strong>
           <button className="open-nopedex-button" type="button" onClick={() => setIsStickerBookOpen(true)}>
             [ OPEN STICKER BOOK ]
           </button>
@@ -933,48 +1176,59 @@ export default function App() {
               </button>
             </div>
 
-            <div className="stickerbook-summary">
-              <span>worthless finds: {normalCollectedCount} / {NORMAL_TOTAL}</span>
-              <span>forbidden loops: {gifCollectedCount} / {GIF_TOTAL}</span>
-              <span>total trash: {totalCollectedCount} / {NORMAL_TOTAL + GIF_TOTAL}</span>
-              <span>portfolio impact: none</span>
-            </div>
+            <div className="stickerbook-scroll">
+              <div className="stickerbook-summary">
+                <span>worthless finds: {normalCollectedCount} / {NORMAL_TOTAL}</span>
+                <span>forbidden loops: {gifCollectedCount} / {GIF_TOTAL}</span>
+                <span>mythic relics: {mythicCollectedCount} / {MYTHIC_TOTAL}</span>
+                <span>total trash: {totalCollectedCount} / {NORMAL_TOTAL + GIF_TOTAL + MYTHIC_TOTAL}</span>
+                <span>portfolio impact: none</span>
+              </div>
 
-            <div className="stickerbook-controls" aria-label="NOPEDEX view controls">
-              {[
-                ["all", "ALL TRASH"],
-                ["normal", "WORTHLESS NOPES"],
-                ["gif", "FORBIDDEN LOOPS"],
-              ].map(([value, label]) => (
-                <button
-                  className={stickerTab === value ? "active" : ""}
-                  key={value}
-                  type="button"
-                  onClick={() => setStickerTab(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+              <section className="mythic-section" aria-label="MYTHIC NOPE RELICS">
+                <div className="mythic-section-title">
+                  <strong>MYTHIC NOPE RELICS</strong>
+                  <span>super rare trash. probably still worthless.</span>
+                </div>
+                <div className="mythic-grid">{mythicNopeRelics.map(renderStickerCard)}</div>
+              </section>
 
-            <div className="stickerbook-controls filter-controls" aria-label="NOPEDEX filters">
-              {[
-                ["all", "ALL"],
-                ["found", "FOUND"],
-                ["missing", "MISSING"],
-              ].map(([value, label]) => (
-                <button
-                  className={stickerFilter === value ? "active" : ""}
-                  key={value}
-                  type="button"
-                  onClick={() => setStickerFilter(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+              <div className="stickerbook-controls" aria-label="NOPEDEX view controls">
+                {[
+                  ["all", "ALL TRASH"],
+                  ["normal", "WORTHLESS NOPES"],
+                  ["gif", "FORBIDDEN LOOPS"],
+                ].map(([value, label]) => (
+                  <button
+                    className={stickerTab === value ? "active" : ""}
+                    key={value}
+                    type="button"
+                    onClick={() => setStickerTab(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
-            <div className="sticker-grid">{getVisibleStickerEntities().map(renderStickerCard)}</div>
+              <div className="stickerbook-controls filter-controls" aria-label="NOPEDEX filters">
+                {[
+                  ["all", "ALL"],
+                  ["found", "FOUND"],
+                  ["missing", "MISSING"],
+                ].map(([value, label]) => (
+                  <button
+                    className={stickerFilter === value ? "active" : ""}
+                    key={value}
+                    type="button"
+                    onClick={() => setStickerFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="sticker-grid">{getVisibleStickerEntities().map(renderStickerCard)}</div>
+            </div>
           </div>
         </section>
       )}

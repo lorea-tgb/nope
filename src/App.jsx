@@ -4,6 +4,7 @@ import "./App.css";
 const CONTRACT = "EQApjQK1qpZ3BjECMaK0GkseWS7qfnhA5YXdP-YKUkK2Hnon";
 const STORAGE_KEYS = {
   collectedIds: "nopeMachine.collectedIds",
+  introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
   nopeCount: "nopeMachine.nopeCount",
 };
@@ -201,20 +202,9 @@ const bootLines = [
   { text: "> Turns out it was definitely NOT Pepe.", important: true, pause: 720 },
   { text: "> NOPE machine ready.", important: true, pause: 620 },
   { text: `> contract: ${CONTRACT}` },
-  { text: "> type something stupid." },
+  { text: "> press the big stupid button." },
   { text: "> you might find something." },
   { text: "> probably nope though." },
-];
-
-const genericReplies = [
-  "request processed. answer rejected. NOPE.",
-  "interesting question. unfortunately no.",
-  "the machine thought about it and said NOPE.",
-  "your input has been emotionally denied.",
-  "invalid hope detected.",
-  "air rejected.",
-  "the frog is not okay.",
-  "permission denied by vibes.",
 ];
 
 const nopeLabels = ["NOPE", "NOPE?", "NOOOOOPE", "ABSOLUTELY NOT", "STILL NOPE", "HARD PASS"];
@@ -241,103 +231,8 @@ const ranks = [
   { count: 0, name: "visitor" },
 ];
 
-function getReply(input) {
-  const text = input.toLowerCase();
-
-  if (text.includes("help")) {
-    return [
-      "available commands:",
-      "moon",
-      "pepe",
-      "roadmap",
-      "utility",
-      "contract",
-      "gm",
-      "secret",
-      "buy",
-      "sell",
-      "non",
-      "warning: all commands end badly.",
-    ].join("\n");
-  }
-
-  if (text.includes("moon")) {
-    return "moon denied. please consult a therapist. NOPE.";
-  }
-
-  if (text.includes("roadmap")) {
-    return "roadmap found. roadmap deleted. NOPE.";
-  }
-
-  if (text.includes("utility")) {
-    return "utility is currently unavailable because this is stupid. NOPE.";
-  }
-
-  if (text.includes("pepe")) {
-    return "PEPE DETECTED. deploying legal avoidance protocol... NOT PEPE.";
-  }
-
-  if (text.includes("dev")) {
-    return "dev left to buy milk. NOPE.";
-  }
-
-  if (text.includes("buy")) {
-    return "financial advice module missing. probably for the best. NOPE.";
-  }
-
-  if (text.includes("contract")) {
-    return "contract detected. ends in non. interpret irresponsibly. NOPE.";
-  }
-
-  if (text.includes("ton")) {
-    return "TON requested pepe. machine returned NOPE.";
-  }
-
-  if (text.includes("secret")) {
-    return "secret detected. there is no secret. obviously there is a secret.";
-  }
-
-  if (text.includes("gm")) {
-    return "gm. grand refusal activated.";
-  }
-
-  if (text.includes("lfg")) {
-    return "loading financial grief... grief loaded. NOPE.";
-  }
-
-  if (text.includes("non")) {
-    return "last 3 chars confirmed: non. the contract itself said nope.";
-  }
-
-  if (text.includes("sell")) {
-    return "selling pressure detected. emotionally blocking transaction.";
-  }
-
-  if (text.includes("hold")) {
-    return "diamond hands detected. still not advice. NOPE.";
-  }
-
-  if (text.includes("frog")) {
-    return "frog detected. legal department sweating. NOT PEPE.";
-  }
-
-  if (text.includes("chart")) {
-    return "chart opened. hope closed.";
-  }
-
-  if (text.includes("ca")) {
-    return "contract address located. ends in non. proceed irresponsibly.";
-  }
-
-  return genericReplies[Math.floor(Math.random() * genericReplies.length)];
-}
-
 function getRank(count) {
   return ranks.find((rank) => count >= rank.count).name;
-}
-
-function pickEntity() {
-  return allNopeEntities[Math.floor(Math.random() * allNopeEntities.length)];
 }
 
 function pickDiscoveryEntity() {
@@ -390,8 +285,10 @@ function readStoredString(key) {
 }
 
 export default function App() {
+  const [showIntro, setShowIntro] = useState(() => readStoredString(STORAGE_KEYS.introSeen) !== "true");
+  const [introChoice, setIntroChoice] = useState(null);
+  const [isIntroExiting, setIsIntroExiting] = useState(false);
   const [lines, setLines] = useState([]);
-  const [input, setInput] = useState("");
   const [nopeCount, setNopeCount] = useState(() => readStoredNumber(STORAGE_KEYS.nopeCount));
   const [collectedIds, setCollectedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.collectedIds),
@@ -400,21 +297,23 @@ export default function App() {
     readStoredString(STORAGE_KEYS.latestDiscoveryId),
   );
   const [entityTransmission, setEntityTransmission] = useState(null);
+  const [breachFlash, setBreachFlash] = useState(null);
   const [nopedexPulse, setNopedexPulse] = useState(null);
   const [mood, setMood] = useState("legally not pepe");
   const [isBooting, setIsBooting] = useState(true);
   const [isGlitching, setIsGlitching] = useState(false);
   const [rankUpgrade, setRankUpgrade] = useState(null);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isStickerBookOpen, setIsStickerBookOpen] = useState(false);
+  const [stickerTab, setStickerTab] = useState("all");
+  const [stickerFilter, setStickerFilter] = useState("all");
   const [buttonText, setButtonText] = useState("NOPE");
   const glitchTimerRef = useRef(null);
   const nopedexPulseTimerRef = useRef(null);
   const rankUpgradeTimerRef = useRef(null);
   const transmissionTimerRef = useRef(null);
+  const breachTimerRef = useRef(null);
   const terminalLogRef = useRef(null);
-  const inputRef = useRef(null);
   const lineIdRef = useRef(0);
-  const isTypingRef = useRef(false);
   const nopeCountRef = useRef(nopeCount);
   const collectedIdsRef = useRef(collectedIds);
   const bootRunRef = useRef(0);
@@ -436,8 +335,7 @@ export default function App() {
     () => collectedIds.filter((id) => forbiddenNopeGifs.some((entity) => entity.id === id)).length,
     [collectedIds],
   );
-
-  const isInputBusy = isBooting || isTyping;
+  const totalCollectedCount = normalCollectedCount + gifCollectedCount;
 
   function createLine(speaker, text = "", isTypingLine = false, important = false) {
     const id = lineIdRef.current;
@@ -470,6 +368,7 @@ export default function App() {
       window.clearTimeout(nopedexPulseTimerRef.current);
       window.clearTimeout(rankUpgradeTimerRef.current);
       window.clearTimeout(transmissionTimerRef.current);
+      window.clearTimeout(breachTimerRef.current);
     };
   }, []);
 
@@ -490,6 +389,10 @@ export default function App() {
   }, [latestDiscoveryId]);
 
   useEffect(() => {
+    if (showIntro) {
+      return undefined;
+    }
+
     let isCancelled = false;
     const runId = bootRunRef.current + 1;
     bootRunRef.current = runId;
@@ -533,7 +436,6 @@ export default function App() {
     async function runBootSequence() {
       setLines([]);
       setIsBooting(true);
-      isTypingRef.current = true;
 
       await sleep(280);
 
@@ -549,10 +451,6 @@ export default function App() {
 
       if (!isCancelled && bootRunRef.current === runId) {
         setIsBooting(false);
-        isTypingRef.current = false;
-        window.setTimeout(() => {
-          inputRef.current?.focus();
-        }, 0);
       }
     }
 
@@ -561,22 +459,47 @@ export default function App() {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [showIntro]);
 
-  function showTransmission(entity) {
-    setEntityTransmission(entity);
+  function replayIntro(event) {
+    event?.preventDefault();
+    setIntroChoice(null);
+    setIsIntroExiting(false);
+    setShowIntro(true);
+  }
+
+  async function enterNopeOs(choice) {
+    if (introChoice) {
+      return;
+    }
+
+    setIntroChoice(choice);
+    await sleep(1600);
+    setIsIntroExiting(true);
+    await sleep(420);
+    window.localStorage.setItem(STORAGE_KEYS.introSeen, "true");
+    setShowIntro(false);
+  }
+
+  function showTransmission(entity, signalType = "signal") {
+    setEntityTransmission({ ...entity, signalType });
     window.clearTimeout(transmissionTimerRef.current);
     transmissionTimerRef.current = window.setTimeout(() => {
       setEntityTransmission(null);
     }, randomBetween(1800, 2500));
   }
 
-  function maybeShowTransmission(chance) {
-    if (Math.random() > chance) {
-      return;
-    }
+  function showBreachFlash(entity) {
+    const flashEntity =
+      entity.type === "gif"
+        ? entity
+        : forbiddenNopeGifs[Math.floor(Math.random() * forbiddenNopeGifs.length)];
 
-    showTransmission(pickEntity());
+    setBreachFlash(flashEntity);
+    window.clearTimeout(breachTimerRef.current);
+    breachTimerRef.current = window.setTimeout(() => {
+      setBreachFlash(null);
+    }, randomBetween(900, 1400));
   }
 
   function pulseNopedex(type) {
@@ -619,91 +542,19 @@ export default function App() {
     });
   }
 
-  async function typeNopeResponse(response) {
-    const responseLine = createLine("nope", "", true);
-    addLine(responseLine);
-
-    for (let index = 1; index <= response.length; index += 1) {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 17);
-      });
-
-      setLines((currentLines) =>
-        currentLines.map((line) =>
-          line.id === responseLine.id
-            ? { ...line, text: response.slice(0, index) }
-            : line,
-        ),
-      );
-    }
-
-    setLines((currentLines) =>
-      currentLines.map((line) =>
-        line.id === responseLine.id ? { ...line, isTyping: false } : line,
-      ),
-    );
-  }
-
-  async function runExchange(userText, responseText, options = {}) {
-    if (isTypingRef.current || isBooting) {
-      return;
-    }
-
-    const { showUserLine = true } = options;
-    const responses = Array.isArray(responseText) ? responseText : [responseText];
-    isTypingRef.current = true;
-    setIsTyping(true);
-
-    if (showUserLine) {
-      addLine(createLine("user", userText));
-    }
-
-    for (const response of responses) {
-      await typeNopeResponse(response);
-      await sleep(130);
-    }
-
-    setIsTyping(false);
-    isTypingRef.current = false;
-
-    window.setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
-  }
-
   async function copyContract(event) {
     event?.preventDefault();
 
-    if (isTypingRef.current || isBooting) {
+    if (isBooting) {
       return;
     }
 
     try {
       await navigator.clipboard.writeText(CONTRACT);
-      await runExchange("copied contract", "contract copied. responsibility not included. NOPE.");
+      addInstantNopeLine("contract copied. responsibility not included. NOPE.");
     } catch {
-      await runExchange("copied contract", `clipboard said no. manual contract: ${CONTRACT}`);
+      addInstantNopeLine(`clipboard said no. manual contract: ${CONTRACT}`);
     }
-  }
-
-  async function submitQuestion(event) {
-    event.preventDefault();
-
-    if (isTypingRef.current || isBooting) {
-      return;
-    }
-
-    const cleanInput = input.trim();
-    setInput("");
-
-    if (!cleanInput) {
-      await runExchange("", "air rejected.");
-      return;
-    }
-
-    maybeShowTransmission(0.25);
-    maybeChangeMood(0.35);
-    await runExchange(cleanInput, getReply(cleanInput));
   }
 
   function addInstantNopeLine(text) {
@@ -720,6 +571,17 @@ export default function App() {
     const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
     const discoveryResponse = getDiscoveryMessage(discoveredEntity, alreadyCollected);
     const showDiscoveryOverlay = !alreadyCollected || Math.random() < 0.1;
+    const showFullScreenBreach =
+      discoveredEntity.type === "gif"
+        ? !alreadyCollected || Math.random() < 0.25
+        : alreadyCollected
+          ? Math.random() < 0.03
+          : Math.random() < 0.2;
+    const signalType = alreadyCollected
+      ? "duplicate"
+      : discoveredEntity.type === "gif"
+        ? "forbidden"
+        : "new";
     const nextCount = nopeCountRef.current + 1;
     const nextRank = getRank(nextCount);
     const rankChanged = nextRank !== getRank(nopeCountRef.current);
@@ -728,7 +590,11 @@ export default function App() {
     setNopeCount(nextCount);
 
     if (showDiscoveryOverlay) {
-      showTransmission(discoveredEntity);
+      showTransmission(discoveredEntity, signalType);
+    }
+
+    if (showFullScreenBreach) {
+      showBreachFlash(discoveredEntity);
     }
 
     setLatestDiscoveryId(discoveredEntity.id);
@@ -765,9 +631,122 @@ export default function App() {
     }
   }
 
+  function getStickerEntities() {
+    if (stickerTab === "normal") {
+      return normalNopeEntities;
+    }
+
+    if (stickerTab === "gif") {
+      return forbiddenNopeGifs;
+    }
+
+    return allNopeEntities;
+  }
+
+  function getVisibleStickerEntities() {
+    return getStickerEntities().filter((entity) => {
+      const isCollected = collectedIds.includes(entity.id);
+
+      if (stickerFilter === "found") {
+        return isCollected;
+      }
+
+      if (stickerFilter === "missing") {
+        return !isCollected;
+      }
+
+      return true;
+    });
+  }
+
+  function renderStickerCard(entity, index) {
+    const isCollected = collectedIds.includes(entity.id);
+    const isGif = entity.type === "gif";
+
+    return (
+      <article
+        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""}`}
+        key={entity.id}
+        style={{ "--sticker-tilt": `${((index % 5) - 2) * 1.25}deg` }}
+      >
+        {isCollected ? (
+          <>
+            <div className="sticker-media">
+              <img
+                src={entity.image}
+                alt={entity.name}
+                onError={(event) => {
+                  event.currentTarget.classList.add("image-missing");
+                }}
+              />
+            </div>
+            <strong>{entity.name}</strong>
+            <span>{isGif ? "FORBIDDEN LOOP" : "COLLECTED"}</span>
+            <p>{entity.caption}</p>
+            <em>value: zero</em>
+          </>
+        ) : (
+          <>
+            <div className="sticker-locked-mark">???</div>
+            <strong>{isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
+            <span>LOCKED TRASH</span>
+            <p>{isGif ? "probability: disrespectful" : "press nope harder"}</p>
+          </>
+        )}
+      </article>
+    );
+  }
+
+  if (showIntro) {
+    const introLines =
+      introChoice === "red"
+        ? ["> red pill selected", "> truth denied", "> booting NOPE OS..."]
+        : introChoice === "blue"
+          ? ["> blue pill selected", "> delusion denied", "> booting NOPE OS..."]
+          : [];
+
+    return (
+      <main className={`intro-screen ${isIntroExiting ? "intro-exit" : ""}`}>
+        <div className="matrix-rain" aria-hidden="true">
+          {Array.from({ length: 44 }, (_, index) => (
+            <span key={index}>NOPE 0101 TON ??? NOTPEPE NOPE 404 REJECT NON NOPE $NOPE 0X00</span>
+          ))}
+        </div>
+
+        <section className="intro-window" aria-label="NOPE OS intro">
+          <img src="/images/bluepillnope.jpg" alt="Blue pill NOPE" />
+
+          {introChoice ? (
+            <div className="intro-terminal">
+              {introLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : (
+            <div className="pill-buttons">
+              <button className="red-pill" type="button" onClick={() => enterNopeOs("red")}>
+                [ RED PILL ]
+              </button>
+              <button className="blue-pill" type="button" onClick={() => enterNopeOs("blue")}>
+                [ BLUE PILL ]
+              </button>
+            </div>
+          )}
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className={`nope-page ${isGlitching ? "is-glitching" : ""}`}>
       <div className="crt-noise" />
+      <header className="os-header" aria-label="NOPE OS">
+        <strong>NOPE OS 0.0.1</strong>
+        <span>press nope. collect garbage. close nothing.</span>
+        <a href="#" onClick={replayIntro}>
+          re-enter matrix
+        </a>
+      </header>
 
       <section className="machine-layout" aria-label="NOPE Machine">
         <section className="terminal-shell" aria-label="NOPE Machine terminal">
@@ -775,7 +754,7 @@ export default function App() {
             <span className="terminal-light red" />
             <span className="terminal-light yellow" />
             <span className="terminal-light green" />
-            <p>NOPE_MACHINE.exe</p>
+            <p>NOPE MACHINE.exe</p>
           </div>
 
           <div className="terminal-screen">
@@ -804,37 +783,7 @@ export default function App() {
               ))}
             </div>
 
-            <button
-              className="copy-button"
-              type="button"
-              onClick={copyContract}
-              disabled={isInputBusy}
-            >
-              copy contract
-            </button>
-
-            <p className="terminal-input-note">terminal input is optional and probably useless</p>
-            <form className="ask-row" onSubmit={submitQuestion}>
-              <span>&gt;</span>
-              <input
-                ref={inputRef}
-                aria-label="Ask the NOPE Machine anything"
-                autoComplete="off"
-                disabled={isInputBusy}
-                placeholder={
-                  isBooting
-                    ? "booting nope machine..."
-                    : isTyping
-                      ? "machine is refusing..."
-                      : "optional: type something stupid..."
-                }
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-              />
-              <button type="submit" disabled={isInputBusy}>
-                ASK
-              </button>
-            </form>
+            <div className="event-feed-footer">NOPE OS event feed // input port sealed</div>
           </div>
 
           {entityTransmission && (
@@ -843,8 +792,23 @@ export default function App() {
               aria-label="NOPE entity transmission"
             >
               <p className="panel-label">
-                {entityTransmission.type === "gif" ? "FORBIDDEN GIF SIGNAL" : "NOPE SIGNAL"}
+                {entityTransmission.signalType === "forbidden"
+                  ? "corrupted-nope-signal.gif"
+                  : entityTransmission.signalType === "new"
+                    ? "new-trash-found.jpg"
+                    : entityTransmission.signalType === "duplicate"
+                      ? "duplicate-trash.tmp"
+                      : "corrupted-nope-signal.gif"}
               </p>
+              <span className="signal-status">
+                {entityTransmission.signalType === "forbidden"
+                  ? "FORBIDDEN LOOP FOUND"
+                  : entityTransmission.signalType === "new"
+                    ? "NEW TRASH ACQUIRED"
+                    : entityTransmission.signalType === "duplicate"
+                      ? "DUPLICATE TRASH"
+                      : "NOPE SIGNAL"}
+              </span>
               <div className="transmission-media">
                 <img
                   src={entityTransmission.image}
@@ -856,6 +820,7 @@ export default function App() {
               </div>
               <h2>{entityTransmission.name}</h2>
               <p>{entityTransmission.caption}</p>
+              <b>value: zero</b>
             </aside>
           )}
         </section>
@@ -864,7 +829,8 @@ export default function App() {
           className={`rank-card ${rankUpgrade ? "rank-upgraded" : ""}`}
           aria-label="Current NOPE rank"
         >
-          <p>{rankUpgrade ? "RANK UPGRADE DETECTED" : "CURRENT RANK"}</p>
+          <p>{rankUpgrade ? "rank-upgrade.alert" : "rank.badge"}</p>
+          <small>{rankUpgrade ? "RANK UPGRADE DETECTED" : "RANK"}</small>
           <strong>
             [ {isBooting ? "UNVERIFIED" : (rankUpgrade ?? currentRank).toUpperCase()} ]
           </strong>
@@ -878,23 +844,25 @@ export default function App() {
           className={`nopedex-card ${nopedexPulse ? `nopedex-${nopedexPulse}` : ""}`}
           aria-label="NOPEDEX collection progress"
         >
-          <p>
+          <p>nopedex.dat</p>
+          <small className="nopedex-alert">
             {nopedexPulse === "gif"
               ? "FORBIDDEN GIF BREACH"
               : nopedexPulse === "normal"
                 ? "NEW TRASH ACQUIRED"
                 : "NOPEDEX"}
-          </p>
+          </small>
           <span>
-            worthless finds: {normalCollectedCount.toString().padStart(3, "0")} / {NORMAL_TOTAL}
+            trash: {normalCollectedCount.toString().padStart(3, "0")} / {NORMAL_TOTAL}
           </span>
           <span>
-            forbidden loops: {gifCollectedCount.toString().padStart(3, "0")} / {GIF_TOTAL}
+            loops: {gifCollectedCount.toString().padStart(3, "0")} / {GIF_TOTAL}
           </span>
-          <span>portfolio impact: none</span>
-          <span>find all {NORMAL_TOTAL} worthless nopes + {GIF_TOTAL} forbidden loops</span>
-          <small>latest discovery:</small>
+          <span>latest:</span>
           <strong>{latestDiscovery ? latestDiscovery.name : "none. press the stupid button."}</strong>
+          <button className="open-nopedex-button" type="button" onClick={() => setIsStickerBookOpen(true)}>
+            [ OPEN STICKER BOOK ]
+          </button>
         </aside>
 
       </section>
@@ -906,6 +874,14 @@ export default function App() {
         </button>
         <div className="status-panel">
           <span>nopes submitted: {formattedCount}</span>
+        </div>
+        <div className="main-actions">
+          <button type="button" onClick={() => setIsStickerBookOpen(true)}>
+            [ OPEN STICKER BOOK ]
+          </button>
+          <button type="button" onClick={copyContract} disabled={isBooting}>
+            [ COPY CONTRACT ]
+          </button>
         </div>
       </section>
 
@@ -920,9 +896,88 @@ export default function App() {
           Buy? lol
         </a>
         <a href="#" onClick={copyContract}>
-          Copy contract
+          contract
+        </a>
+        <a href="#" onClick={replayIntro}>
+          take another pointless pill
         </a>
       </footer>
+
+      {breachFlash && (
+        <section className="breach-overlay" aria-label="Forbidden loop breach">
+          <div className="breach-card">
+            <p>FORBIDDEN LOOP BREACH</p>
+            <img
+              src={breachFlash.image}
+              alt={breachFlash.name}
+              onError={(event) => {
+                event.currentTarget.classList.add("image-missing");
+              }}
+            />
+            <strong>{breachFlash.name}</strong>
+            <span>value gained: zero</span>
+          </div>
+        </section>
+      )}
+
+      {isStickerBookOpen && (
+        <section className="stickerbook-overlay" aria-label="NOPEDEX sticker book">
+          <div className="stickerbook-window">
+            <div className="stickerbook-titlebar">
+              <div>
+                <strong>NOPEDEX STICKER BOOK</strong>
+                <span>collect them all. achieve nothing.</span>
+              </div>
+              <button type="button" onClick={() => setIsStickerBookOpen(false)}>
+                [ CLOSE NOPEDEX ]
+              </button>
+            </div>
+
+            <div className="stickerbook-summary">
+              <span>worthless finds: {normalCollectedCount} / {NORMAL_TOTAL}</span>
+              <span>forbidden loops: {gifCollectedCount} / {GIF_TOTAL}</span>
+              <span>total trash: {totalCollectedCount} / {NORMAL_TOTAL + GIF_TOTAL}</span>
+              <span>portfolio impact: none</span>
+            </div>
+
+            <div className="stickerbook-controls" aria-label="NOPEDEX view controls">
+              {[
+                ["all", "ALL TRASH"],
+                ["normal", "WORTHLESS NOPES"],
+                ["gif", "FORBIDDEN LOOPS"],
+              ].map(([value, label]) => (
+                <button
+                  className={stickerTab === value ? "active" : ""}
+                  key={value}
+                  type="button"
+                  onClick={() => setStickerTab(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="stickerbook-controls filter-controls" aria-label="NOPEDEX filters">
+              {[
+                ["all", "ALL"],
+                ["found", "FOUND"],
+                ["missing", "MISSING"],
+              ].map(([value, label]) => (
+                <button
+                  className={stickerFilter === value ? "active" : ""}
+                  key={value}
+                  type="button"
+                  onClick={() => setStickerFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="sticker-grid">{getVisibleStickerEntities().map(renderStickerCard)}</div>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

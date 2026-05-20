@@ -188,6 +188,10 @@ export default function App() {
       return null;
     }
 
+    if (window.location.pathname.startsWith("/share/achievement/")) {
+      return null;
+    }
+
     const id = decodeURIComponent(window.location.pathname.replace("/share/", "").split("/")[0]);
     return getNopeEntityById(id) ?? false;
   }, []);
@@ -820,15 +824,15 @@ export default function App() {
   // sticker-specific OG tags and a generated /api/og card image.
   function getShareText(entity) {
     const shareUrl = getStickerShareUrl(entity);
-    const dropText = `drop: ${formatDropChance(entity.dropChance)}`;
+    const oddsText = `odds: ${formatDropChance(entity.dropChance)}`;
 
     if (entity.type === "uber") {
-      return `UBER NOPE FOUND:
+      return `UBER NOPE BREACH:
 ${entity.name}
 
-${dropText}
+${oddsText}
 probability has been insulted.
-value gained: zero.
+value: still zero.
 
 $NOPE
 
@@ -836,11 +840,11 @@ ${shareUrl}`;
     }
 
     if (entity.type === "mythic") {
-      return `MYTHIC WASTE FOUND:
+      return `I pulled a MYTHIC WASTE from the NOPEDEX:
 ${entity.name}
 
-${dropText}
-somehow still worth zero.
+${oddsText}
+value: somehow still zero.
 
 $NOPE
 
@@ -848,24 +852,23 @@ ${shareUrl}`;
     }
 
     if (entity.type === "gif") {
-      return `FORBIDDEN NOPE LOOP DISCOVERED:
+      return `FORBIDDEN LOOP LEAK:
 ${entity.name}
 
-${dropText}
+${oddsText}
 this should not have happened.
-value gained: zero.
+value: animated zero.
 
 $NOPE
 
 ${shareUrl}`;
     }
 
-    return `NOPEDEX discovery:
-${entity.name}
+    return `I pulled ${entity.name} from the NOPEDEX.
 
 ${entity.rarityLabel}
-${dropText}
-value gained: zero.
+${oddsText}
+value: emotionally zero.
 
 $NOPE
 
@@ -901,6 +904,56 @@ ${shareUrl}`;
     }
   }
 
+  function getAchievementShareUrl(achievement) {
+    const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return `${siteUrl}/share/achievement/${encodeURIComponent(achievement.id)}`;
+  }
+
+  function getAchievementShareText(achievement) {
+    const shareUrl = getAchievementShareUrl(achievement);
+
+    return `I unlocked a pointless NOPE achievement:
+
+${achievement.name}
+
+${achievement.description}
+reward: ${achievement.reward}
+value gained: zero.
+
+$NOPE
+
+${shareUrl}`;
+  }
+
+  function openAchievementShareWindow(achievement, destination) {
+    const shareText = getAchievementShareText(achievement);
+    const achievementShareUrl = getAchievementShareUrl(achievement);
+    const shareUrl =
+      destination === "telegram"
+        ? `https://t.me/share/url?url=${encodeURIComponent(achievementShareUrl)}&text=${encodeURIComponent(shareText)}`
+        : `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(achievementShareUrl)}`;
+
+    const nextStats = updateAchievementStats({ shareCount: 1 });
+    queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+    window.open(shareUrl, "_blank", "noopener,noreferrer");
+  }
+
+  async function copyAchievementShareText(achievement) {
+    try {
+      await navigator.clipboard.writeText(getAchievementShareText(achievement));
+      const nextStats = updateAchievementStats({ shareCopyCount: 1, shareCount: 1 });
+      queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+      setCopiedShareId(`achievement:${achievement.id}`);
+      window.clearTimeout(shareCopyTimerRef.current);
+      shareCopyTimerRef.current = window.setTimeout(() => {
+        setCopiedShareId(null);
+      }, 1200);
+      addInstantNopeLine("achievement share copied. reward still missing.");
+    } catch {
+      addInstantNopeLine("achievement refused to copy. impressive failure.");
+    }
+  }
+
   function renderAchievementCard(achievement) {
     const isUnlocked = unlockedAchievements.includes(achievement.id);
 
@@ -913,6 +966,19 @@ ${shareUrl}`;
         <strong>{achievement.name}</strong>
         <p>{achievement.description}</p>
         <em>reward: {achievement.reward}</em>
+        {isUnlocked ? (
+          <div className="sticker-share-row achievement-share-row" aria-label={`Share ${achievement.name}`}>
+            <button type="button" onClick={() => openAchievementShareWindow(achievement, "x")}>
+              X
+            </button>
+            <button type="button" onClick={() => openAchievementShareWindow(achievement, "telegram")}>
+              TG
+            </button>
+            <button type="button" onClick={() => copyAchievementShareText(achievement)}>
+              {copiedShareId === `achievement:${achievement.id}` ? "COPIED" : "COPY"}
+            </button>
+          </div>
+        ) : null}
       </article>
     );
   }
@@ -1012,9 +1078,9 @@ ${shareUrl}`;
             </div>
             <strong>{entity.name}</strong>
             <span>{entity.rarityLabel}</span>
-            <em>drop: {formatDropChance(entity.dropChance)}</em>
+            <em>odds: {formatDropChance(entity.dropChance)}</em>
             <small>{entity.caption}</small>
-            <b>value: zero</b>
+            <b>{entity.type === "gif" ? "value: animated zero" : entity.type === "uber" ? "value: still zero" : "value: emotionally zero"}</b>
             <button type="button" onClick={() => { window.location.href = "/"; }}>
               [ ENTER NOPE MACHINE ]
             </button>

@@ -1,12 +1,8 @@
-import { getNopeEntityById } from "../src/nopeData.js";
+import { getAchievementById } from "../src/nopeData.js";
 
 export const config = {
   runtime: "edge",
 };
-
-function formatDropChance(chance) {
-  return `${Number(chance).toFixed(chance < 1 ? 2 : 1).replace(/\.?0+$/, "")}%`;
-}
 
 function getBaseUrl(req) {
   const protocol = req.headers.get("x-forwarded-proto") || "https";
@@ -24,30 +20,19 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function getStickerValue(entity) {
-  if (entity?.type === "uber") {
-    return "probability: insulted - value: still zero";
-  }
-
-  if (entity?.type === "gif") {
-    return "value: animated zero";
-  }
-
-  return "value: emotionally zero";
-}
-
-function buildShareHtml(req, entity) {
+function buildAchievementHtml(req, achievement) {
   const baseUrl = getBaseUrl(req);
-  const shareUrl = entity ? `${baseUrl}/share/${encodeURIComponent(entity.id)}` : `${baseUrl}/`;
-  const ogImageUrl = `${baseUrl}/api/og?id=${encodeURIComponent(entity?.id || "missing")}`;
-  const title = entity ? `${entity.name} - NOPEDEX` : "NOPE not found - NOPEDEX";
-  const description = entity
-    ? `${entity.rarityLabel} - odds ${formatDropChance(entity.dropChance)} - ${getStickerValue(entity)}`
-    : "NOPE not found. probably your fault.";
-  const stickerImageUrl = entity ? `${baseUrl}${entity.image}` : `${baseUrl}/images/nopebutton.png`;
+  const shareUrl = achievement
+    ? `${baseUrl}/share/achievement/${encodeURIComponent(achievement.id)}`
+    : `${baseUrl}/`;
+  const ogImageUrl = `${baseUrl}/api/og?achievement=${encodeURIComponent(achievement?.id || "missing")}`;
+  const title = achievement
+    ? `${achievement.name} - NOPE Achievement`
+    : "NOPE achievement not found";
+  const description = achievement
+    ? `${achievement.description} - reward: ${achievement.reward} - value gained: zero`
+    : "NOPE achievement not found. probably your fault.";
 
-  // Social platforms cache previews aggressively. When testing a changed card,
-  // try a different sticker or add a temporary query string after deployment.
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -83,24 +68,27 @@ function buildShareHtml(req, entity) {
         place-items: center;
         padding: 22px;
         background:
-          linear-gradient(rgba(57, 255, 20, 0.06) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0, 152, 234, 0.06) 1px, transparent 1px),
+          repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 8px),
+          linear-gradient(90deg, rgba(0, 152, 234, 0.12), transparent 34%, rgba(255, 43, 214, 0.1)),
           #020806;
-        background-size: 34px 34px;
         color: #d8ffe2;
         font-family: "Courier New", monospace;
       }
 
       .card {
-        width: min(94vw, 620px);
-        padding: 14px;
-        border: 4px solid var(--ton-blue);
+        width: min(94vw, 680px);
+        padding: 16px;
+        border: 4px solid var(--pepe-green);
         background: #07120d;
-        box-shadow: 0 0 0 4px #00110a, 0 0 32px rgba(57, 255, 20, 0.26);
+        box-shadow:
+          0 0 0 4px #00110a,
+          -7px 0 0 var(--glitch-pink),
+          7px 0 0 var(--ton-blue),
+          0 0 38px rgba(57, 255, 20, 0.28);
       }
 
       .titlebar {
-        margin: -14px -14px 14px;
+        margin: -16px -16px 16px;
         padding: 10px 12px;
         background: var(--ton-blue);
         color: #00110a;
@@ -111,39 +99,22 @@ function buildShareHtml(req, entity) {
         gap: 12px;
       }
 
-      .media {
-        aspect-ratio: 1 / 1;
-        display: grid;
-        place-items: center;
-        background: #020806;
-        border: 3px solid var(--pepe-green);
-        margin-bottom: 12px;
-        overflow: hidden;
-      }
-
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: block;
-      }
-
-      h1 {
-        margin: 8px 0;
-        font-size: clamp(2rem, 8vw, 4.2rem);
-        line-height: 0.95;
-        color: #fff;
-        text-shadow: 3px 0 var(--glitch-pink), -3px 0 var(--ton-blue);
-      }
-
-      .badge {
+      .stamp {
         display: inline-block;
-        margin: 2px 0 8px;
-        padding: 6px 9px;
+        padding: 7px 10px;
         border: 2px solid var(--pepe-green);
         color: var(--pepe-green);
         background: #00110a;
         font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 12px 0;
+        font-size: clamp(2rem, 8vw, 4.4rem);
+        line-height: 0.95;
+        color: #fff;
+        text-shadow: 3px 0 var(--glitch-pink), -3px 0 var(--ton-blue);
       }
 
       p { line-height: 1.35; }
@@ -163,17 +134,18 @@ function buildShareHtml(req, entity) {
   </head>
   <body>
     <main class="card">
-      <div class="titlebar"><span>NOPEDEX // GARBAGE INDEX</span><span>VALUE: ZERO</span></div>
+      <div class="titlebar"><span>NOPE OS // REWARD SYSTEM</span><span>VALUE: ZERO</span></div>
       ${
-        entity
-          ? `<div class="media"><img src="${escapeHtml(stickerImageUrl)}" alt="${escapeHtml(entity.name)}" /></div>
-      <h1>${escapeHtml(entity.name)}</h1>
-      <span class="badge">${escapeHtml(entity.rarityLabel)} - odds ${escapeHtml(formatDropChance(entity.dropChance))}</span>
-      <p>${escapeHtml(entity.caption)}</p>
-      <p>${escapeHtml(getStickerValue(entity))}</p>`
-          : `<h1>NOPE not found.</h1>
+        achievement
+          ? `<span class="stamp">ACHIEVEMENT UNLOCKED</span>
+      <h1>${escapeHtml(achievement.name)}</h1>
+      <p>${escapeHtml(achievement.description)}</p>
+      <p>reward: ${escapeHtml(achievement.reward)}</p>
+      <p>value gained: zero</p>`
+          : `<span class="stamp">ACHIEVEMENT MISSING</span>
+      <h1>NOPE achievement not found.</h1>
       <p>probably your fault.</p>
-      <p>value: still zero</p>`
+      <p>value gained: zero</p>`
       }
       <a href="/">ENTER NOPE MACHINE</a>
     </main>
@@ -183,9 +155,9 @@ function buildShareHtml(req, entity) {
 
 export default function handler(req) {
   const id = new URL(req.url).searchParams.get("id");
-  const entity = getNopeEntityById(id);
+  const achievement = getAchievementById(id);
 
-  return new Response(buildShareHtml(req, entity), {
+  return new Response(buildAchievementHtml(req, achievement), {
     headers: {
       "cache-control": "public, max-age=0, s-maxage=86400",
       "content-type": "text/html; charset=utf-8",

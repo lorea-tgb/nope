@@ -460,3 +460,7 @@ export const uberNopeEntities = uberNopeRelics;
 export function getNopeEntityById(id) {
   return allNopeEntities.find((entity) => entity.id === id);
 }
+
+export function getAchievementById(id) {
+  return achievements.find((achievement) => achievement.id === id);
+}

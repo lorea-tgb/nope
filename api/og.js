@@ -1,6 +1,6 @@
 import React from "react";
 import { ImageResponse } from "@vercel/og";
-import { getNopeEntityById } from "../src/nopeData.js";
+import { getAchievementById, getNopeEntityById } from "../src/nopeData.js";
 
 export const config = {
   runtime: "edge",
@@ -27,19 +27,33 @@ function getDiscoveryTitle(entity) {
     return "NOPE NOT FOUND";
   }
 
-  if (entity.type === "uber") {
-    return "UBER NOPE FOUND";
+  const eventLabels = {
+    common: "TRASH RECOVERED",
+    uncommon: "QUESTIONABLE FIND",
+    rare: "REGRET DETECTED",
+    epic: "FAILURE UNLOCKED",
+    mythic: "MYTHIC WASTE FOUND",
+    uber: "UBER NOPE BREACH",
+    forbidden: "FORBIDDEN LOOP LEAK",
+  };
+
+  return eventLabels[entity.rarity] || "NOPEDEX DISCOVERY";
+}
+
+function getStickerValueLines(entity) {
+  if (!entity) {
+    return ["value: still zero"];
   }
 
-  if (entity.type === "mythic") {
-    return "MYTHIC WASTE FOUND";
+  if (entity.type === "uber") {
+    return ["probability: insulted", "value: still zero"];
   }
 
   if (entity.type === "gif") {
-    return "FORBIDDEN LOOP DISCOVERED";
+    return ["value: animated zero"];
   }
 
-  return "NOPEDEX DISCOVERY";
+  return ["value: emotionally zero"];
 }
 
 function getRarityAccent(entity) {
@@ -65,6 +79,7 @@ function createCard(req, entity) {
   const imageUrl = entity ? `${baseUrl}${entity.image}` : `${baseUrl}/images/nopebutton.png`;
   const accent = getRarityAccent(entity);
   const title = getDiscoveryTitle(entity);
+  const valueLines = getStickerValueLines(entity);
 
   return React.createElement(
     "div",
@@ -125,7 +140,7 @@ function createCard(req, entity) {
             letterSpacing: 0,
           },
         },
-        React.createElement("span", null, "NOPEDEX / $NOPE"),
+        React.createElement("span", null, "NOPEDEX // GARBAGE INDEX"),
         React.createElement("span", { style: { color: "#39ff14" } }, "VALUE: ZERO")
       ),
       React.createElement(
@@ -235,7 +250,7 @@ function createCard(req, entity) {
                   fontSize: 25,
                 },
               },
-              entity ? `drop: ${formatDropChance(entity.dropChance)}` : "drop: nope"
+              entity ? `odds: ${formatDropChance(entity.dropChance)}` : "odds: nope"
             )
           ),
           React.createElement(
@@ -258,9 +273,7 @@ function createCard(req, entity) {
                 fontSize: 28,
               },
             },
-            entity?.type === "uber"
-              ? "probability has been insulted."
-              : "value gained: zero."
+            valueLines.join(" // ")
           )
         )
       )
@@ -268,8 +281,161 @@ function createCard(req, entity) {
   );
 }
 
+function createAchievementCard(achievement) {
+  return React.createElement(
+    "div",
+    {
+      style: {
+        width: "100%",
+        height: "100%",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#020806",
+        backgroundImage:
+          "linear-gradient(90deg, rgba(0,152,234,0.14) 1px, transparent 1px), linear-gradient(0deg, rgba(57,255,20,0.1) 1px, transparent 1px)",
+        backgroundSize: "38px 38px, 38px 38px",
+        fontFamily: "Arial Black, Arial, sans-serif",
+        color: "#d8ffe2",
+        padding: 38,
+      },
+    },
+    React.createElement(
+      "div",
+      {
+        style: {
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          border: "8px solid #39ff14",
+          boxShadow: "0 0 0 6px #001a12, -10px 0 0 #ff2bd6, 10px 0 0 #0098ea",
+          backgroundColor: "#07120d",
+          position: "relative",
+          overflow: "hidden",
+        },
+      },
+      React.createElement("div", {
+        style: {
+          position: "absolute",
+          inset: 0,
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)",
+          backgroundSize: "100% 8px",
+          opacity: 0.42,
+        },
+      }),
+      React.createElement(
+        "div",
+        {
+          style: {
+            height: 76,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            backgroundColor: "#0098ea",
+            color: "#00110a",
+            borderBottom: "6px solid #00110a",
+            padding: "0 30px",
+            fontSize: 31,
+          },
+        },
+        React.createElement("span", null, "NOPE OS // REWARD SYSTEM"),
+        React.createElement("span", { style: { color: "#39ff14" } }, "VALUE: ZERO")
+      ),
+      React.createElement(
+        "div",
+        {
+          style: {
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            padding: 46,
+            position: "relative",
+          },
+        },
+        React.createElement(
+          "div",
+          {
+            style: {
+              alignSelf: "flex-start",
+              backgroundColor: "#00110a",
+              color: "#39ff14",
+              border: "4px solid #39ff14",
+              padding: "9px 15px",
+              fontSize: 28,
+              marginBottom: 24,
+              boxShadow: "4px 4px 0 #ff2bd6",
+            },
+          },
+          "ACHIEVEMENT UNLOCKED"
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              color: "#ffffff",
+              fontSize: achievement && achievement.name.length > 20 ? 58 : 70,
+              lineHeight: 0.95,
+              textShadow: "5px 5px 0 #00110a, -3px 0 0 #ff2bd6",
+              marginBottom: 22,
+              maxWidth: 960,
+            },
+          },
+          achievement ? achievement.name : "ACHIEVEMENT NOT FOUND"
+        ),
+        React.createElement(
+          "p",
+          {
+            style: {
+              color: "#d8ffe2",
+              fontSize: 34,
+              lineHeight: 1.15,
+              margin: "0 0 18px",
+            },
+          },
+          achievement ? achievement.description : "probably your fault."
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              color: "#9cff8f",
+              fontSize: 30,
+            },
+          },
+          achievement
+            ? `reward: ${achievement.reward} // value gained: zero`
+            : "reward: nothing // value gained: zero"
+        ),
+        React.createElement(
+          "div",
+          {
+            style: {
+              color: "#0098ea",
+              fontSize: 27,
+              marginTop: 20,
+            },
+          },
+          "$NOPE - press nope. collect garbage."
+        )
+      )
+    )
+  );
+}
+
 export default function handler(req) {
-  const id = new URL(req.url).searchParams.get("id");
+  const url = new URL(req.url);
+  const achievementId = url.searchParams.get("achievement");
+
+  if (achievementId !== null) {
+    const achievement = getAchievementById(achievementId);
+
+    return new ImageResponse(createAchievementCard(achievement), CARD_SIZE);
+  }
+
+  const id = url.searchParams.get("id");
   const entity = getNopeEntityById(id);
 
   return new ImageResponse(createCard(req, entity), CARD_SIZE);

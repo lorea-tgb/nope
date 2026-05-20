@@ -2031,6 +2031,14 @@ button {
   background: #8fa096;
 }
 
+.achievement-share-row {
+  margin-top: 3px;
+}
+
+.achievement-card.achievement-unlocked .achievement-share-row {
+  width: 100%;
+}
+
 .stickerbook-controls {
   display: flex;
   gap: 6px;

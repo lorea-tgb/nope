@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/share/achievement/:id",
+      "destination": "/api/shareAchievement?id=:id"
+    },
+    {
       "source": "/share/:id",
       "destination": "/api/share?id=:id"
     },

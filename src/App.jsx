@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
+import { supabase } from "./lib/supabaseClient";
 import {
   CONTRACT,
   GIF_TOTAL,
@@ -199,6 +200,8 @@ export default function App() {
   const [stickerFilter, setStickerFilter] = useState("all");
   const [copiedShareId, setCopiedShareId] = useState(null);
   const [buttonText, setButtonText] = useState("NOPE");
+  const [globalNopeCount, setGlobalNopeCount] = useState(null);
+  const [isGlobalCounterAvailable, setIsGlobalCounterAvailable] = useState(Boolean(supabase));
   const glitchTimerRef = useRef(null);
   const discoveryTimerRef = useRef(null);
   const breachTimerRef = useRef(null);
@@ -216,11 +219,23 @@ export default function App() {
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
   const bootRunRef = useRef(0);
+  const globalNopeCountRef = useRef(globalNopeCount);
+  const globalSyncMessageRef = useRef(false);
+  const globalFlushInProgressRef = useRef(false);
+  const globalFlushIntervalRef = useRef(null);
+  const pendingGlobalNopesRef = useRef(0);
 
   const formattedCount = useMemo(
     () => nopeCount.toString().padStart(6, "0"),
     [nopeCount],
   );
+  const formattedGlobalCount = useMemo(() => {
+    if (!isGlobalCounterAvailable || globalNopeCount === null) {
+      return "offline";
+    }
+
+    return globalNopeCount.toString().padStart(9, "0");
+  }, [globalNopeCount, isGlobalCounterAvailable]);
   const latestDiscovery = useMemo(
     () => allNopeEntities.find((entity) => entity.id === latestDiscoveryId),
     [latestDiscoveryId],
@@ -290,6 +305,112 @@ export default function App() {
       window.clearTimeout(ambientTimerRef.current);
       window.clearTimeout(ambientClearTimerRef.current);
       window.clearTimeout(nopeIdleTimerRef.current);
+      window.clearInterval(globalFlushIntervalRef.current);
+    };
+  }, []);
+
+  async function flushGlobalNopes() {
+    if (!supabase || globalFlushInProgressRef.current || pendingGlobalNopesRef.current <= 0) {
+      return;
+    }
+
+    const amountToAdd = pendingGlobalNopesRef.current;
+    globalFlushInProgressRef.current = true;
+
+    const { data, error } = await supabase.rpc("increment_global_nopes", {
+      amount_to_add: amountToAdd,
+    });
+
+    globalFlushInProgressRef.current = false;
+
+    if (error) {
+      setIsGlobalCounterAvailable(false);
+      return;
+    }
+
+    pendingGlobalNopesRef.current = Math.max(0, pendingGlobalNopesRef.current - amountToAdd);
+    const nextGlobalCount = Number(data);
+
+    if (Number.isFinite(nextGlobalCount)) {
+      const optimisticGlobalCount = nextGlobalCount + pendingGlobalNopesRef.current;
+      globalNopeCountRef.current = optimisticGlobalCount;
+      setGlobalNopeCount(optimisticGlobalCount);
+      setIsGlobalCounterAvailable(true);
+    }
+  }
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadGlobalNopes() {
+      function addGlobalStatusLine(text) {
+        const id = lineIdRef.current;
+        lineIdRef.current += 1;
+        setLines((currentLines) => [
+          ...currentLines,
+          { id, important: false, isTyping: false, speaker: "nope", text },
+        ].slice(-80));
+      }
+
+      if (!supabase) {
+        setIsGlobalCounterAvailable(false);
+        return;
+      }
+
+      const { data, error } = await supabase.rpc("get_global_nopes");
+
+      if (isCancelled) {
+        return;
+      }
+
+      if (error) {
+        setIsGlobalCounterAvailable(false);
+
+        if (!globalSyncMessageRef.current) {
+          globalSyncMessageRef.current = true;
+          addGlobalStatusLine("global regret temporarily unavailable.");
+        }
+
+        return;
+      }
+
+      const nextGlobalCount = Number(data);
+
+      if (Number.isFinite(nextGlobalCount)) {
+        globalNopeCountRef.current = nextGlobalCount;
+        setGlobalNopeCount(nextGlobalCount);
+        setIsGlobalCounterAvailable(true);
+      }
+
+      if (!globalSyncMessageRef.current) {
+        globalSyncMessageRef.current = true;
+        addGlobalStatusLine("global regret synced.");
+      }
+    }
+
+    loadGlobalNopes();
+    globalFlushIntervalRef.current = window.setInterval(() => {
+      flushGlobalNopes();
+    }, 30000);
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        flushGlobalNopes();
+      }
+    }
+
+    function handleBeforeUnload() {
+      flushGlobalNopes();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      isCancelled = true;
+      window.clearInterval(globalFlushIntervalRef.current);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
 
@@ -792,6 +913,14 @@ export default function App() {
 
     nopeCountRef.current = nextCount;
     setNopeCount(nextCount);
+    pendingGlobalNopesRef.current += 1;
+
+    if (globalNopeCountRef.current !== null) {
+      const optimisticGlobalCount = globalNopeCountRef.current + 1;
+      globalNopeCountRef.current = optimisticGlobalCount;
+      setGlobalNopeCount(optimisticGlobalCount);
+      setIsGlobalCounterAvailable(true);
+    }
 
     if (discoveredEntity) {
       const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
@@ -1351,7 +1480,8 @@ ${shareUrl}`;
           {isBooting && <span>BOOTING...</span>}
         </button>
         <div className="status-panel">
-          <span>nopes: {formattedCount}</span>
+          <span>your regret: {formattedCount}</span>
+          <span>global regret: {formattedGlobalCount}</span>
           <span>
             garbage: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL} · loops: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL} · mythic: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")} · uber: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")} · achievements: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}
           </span>

@@ -1403,7 +1403,12 @@ button {
   font-weight: 900;
 }
 
-.status-panel span:nth-child(3) {
+.status-panel span:nth-child(2) {
+  color: var(--pepe-green);
+  font-weight: 900;
+}
+
+.status-panel span:last-child {
   color: rgba(216, 255, 226, 0.72);
 }
 

@@ -11,17 +11,36 @@ const STORAGE_KEYS = {
   unlockedAchievements: "nopeMachine.unlockedAchievements",
 };
 
-const NORMAL_TOTAL = 137;
-const GIF_TOTAL = 20;
-const MYTHIC_TOTAL = 2;
+const UBER_IDS = [
+  "znope",
+  "speednope",
+  "00nope",
+  "matrixnope",
+  "nopeorno",
+  "nopeornothing",
+  "godteirnope",
+  "godnope",
+  "sketchnope",
+];
+const MYTHIC_IDS = [
+  "robo3nope",
+  "bnwnope",
+  "russiannope",
+  "redhoodnope",
+  "ricknope",
+  "nopeorno2",
+  "hackernope",
+  "matrix2nope",
+];
 
 const rarityLabels = {
-  common: "COMMON TRASH",
-  uncommon: "UNCOMMON RUBBISH",
-  rare: "RARE MISTAKE",
+  common: "COMMON GARBAGE",
+  uncommon: "UNCOMMON TRASH",
+  rare: "RARE REGRET",
   epic: "EPIC FAILURE",
   forbidden: "FORBIDDEN LOOP",
-  mythic: "MYTHIC RELIC",
+  mythic: "MYTHIC WASTE",
+  uber: "UBER NOPE",
 };
 
 const defaultAchievementStats = {
@@ -174,6 +193,22 @@ const normalNopeEntities = [
   { id: "wizardnope", name: "WIZARD NOPE", image: "/images/wizardnope.jpg", type: "image", caption: "casts deny" },
   { id: "wolfnope", name: "WOLF NOPE", image: "/images/wolfnope.jpg", type: "image", caption: "howling at nothing" },
   { id: "yaghtnope", name: "YAGHT NOPE", image: "/images/yaghtnope.jpg", type: "image", caption: "misspelled yacht, real regret" },
+  { id: "castlenope", name: "CASTLE NOPE", image: "/images/castlenope.jpg", type: "image", caption: "royal garbage recovered" },
+  { id: "diamondcoatnope", name: "DIAMOND COAT NOPE", image: "/images/diamondcoatnope.jpg", type: "image", caption: "dripped out and still worthless" },
+  { id: "dinonope", name: "DINO NOPE", image: "/images/dinonope.jpg", type: "image", caption: "prehistoric disappointment" },
+  { id: "dudenope", name: "DUDE NOPE", image: "/images/dudenope.jpg", type: "image", caption: "the dude refuses" },
+  { id: "godnope", name: "GOD NOPE", image: "/images/godnope.jpg", type: "image", caption: "holy rejection protocol" },
+  { id: "godteirnope", name: "GOD TEIR NOPE", image: "/images/godteirnope.jpg", type: "image", caption: "misspelled divinity detected" },
+  { id: "hackernope", name: "HACKER NOPE", image: "/images/hackernope.jpg", type: "image", caption: "mainframe access denied" },
+  { id: "holdcatnope", name: "HOLD CAT NOPE", image: "/images/holdcatnope.jpg", type: "image", caption: "cat held. hope dropped" },
+  { id: "matrix2nope", name: "MATRIX 2 NOPE", image: "/images/matrix2nope.jpg", type: "image", caption: "second matrix, same refusal" },
+  { id: "mushnope", name: "MUSH NOPE", image: "/images/mushnope.jpg", type: "image", caption: "sports utility denied" },
+  { id: "neednope", name: "NEED NOPE", image: "/images/neednope.jpg", type: "image", caption: "you need nope" },
+  { id: "nopeorno2", name: "NOPE OR NO 2", image: "/images/nopeorno2.jpg", type: "image", caption: "the sequel also said no" },
+  { id: "runmatrixnope", name: "RUN MATRIX NOPE", image: "/images/runmatrixnope.jpg", type: "image", caption: "running from reality" },
+  { id: "sketchnope", name: "SKETCH NOPE", image: "/images/sketchnope.jpg", type: "image", caption: "prototype of pure refusal" },
+  { id: "smashnope", name: "SMASH NOPE", image: "/images/smashnope.jpg", type: "image", caption: "smashing expectations" },
+  { id: "stopnope", name: "STOP NOPE", image: "/images/stopnope.jpg", type: "image", caption: "stop means nope" },
   { id: "znope", name: "Z NOPE", image: "/images/znope.jpg", type: "image", caption: "final alphabet refusal" },
 ];
 
@@ -200,57 +235,125 @@ const forbiddenNopeGifs = [
   { id: "nope20", name: "FORBIDDEN NOPE 20", image: "/images/nope20.gif", type: "gif", caption: "final forbidden nope" },
 ];
 
-const mythicNopeRelics = [
+const extraUberNopeRelics = [
   {
     id: "nopeorno",
     name: "NOPE OR NO",
     image: "/images/nopeorno.jpg",
-    type: "mythic",
+    type: "uber",
     caption: "both options were rejected",
   },
   {
     id: "nopeornothing",
     name: "NOPE OR NOTHING",
     image: "/images/nopeornothing.jpg",
-    type: "mythic",
+    type: "uber",
     caption: "all or absolutely nope",
   },
 ];
 
-normalNopeEntities.forEach((entity, index) => {
+const dropChanceSpread = {
+  common: [1.8, 1.7, 1.9, 1.6, 2],
+  uncommon: [0.8, 0.7, 0.9, 0.6],
+  rare: [0.35, 0.3, 0.25],
+  epic: [0.15, 0.12, 0.1],
+};
+
+const fixedStandardRarity = {
+  castlenope: { caption: "royal garbage recovered", dropChance: 0.3, rarity: "rare" },
+  chaddernope: { caption: "cheese-based refusal", dropChance: 0.8, rarity: "uncommon" },
+  diamondcoatnope: { caption: "dripped out and still worthless", dropChance: 0.12, rarity: "epic" },
+  dinonope: { caption: "prehistoric disappointment", dropChance: 0.3, rarity: "rare" },
+  dudenope: { caption: "the dude refuses", dropChance: 0.7, rarity: "uncommon" },
+  holdcatnope: { caption: "cat held. hope dropped", dropChance: 0.25, rarity: "rare" },
+  mushnope: { caption: "sports utility denied", dropChance: 1.7, rarity: "common" },
+  neednope: { caption: "you need nope", dropChance: 0.1, rarity: "epic" },
+  runmatrixnope: { caption: "running from reality", dropChance: 0.12, rarity: "epic" },
+  sexynope: { caption: "disguise rejected", dropChance: 0.7, rarity: "uncommon" },
+  smashnope: { caption: "smashing expectations", dropChance: 0.3, rarity: "rare" },
+  stopnope: { caption: "stop means nope", dropChance: 1.6, rarity: "common" },
+};
+
+normalNopeEntities.forEach((entity) => {
+  if (UBER_IDS.includes(entity.id)) {
+    entity.type = "uber";
+    entity.rarity = "uber";
+    entity.rarityLabel = rarityLabels.uber;
+    entity.dropChance = 0.1;
+    return;
+  }
+
+  if (MYTHIC_IDS.includes(entity.id)) {
+    entity.type = "mythic";
+    entity.rarity = "mythic";
+    entity.rarityLabel = rarityLabels.mythic;
+    entity.dropChance = 0.5;
+    return;
+  }
+
+  entity.type = "image";
+});
+
+const standardNopeEntities = normalNopeEntities.filter((entity) => entity.type === "image");
+
+standardNopeEntities.forEach((entity, index) => {
   let rarity = "common";
 
-  if (index >= 130) {
+  if (index >= 124) {
     rarity = "epic";
-  } else if (index >= 114) {
+  } else if (index >= 110) {
     rarity = "rare";
-  } else if (index >= 80) {
+  } else if (index >= 78) {
     rarity = "uncommon";
+  }
+
+  const chances = dropChanceSpread[rarity];
+  const fixedRarity = fixedStandardRarity[entity.id];
+
+  if (fixedRarity) {
+    entity.caption = fixedRarity.caption;
+    entity.rarity = fixedRarity.rarity;
+    entity.rarityLabel = rarityLabels[fixedRarity.rarity];
+    entity.dropChance = fixedRarity.dropChance;
+    return;
   }
 
   entity.rarity = rarity;
   entity.rarityLabel = rarityLabels[rarity];
+  entity.dropChance = chances[index % chances.length];
 });
 
 forbiddenNopeGifs.forEach((entity) => {
   entity.rarity = "forbidden";
   entity.rarityLabel = rarityLabels.forbidden;
+  entity.dropChance = 0.25;
 });
 
-mythicNopeRelics.forEach((entity) => {
-  entity.rarity = "mythic";
-  entity.rarityLabel = rarityLabels.mythic;
+extraUberNopeRelics.forEach((entity) => {
+  entity.rarity = "uber";
+  entity.rarityLabel = rarityLabels.uber;
+  entity.dropChance = 0.1;
 });
 
-const stickerGridEntities = [...normalNopeEntities, ...forbiddenNopeGifs];
-const allNopeEntities = [...normalNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics];
+const mythicNopeRelics = normalNopeEntities.filter((entity) => entity.type === "mythic");
+const uberNopeRelics = [
+  ...normalNopeEntities.filter((entity) => entity.type === "uber"),
+  ...extraUberNopeRelics,
+];
+const NORMAL_TOTAL = standardNopeEntities.length;
+const GIF_TOTAL = forbiddenNopeGifs.length;
+const MYTHIC_TOTAL = mythicNopeRelics.length;
+const UBER_TOTAL = uberNopeRelics.length;
+const stickerGridEntities = [...standardNopeEntities, ...forbiddenNopeGifs];
+const allNopeEntities = [...standardNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics, ...uberNopeRelics];
 const rarityPools = {
-  common: normalNopeEntities.filter((entity) => entity.rarity === "common"),
-  uncommon: normalNopeEntities.filter((entity) => entity.rarity === "uncommon"),
-  rare: normalNopeEntities.filter((entity) => entity.rarity === "rare"),
-  epic: normalNopeEntities.filter((entity) => entity.rarity === "epic"),
+  common: standardNopeEntities.filter((entity) => entity.rarity === "common"),
+  uncommon: standardNopeEntities.filter((entity) => entity.rarity === "uncommon"),
+  rare: standardNopeEntities.filter((entity) => entity.rarity === "rare"),
+  epic: standardNopeEntities.filter((entity) => entity.rarity === "epic"),
   forbidden: forbiddenNopeGifs,
   mythic: mythicNopeRelics,
+  uber: uberNopeRelics,
 };
 
 const bootLines = [
@@ -287,6 +390,16 @@ const glitchWarnings = [
   "REALITY REFUSED",
 ];
 
+const noHitMessages = [
+  "no signal. no sticker. no apology.",
+  "empty packet received. value gained: zero.",
+  "the machine refused to reward you.",
+  "nothing found. still somehow your fault.",
+  "failed pull. emotional damage applied.",
+  "packet rejected. try being luckier.",
+  "no trash recovered. shame.",
+];
+
 const ranks = [
   { count: 500, name: "final boss of nothing" },
   { count: 250, name: "operationally useless" },
@@ -315,10 +428,11 @@ const achievements = [
   { id: "loop-sickness", name: "LOOP SICKNESS", description: "found 5 forbidden loops.", reward: "dizziness", check: ({ gifCollectedCount }) => gifCollectedCount >= 5 },
   { id: "animated-regret", name: "ANIMATED REGRET", description: "found 10 forbidden loops.", reward: "frames of shame", check: ({ gifCollectedCount }) => gifCollectedCount >= 10 },
   { id: "gif-criminal", name: "GIF CRIMINAL", description: "completed the forbidden loop set.", reward: "no parole", check: ({ gifCollectedCount }) => gifCollectedCount >= GIF_TOTAL },
-  { id: "mythically-useless", name: "MYTHICALLY USELESS", description: "found a mythic NOPE relic.", reward: "rare nothing", check: ({ mythicCollectedCount }) => mythicCollectedCount >= 1 },
+  { id: "mythically-useless", name: "MYTHICALLY USELESS", description: "found mythic waste.", reward: "rare nothing", check: ({ mythicCollectedCount }) => mythicCollectedCount >= 1 },
   { id: "nope-or-no-achievement", name: "NOPE OR NO", description: "found NOPE OR NO.", reward: "both options rejected", check: ({ collectedIds }) => collectedIds.includes("nopeorno") },
   { id: "nope-or-nothing-achievement", name: "NOPE OR NOTHING", description: "found NOPE OR NOTHING.", reward: "all or absolutely nope", check: ({ collectedIds }) => collectedIds.includes("nopeornothing") },
-  { id: "both-options-rejected", name: "BOTH OPTIONS REJECTED", description: "found both mythic NOPE relics.", reward: "choice deleted", check: ({ mythicCollectedCount }) => mythicCollectedCount >= MYTHIC_TOTAL },
+  { id: "both-options-rejected", name: "BOTH OPTIONS REJECTED", description: "found both NOPE OR Uber relics.", reward: "choice deleted", check: ({ collectedIds }) => collectedIds.includes("nopeorno") && collectedIds.includes("nopeornothing") },
+  { id: "uberly-pointless", name: "UBERLY POINTLESS", description: "found an Uber NOPE.", reward: "probability trauma", check: ({ uberCollectedCount }) => uberCollectedCount >= 1 },
   { id: "duplicate-damage", name: "DUPLICATE DAMAGE", description: "found 10 duplicates.", reward: "recycled disappointment", check: ({ duplicateCount }) => duplicateCount >= 10 },
   { id: "emotional-recycling", name: "EMOTIONAL RECYCLING", description: "found 50 duplicates.", reward: "reused pain", check: ({ duplicateCount }) => duplicateCount >= 50 },
   { id: "again-really", name: "AGAIN? REALLY?", description: "found 100 duplicates.", reward: "deja nope", check: ({ duplicateCount }) => duplicateCount >= 100 },
@@ -330,7 +444,8 @@ const achievements = [
   { id: "epic-failure-achievement", name: "EPIC FAILURE", description: "discovered an epic failure.", reward: "larger disappointment", check: ({ epicCollectedCount }) => epicCollectedCount >= 1 },
   { id: "common-sense-lost", name: "COMMON SENSE LOST", description: "collected 25 common trash stickers.", reward: "common sense not found", check: ({ commonCollectedCount }) => commonCollectedCount >= 25 },
   { id: "rubbish-with-range", name: "RUBBISH WITH RANGE", description: "collected 10 uncommon rubbish stickers.", reward: "premium garbage", check: ({ uncommonCollectedCount }) => uncommonCollectedCount >= 10 },
-  { id: "total-nopeification", name: "TOTAL NOPEIFICATION", description: "completed the entire NOPEDEX.", reward: "seek help", check: ({ totalCollectedCount }) => totalCollectedCount >= NORMAL_TOTAL + GIF_TOTAL + MYTHIC_TOTAL },
+  { id: "total-nopeification", name: "TOTAL NOPEIFICATION", description: "completed the non-Uber NOPEDEX.", reward: "seek help", check: ({ normalCollectedCount, gifCollectedCount, mythicCollectedCount }) => normalCollectedCount >= NORMAL_TOTAL && gifCollectedCount >= GIF_TOTAL && mythicCollectedCount >= MYTHIC_TOTAL },
+  { id: "ascended-into-nope", name: "ASCENDED INTO NOPE", description: "found every Uber NOPE.", reward: "Telegram tag maybe, eventually", check: ({ uberCollectedCount }) => uberCollectedCount >= UBER_TOTAL },
 ];
 
 function getRank(count) {
@@ -338,21 +453,13 @@ function getRank(count) {
 }
 
 function pickDiscoveryEntity() {
-  const roll = Math.random();
-  const pool =
-    roll < 0.52
-      ? rarityPools.common
-      : roll < 0.74
-        ? rarityPools.uncommon
-        : roll < 0.86
-          ? rarityPools.rare
-          : roll < 0.91
-            ? rarityPools.epic
-            : roll < 0.99
-              ? rarityPools.forbidden
-              : rarityPools.mythic;
+  const hits = allNopeEntities.filter((entity) => Math.random() * 100 < entity.dropChance);
 
-  return pool[Math.floor(Math.random() * pool.length)];
+  if (hits.length === 0) {
+    return null;
+  }
+
+  return hits[Math.floor(Math.random() * hits.length)];
 }
 
 function sleep(ms) {
@@ -371,6 +478,10 @@ function randomChance(chance) {
 
 function pickRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function formatDropChance(chance) {
+  return `${Number(chance).toFixed(chance < 1 ? 2 : 1).replace(/\.?0+$/, "")}%`;
 }
 
 function readStoredArray(key) {
@@ -440,6 +551,7 @@ export default function App() {
   const [activeDiscoveryPopup, setActiveDiscoveryPopup] = useState(null);
   const [activeBreachOverlay, setActiveBreachOverlay] = useState(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showExistentialPopup, setShowExistentialPopup] = useState(false);
   const [collectedIds, setCollectedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.collectedIds),
   );
@@ -483,7 +595,7 @@ export default function App() {
     [latestDiscoveryId],
   );
   const normalCollectedCount = useMemo(
-    () => collectedIds.filter((id) => normalNopeEntities.some((entity) => entity.id === id)).length,
+    () => collectedIds.filter((id) => standardNopeEntities.some((entity) => entity.id === id)).length,
     [collectedIds],
   );
   const gifCollectedCount = useMemo(
@@ -492,6 +604,10 @@ export default function App() {
   );
   const mythicCollectedCount = useMemo(
     () => collectedIds.filter((id) => mythicNopeRelics.some((entity) => entity.id === id)).length,
+    [collectedIds],
+  );
+  const uberCollectedCount = useMemo(
+    () => collectedIds.filter((id) => uberNopeRelics.some((entity) => entity.id === id)).length,
     [collectedIds],
   );
   const unlockedAchievementCount = unlockedAchievements.length;
@@ -773,6 +889,15 @@ export default function App() {
   }
 
   function getDiscoveryVisualEvent(entity, alreadyCollected) {
+    if (!alreadyCollected && entity.type === "uber") {
+      return {
+        duration: randomBetween(4200, 4800),
+        entity,
+        signalType: "uber",
+        type: "transmission",
+      };
+    }
+
     if (!alreadyCollected && entity.type === "mythic") {
       return {
         duration: randomBetween(3500, 4000),
@@ -803,7 +928,7 @@ export default function App() {
       return {
         duration: randomBetween(900, 1400),
         entity,
-        signalType: entity.type === "mythic" ? "mythic" : entity.type === "gif" ? "forbidden" : "duplicate",
+        signalType: entity.type === "uber" ? "uber" : entity.type === "mythic" ? "mythic" : entity.type === "gif" ? "forbidden" : "duplicate",
         type: "transmission",
       };
     }
@@ -812,7 +937,7 @@ export default function App() {
   }
 
   function getBreachVisualEvent(entity, alreadyCollected) {
-    if (entity.type === "mythic") {
+    if (entity.type === "mythic" || entity.type === "uber") {
       return null;
     }
 
@@ -840,16 +965,24 @@ export default function App() {
   }
 
   function getDiscoveryMessage(entity, alreadyCollected) {
+    if (alreadyCollected && entity.type === "uber") {
+      return `duplicate Uber NOPE detected: ${entity.name}. probability wasted harder.`;
+    }
+
     if (alreadyCollected && entity.type === "mythic") {
-      return `duplicate mythic relic detected: ${entity.name}. probability wasted.`;
+      return `duplicate mythic waste detected: ${entity.name}. probability wasted.`;
     }
 
     if (alreadyCollected) {
       return `duplicate: ${entity.name}. disappointment increased.`;
     }
 
+    if (entity.type === "uber") {
+      return `UBER NOPE DISCOVERED: ${entity.name}. probability has been insulted.`;
+    }
+
     if (entity.type === "mythic") {
-      return `MYTHIC NOPE RELIC DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
+      return `MYTHIC WASTE DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
     }
 
     if (entity.type === "gif") {
@@ -886,10 +1019,11 @@ export default function App() {
       epicCollectedCount: ids.filter((id) => rarityPools.epic.some((entity) => entity.id === id)).length,
       gifCollectedCount: ids.filter((id) => forbiddenNopeGifs.some((entity) => entity.id === id)).length,
       mythicCollectedCount: ids.filter((id) => mythicNopeRelics.some((entity) => entity.id === id)).length,
-      normalCollectedCount: ids.filter((id) => normalNopeEntities.some((entity) => entity.id === id)).length,
+      normalCollectedCount: ids.filter((id) => standardNopeEntities.some((entity) => entity.id === id)).length,
       rareCollectedCount: ids.filter((id) => rarityPools.rare.some((entity) => entity.id === id)).length,
       totalCollectedCount: ids.filter((id) => allNopeEntities.some((entity) => entity.id === id)).length,
       uncommonCollectedCount: ids.filter((id) => rarityPools.uncommon.some((entity) => entity.id === id)).length,
+      uberCollectedCount: ids.filter((id) => uberNopeRelics.some((entity) => entity.id === id)).length,
     };
   }
 
@@ -983,11 +1117,6 @@ export default function App() {
 
     const nextLabel = pickRandom(nopeLabels);
     const discoveredEntity = pickDiscoveryEntity();
-    const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
-    const discoveryResponse = getDiscoveryMessage(discoveredEntity, alreadyCollected);
-    const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
-    const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
-    const achievementDelay = visualEvent && !alreadyCollected ? randomBetween(700, 1000) : 0;
     const nextCount = nopeCountRef.current + 1;
     const nextRank = getRank(nextCount);
     const rankChanged = nextRank !== getRank(nopeCountRef.current);
@@ -997,17 +1126,43 @@ export default function App() {
     nopeCountRef.current = nextCount;
     setNopeCount(nextCount);
 
-    showDiscoveryVisualEvent(visualEvent);
-    showBreachOverlay(breachEvent);
+    if (discoveredEntity) {
+      const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
+      const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
+      const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
 
-    setLatestDiscoveryId(discoveredEntity.id);
+      showDiscoveryVisualEvent(visualEvent);
+      showBreachOverlay(breachEvent);
+      setLatestDiscoveryId(discoveredEntity.id);
 
-    if (!alreadyCollected) {
-      nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
-      collectedIdsRef.current = nextCollectedIds;
-      setCollectedIds(nextCollectedIds);
+      if (!alreadyCollected) {
+        nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
+        collectedIdsRef.current = nextCollectedIds;
+        setCollectedIds(nextCollectedIds);
+      } else {
+        nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
+      }
+
+      addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
+
+      queueAchievementUnlocks(
+        buildAchievementSnapshot({
+          achievementStats: nextAchievementStats,
+          collectedIds: nextCollectedIds,
+          nopeCount: nextCount,
+        }),
+        !alreadyCollected ? randomBetween(700, 1000) : 0,
+      );
     } else {
-      nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
+      addInstantNopeLine(pickRandom(noHitMessages));
+
+      queueAchievementUnlocks(
+        buildAchievementSnapshot({
+          achievementStats: nextAchievementStats,
+          collectedIds: nextCollectedIds,
+          nopeCount: nextCount,
+        }),
+      );
     }
 
     setButtonText(nextLabel);
@@ -1019,20 +1174,9 @@ export default function App() {
       setButtonText("NOPE");
     }, 430);
 
-    addInstantNopeLine(discoveryResponse);
-
     if (rankChanged) {
       addInstantNopeLine(`rank updated: ${nextRank}. achievement value: zero.`);
     }
-
-    queueAchievementUnlocks(
-      buildAchievementSnapshot({
-        achievementStats: nextAchievementStats,
-        collectedIds: nextCollectedIds,
-        nopeCount: nextCount,
-      }),
-      achievementDelay,
-    );
   }
 
   function getStickerEntities() {
@@ -1041,7 +1185,7 @@ export default function App() {
     }
 
     if (stickerTab === "normal") {
-      return normalNopeEntities;
+      return standardNopeEntities;
     }
 
     if (stickerTab === "gif") {
@@ -1083,11 +1227,27 @@ export default function App() {
     });
   }
 
+  function getVisibleUberEntities() {
+    return uberNopeRelics.filter((entity) => collectedIds.includes(entity.id));
+  }
+
   function getShareText(entity) {
     const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
+    if (entity.type === "uber") {
+      return `UBER NOPE DISCOVERED:
+${entity.name}
+
+probability has been insulted.
+somehow still worth zero.
+
+$NOPE
+
+${siteUrl}`;
+    }
+
     if (entity.type === "mythic") {
-      return `MYTHIC NOPE RELIC FOUND:
+      return `MYTHIC WASTE FOUND:
 ${entity.name}
 
 super rare trash.
@@ -1187,10 +1347,11 @@ ${siteUrl}`;
     const isCollected = collectedIds.includes(entity.id);
     const isGif = entity.type === "gif";
     const isMythic = entity.type === "mythic";
+    const isUber = entity.type === "uber";
 
     return (
       <article
-        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} rarity-${entity.rarity}`}
+        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} rarity-${entity.rarity}`}
         key={entity.id}
         style={{ "--sticker-tilt": `${((index % 5) - 2) * 1.25}deg` }}
       >
@@ -1208,6 +1369,7 @@ ${siteUrl}`;
             <strong>{entity.name}</strong>
             <span>{entity.rarityLabel}</span>
             <p>{entity.caption}</p>
+            <em>drop: {formatDropChance(entity.dropChance)}</em>
             <em>value: zero</em>
             <div className="sticker-share-row" aria-label={`Share ${entity.name}`}>
               <button type="button" onClick={() => openShareWindow(entity, "x")}>
@@ -1224,9 +1386,10 @@ ${siteUrl}`;
         ) : (
           <>
             <div className="sticker-locked-mark">???</div>
-            <strong>{isMythic ? "???" : isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
-            <span>{isMythic ? "MYTHIC NOPE MISSING" : isGif ? "FORBIDDEN LOOP MISSING" : entity.rarityLabel}</span>
-            <p>{isMythic ? "probability: emotionally illegal" : isGif ? "probability: disrespectful" : "press nope harder"}</p>
+            <strong>{isMythic ? entity.name : isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
+            <span>{isMythic ? "MYTHIC WASTE" : isGif ? "FORBIDDEN LOOP MISSING" : entity.rarityLabel}</span>
+            <p>{isMythic ? "drop chance: 0.5%" : isGif ? "probability: disrespectful" : "press nope harder"}</p>
+            <em>drop: {formatDropChance(entity.dropChance)}</em>
           </>
         )}
       </article>
@@ -1287,9 +1450,6 @@ ${siteUrl}`;
       <header className="os-header" aria-label="NOPE OS">
         <strong>NOPE OS 0.0.1</strong>
         <span>press nope. collect garbage. close nothing.</span>
-        <a href="#" onClick={replayIntro}>
-          re-enter matrix
-        </a>
       </header>
 
       <section className="machine-layout" aria-label="NOPE Machine">
@@ -1332,12 +1492,14 @@ ${siteUrl}`;
 
           {activeDiscoveryPopup && (
             <aside
-              className={`entity-transmission ${activeDiscoveryPopup.entity.type === "gif" ? "forbidden" : ""} ${activeDiscoveryPopup.entity.type === "mythic" ? "mythic" : ""}`}
+              className={`entity-transmission ${activeDiscoveryPopup.entity.type === "gif" ? "forbidden" : ""} ${activeDiscoveryPopup.entity.type === "mythic" ? "mythic" : ""} ${activeDiscoveryPopup.entity.type === "uber" ? "uber" : ""}`}
               aria-label="NOPE entity transmission"
             >
               <p className="panel-label">
                 {activeDiscoveryPopup.signalType === "forbidden"
                   ? "corrupted-nope-signal.gif"
+                  : activeDiscoveryPopup.signalType === "uber"
+                    ? "uber-nope-detected.sys"
                   : activeDiscoveryPopup.signalType === "mythic"
                     ? "mythic-relic-found.jpg"
                   : activeDiscoveryPopup.signalType === "new"
@@ -1349,8 +1511,10 @@ ${siteUrl}`;
               <span className="signal-status">
                 {activeDiscoveryPopup.signalType === "forbidden"
                   ? "FORBIDDEN LOOP FOUND"
+                  : activeDiscoveryPopup.signalType === "uber"
+                    ? "UBER NOPE DETECTED"
                   : activeDiscoveryPopup.signalType === "mythic"
-                    ? "MYTHIC RELIC FOUND"
+                    ? "MYTHIC WASTE FOUND"
                   : activeDiscoveryPopup.signalType === "new"
                     ? "NEW TRASH ACQUIRED"
                     : activeDiscoveryPopup.signalType === "duplicate"
@@ -1368,7 +1532,7 @@ ${siteUrl}`;
               </div>
               <h2>{activeDiscoveryPopup.entity.name}</h2>
               <p>{activeDiscoveryPopup.entity.caption}</p>
-              <b>value: zero</b>
+              <b>{activeDiscoveryPopup.signalType === "uber" ? "odds: offensive // value: zero" : "value: zero"}</b>
             </aside>
           )}
         </section>
@@ -1377,16 +1541,23 @@ ${siteUrl}`;
 
       <section className="button-zone" aria-label="NOPE button">
         <p>PRESS NOPE. COLLECT WORTHLESS TRASH.</p>
-        <button className="mega-nope" type="button" onClick={pressNope} disabled={isBooting}>
-          {isBooting ? "BOOTING..." : buttonText}
+        <button
+          className="mega-nope image-nope-button"
+          type="button"
+          onClick={pressNope}
+          disabled={isBooting}
+          aria-label={isBooting ? "NOPE machine booting" : `Press ${buttonText}`}
+        >
+          <img src="/images/nopebutton.png" alt="NOPE" />
+          {isBooting && <span>BOOTING...</span>}
         </button>
         <div className="status-panel">
           <span>nopes: {formattedCount}</span>
           <span>
-            garbage: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL} · loops: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL} · mythic: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")} · achievements: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}
+            garbage: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL} · loops: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL} · mythic: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")} · uber: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")} · achievements: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}
           </span>
           <span>
-            latest: {latestDiscovery ? `${latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "none. press the stupid button."}
+            latest: {latestDiscovery ? `${latestDiscovery.type === "uber" ? "UBER - " : latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "none. press the stupid button."}
           </span>
         </div>
         <div className="main-actions">
@@ -1397,6 +1568,18 @@ ${siteUrl}`;
             [ COPY CONTRACT ]
           </button>
         </div>
+        {nopeCount >= 10 && (
+          <button
+            className="existential-button"
+            type="button"
+            onClick={() => {
+              setShowExistentialPopup(true);
+              addInstantNopeLine("existential crisis acknowledged.");
+            }}
+          >
+            why the hell am I pressing this?
+          </button>
+        )}
       </section>
 
       <footer className="footer-links">
@@ -1453,6 +1636,19 @@ ${siteUrl}`;
         </section>
       )}
 
+      {showExistentialPopup && (
+        <section className="existential-modal-overlay" aria-modal="true" role="dialog">
+          <div className="existential-modal-card">
+            <p>WHY ARE YOU PRESSING THIS?</p>
+            <strong>for no fucking reason at all.</strong>
+            <span>-NOPE</span>
+            <button type="button" onClick={() => setShowExistentialPopup(false)}>
+              [ erm... yea... nope ]
+            </button>
+          </div>
+        </section>
+      )}
+
       {showResetConfirm && (
         <section className="reset-modal-overlay" aria-modal="true" role="dialog">
           <div className="reset-modal-card">
@@ -1485,10 +1681,13 @@ ${siteUrl}`;
 
             <div className="stickerbook-scroll">
               <div className="stickerbook-summary">
-                <span>worthless finds: {normalCollectedCount} / {NORMAL_TOTAL}</span>
-                <span>forbidden loops: {gifCollectedCount} / {GIF_TOTAL}</span>
-                <span>mythic relics: {mythicCollectedCount} / {MYTHIC_TOTAL}</span>
+                <span>garbage: {normalCollectedCount} / {NORMAL_TOTAL}</span>
+                <span>loops: {gifCollectedCount} / {GIF_TOTAL}</span>
+                <span>mythic waste: {mythicCollectedCount} / {MYTHIC_TOTAL}</span>
+                <span>uber nope: {uberCollectedCount} / {UBER_TOTAL}</span>
                 <span>achievements: {unlockedAchievementCount} / {achievements.length}</span>
+                <span>NOPEDEX COMPLETE = all non-Uber trash found</span>
+                <span>NOPEDEX ASCENDED = everything found, including Uber NOPEs</span>
               </div>
 
               <div className="stickerbook-controls primary-controls" aria-label="NOPEDEX view controls">
@@ -1537,11 +1736,30 @@ ${siteUrl}`;
                 </section>
               ) : (
                 <>
+                  {stickerTab === "all" && (
+                    <section className="uber-section" aria-label="UBER NOPE SIGNALS">
+                      <div className="uber-section-title">
+                        <strong>UBER SIGNALS DETECTED</strong>
+                        <span>classified finds: {uberCollectedCount} / {UBER_TOTAL}</span>
+                        <span>odds: offensive</span>
+                      </div>
+                      {getVisibleUberEntities().length > 0 && (
+                        <>
+                          <div className="uber-section-title recovered">
+                            <strong>UBER NOPE SIGNALS</strong>
+                            <span>impossible trash recovered.</span>
+                          </div>
+                          <div className="uber-grid">{getVisibleUberEntities().map(renderStickerCard)}</div>
+                        </>
+                      )}
+                    </section>
+                  )}
+
                   {stickerTab === "all" && getVisibleMythicEntities().length > 0 && (
                     <section className="mythic-section" aria-label="MYTHIC NOPE RELICS">
                       <div className="mythic-section-title">
-                        <strong>MYTHIC NOPE RELICS</strong>
-                        <span>super rare trash. probably still worthless.</span>
+                        <strong>MYTHIC WASTE</strong>
+                        <span>known chase trash. drop chance: 0.5%.</span>
                       </div>
                       <div className="mythic-grid">{getVisibleMythicEntities().map(renderStickerCard)}</div>
                     </section>

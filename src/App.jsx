@@ -166,7 +166,16 @@ function readStoredString(key) {
   return window.localStorage.getItem(key);
 }
 
+function getTelegramWebApp() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.Telegram?.WebApp ?? null;
+}
+
 export default function App() {
+  const [telegramWebApp] = useState(() => getTelegramWebApp());
   const [showIntro, setShowIntro] = useState(() => readStoredString(STORAGE_KEYS.introSeen) !== "true");
   const [introChoice, setIntroChoice] = useState(null);
   const [isIntroExiting, setIsIntroExiting] = useState(false);
@@ -226,6 +235,11 @@ export default function App() {
   const globalFlushIntervalRef = useRef(null);
   const globalPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
+  const telegramDiscoveryHapticCooldownRef = useRef(false);
+  const telegramDiscoveryHapticTimerRef = useRef(null);
+  const telegramSignalLineRef = useRef(false);
+  const isTelegramMiniApp = Boolean(telegramWebApp);
+  const telegramUser = telegramWebApp?.initDataUnsafe?.user ?? null;
 
   const formattedCount = useMemo(
     () => nopeCount.toString().padStart(6, "0"),
@@ -293,6 +307,33 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (!telegramWebApp) {
+      return;
+    }
+
+    try {
+      telegramWebApp.ready?.();
+      telegramWebApp.expand?.();
+      telegramWebApp.setHeaderColor?.("#061b10");
+      telegramWebApp.setBackgroundColor?.("#001008");
+    } catch {
+      // Telegram WebView capabilities vary by client version.
+    }
+  }, [telegramWebApp]);
+
+  useEffect(() => {
+    if (!telegramWebApp || telegramSignalLineRef.current) {
+      return;
+    }
+
+    telegramSignalLineRef.current = true;
+    addLine(createLine(
+      "nope",
+      `Telegram signal detected${telegramUser?.first_name ? `: ${telegramUser.first_name}` : ""}.`,
+    ));
+  }, [telegramUser?.first_name, telegramWebApp]);
+
+  useEffect(() => {
     const terminalLog = terminalLogRef.current;
 
     if (terminalLog) {
@@ -311,6 +352,7 @@ export default function App() {
       window.clearTimeout(ambientClearTimerRef.current);
       window.clearTimeout(nopeIdleTimerRef.current);
       window.clearTimeout(globalPulseTimerRef.current);
+      window.clearTimeout(telegramDiscoveryHapticTimerRef.current);
       window.clearInterval(globalFlushIntervalRef.current);
     };
   }, []);
@@ -915,11 +957,43 @@ export default function App() {
     }, randomBetween(6000, 8000));
   }
 
+  function triggerTelegramHaptic(style = "light") {
+    try {
+      telegramWebApp?.HapticFeedback?.impactOccurred?.(style);
+    } catch {
+      // Haptics are best-effort inside Telegram and absent elsewhere.
+    }
+  }
+
+  function triggerDiscoveryHaptic(entity, alreadyCollected) {
+    if (alreadyCollected || !entity) {
+      return;
+    }
+
+    const isRareDiscovery = entity.rarity === "rare" || entity.type === "mythic" || entity.type === "uber";
+
+    if (!isRareDiscovery) {
+      return;
+    }
+
+    if (telegramDiscoveryHapticCooldownRef.current) {
+      return;
+    }
+
+    telegramDiscoveryHapticCooldownRef.current = true;
+    window.clearTimeout(telegramDiscoveryHapticTimerRef.current);
+    telegramDiscoveryHapticTimerRef.current = window.setTimeout(() => {
+      telegramDiscoveryHapticCooldownRef.current = false;
+    }, 1200);
+    triggerTelegramHaptic(entity.type === "uber" || entity.type === "mythic" ? "heavy" : "medium");
+  }
+
   function pressNope() {
     if (isBooting) {
       return;
     }
 
+    triggerTelegramHaptic("light");
     resetNopeIdleTimer();
 
     const nextLabel = pickRandom(nopeLabels);
@@ -946,6 +1020,7 @@ export default function App() {
       const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
       const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
 
+      triggerDiscoveryHaptic(discoveredEntity, alreadyCollected);
       showDiscoveryVisualEvent(visualEvent);
       showBreachOverlay(breachEvent);
       setLatestDiscoveryId(discoveredEntity.id);
@@ -1295,7 +1370,7 @@ ${shareUrl}`;
     const entity = shareEntity || null;
 
     return (
-      <main className="share-page">
+      <main className={`share-page ${isTelegramMiniApp ? "telegram-mini-app" : ""}`}>
         <div className="crt-noise" />
         <div className="app-code-rain" aria-hidden="true">
           {Array.from({ length: 28 }, (_, index) => (
@@ -1346,7 +1421,7 @@ ${shareUrl}`;
           : [];
 
     return (
-      <main className={`intro-screen ${isIntroExiting ? "intro-exit" : ""}`}>
+      <main className={`intro-screen ${isTelegramMiniApp ? "telegram-mini-app" : ""} ${isIntroExiting ? "intro-exit" : ""}`}>
         <div className="matrix-rain" aria-hidden="true">
           {Array.from({ length: 44 }, (_, index) => (
             <span key={index}>NOPE 0101 TON ??? NOTPEPE NOPE 404 REJECT NON NOPE $NOPE 0X00</span>
@@ -1379,7 +1454,7 @@ ${shareUrl}`;
 
   return (
     <main
-      className={`nope-page ${isGlitching ? "is-glitching" : ""} ${isAmbientGlitch ? "ambient-glitch" : ""} ${isNopeIdle ? "nope-idle" : ""}`}
+      className={`nope-page ${isTelegramMiniApp ? "telegram-mini-app" : ""} ${isGlitching ? "is-glitching" : ""} ${isAmbientGlitch ? "ambient-glitch" : ""} ${isNopeIdle ? "nope-idle" : ""}`}
     >
       <div className="crt-noise" />
       <div className="app-code-rain" aria-hidden="true">

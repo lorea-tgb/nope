@@ -61,6 +61,17 @@ button {
     #020806;
 }
 
+.intro-screen.telegram-mini-app,
+.share-page.telegram-mini-app {
+  min-height: 100dvh;
+  height: auto;
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .intro-screen.intro-exit {
   animation: introExit 0.42s steps(2, end) forwards;
 }
@@ -482,6 +493,21 @@ button {
     auto,
     auto,
     auto;
+}
+
+.nope-page.telegram-mini-app {
+  min-height: 100dvh;
+  justify-content: flex-start;
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.telegram-mini-app .app-code-rain,
+.telegram-mini-app .matrix-rain {
+  height: 100dvh;
 }
 
 @media (max-height: 820px) {
@@ -1971,6 +1997,28 @@ button {
     inset -2px -2px 0 rgba(0, 0, 0, 0.72),
     8px 8px 0 #000,
     0 0 24px rgba(57, 255, 20, 0.16);
+}
+
+.telegram-mini-app .achievement-modal-overlay,
+.telegram-mini-app .existential-modal-overlay,
+.telegram-mini-app .reset-modal-overlay,
+.telegram-mini-app .breach-overlay,
+.telegram-mini-app .stickerbook-overlay {
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.telegram-mini-app .achievement-modal-card,
+.telegram-mini-app .existential-modal-card,
+.telegram-mini-app .reset-modal-card,
+.telegram-mini-app .breach-card {
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  overflow-y: auto;
+}
+
+.telegram-mini-app .stickerbook-window {
+  height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  max-height: 820px;
 }
 
 .stickerbook-titlebar {

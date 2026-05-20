@@ -25,6 +25,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     repeating-linear-gradient(
       0deg,
@@ -459,14 +461,15 @@ button {
 .nope-page {
   position: relative;
   min-height: 100vh;
-  height: 100vh;
+  height: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
   padding: 8px 12px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     linear-gradient(90deg, rgba(0, 152, 234, 0.1) 1px, transparent 1px),
     linear-gradient(0deg, rgba(57, 255, 20, 0.06) 1px, transparent 1px),
@@ -479,6 +482,12 @@ button {
     auto,
     auto,
     auto;
+}
+
+@media (max-height: 820px) {
+  .nope-page {
+    justify-content: flex-start;
+  }
 }
 
 .os-header {

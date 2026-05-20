@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./App.css";
 import { supabase } from "./lib/supabaseClient";
 import {
@@ -202,6 +202,7 @@ export default function App() {
   const [buttonText, setButtonText] = useState("NOPE");
   const [globalNopeCount, setGlobalNopeCount] = useState(null);
   const [isGlobalCounterAvailable, setIsGlobalCounterAvailable] = useState(Boolean(supabase));
+  const [globalCountPulse, setGlobalCountPulse] = useState(false);
   const glitchTimerRef = useRef(null);
   const discoveryTimerRef = useRef(null);
   const breachTimerRef = useRef(null);
@@ -223,6 +224,7 @@ export default function App() {
   const globalSyncMessageRef = useRef(false);
   const globalFlushInProgressRef = useRef(false);
   const globalFlushIntervalRef = useRef(null);
+  const globalPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
 
   const formattedCount = useMemo(
@@ -257,6 +259,9 @@ export default function App() {
     [collectedIds],
   );
   const unlockedAchievementCount = unlockedAchievements.length;
+  const nopedexComplete =
+    normalCollectedCount + gifCollectedCount + mythicCollectedCount >= NORMAL_TOTAL + GIF_TOTAL + MYTHIC_TOTAL;
+  const nopedexAscended = nopedexComplete && uberCollectedCount >= UBER_TOTAL;
   const shareEntity = useMemo(() => {
     if (typeof window === "undefined" || !window.location.pathname.startsWith("/share/")) {
       return null;
@@ -305,11 +310,23 @@ export default function App() {
       window.clearTimeout(ambientTimerRef.current);
       window.clearTimeout(ambientClearTimerRef.current);
       window.clearTimeout(nopeIdleTimerRef.current);
+      window.clearTimeout(globalPulseTimerRef.current);
       window.clearInterval(globalFlushIntervalRef.current);
     };
   }, []);
 
-  async function flushGlobalNopes() {
+  const pulseGlobalCount = useCallback(() => {
+    window.clearTimeout(globalPulseTimerRef.current);
+    setGlobalCountPulse(false);
+    window.requestAnimationFrame(() => {
+      setGlobalCountPulse(true);
+      globalPulseTimerRef.current = window.setTimeout(() => {
+        setGlobalCountPulse(false);
+      }, 760);
+    });
+  }, []);
+
+  const flushGlobalNopes = useCallback(async () => {
     if (!supabase || globalFlushInProgressRef.current || pendingGlobalNopesRef.current <= 0) {
       return;
     }
@@ -336,8 +353,9 @@ export default function App() {
       globalNopeCountRef.current = optimisticGlobalCount;
       setGlobalNopeCount(optimisticGlobalCount);
       setIsGlobalCounterAvailable(true);
+      pulseGlobalCount();
     }
-  }
+  }, [pulseGlobalCount]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -380,6 +398,7 @@ export default function App() {
         globalNopeCountRef.current = nextGlobalCount;
         setGlobalNopeCount(nextGlobalCount);
         setIsGlobalCounterAvailable(true);
+        pulseGlobalCount();
       }
 
       if (!globalSyncMessageRef.current) {
@@ -412,7 +431,7 @@ export default function App() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, []);
+  }, [flushGlobalNopes, pulseGlobalCount]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.nopeCount, String(nopeCount));
@@ -770,7 +789,7 @@ export default function App() {
     }
 
     if (entity.type === "mythic") {
-      return `MYTHIC WASTE DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
+      return `MYTHIC NOPE DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
     }
 
     if (entity.type === "gif") {
@@ -1053,7 +1072,7 @@ ${shareUrl}`;
     }
 
     if (entity.type === "mythic") {
-      return `I pulled a MYTHIC WASTE from the NOPEDEX:
+      return `I pulled a MYTHIC NOPE from the NOPEDEX:
 ${entity.name}
 
 ${oddsText}
@@ -1263,7 +1282,7 @@ ${shareUrl}`;
           <>
             <div className="sticker-locked-mark">???</div>
             <strong>{isMythic ? entity.name : isGif ? `${entity.rarityLabel} MISSING` : "NOT FOUND"}</strong>
-            <span>{isMythic ? "MYTHIC WASTE" : entity.rarityLabel}</span>
+            <span>{isMythic ? "MYTHIC NOPE" : entity.rarityLabel}</span>
             <p>{isMythic ? "drop chance: 0.5%" : isGif ? "probability: disrespectful" : "press nope harder"}</p>
             <em>drop: {formatDropChance(entity.dropChance)}</em>
           </>
@@ -1409,7 +1428,7 @@ ${shareUrl}`;
               ))}
             </div>
 
-            <div className="event-feed-footer">NOPE OS event feed // input port sealed</div>
+            <div className="event-feed-footer">&gt; INPUT PORT SEALED FOR NOW... OR MAYBE FOREVER... DUNNO</div>
           </div>
 
           {activeDiscoveryPopup && (
@@ -1436,7 +1455,7 @@ ${shareUrl}`;
                   : activeDiscoveryPopup.signalType === "uber"
                     ? "UBER NOPE DETECTED"
                   : activeDiscoveryPopup.signalType === "mythic"
-                    ? "MYTHIC WASTE FOUND"
+                    ? "MYTHIC NOPE FOUND"
                   : activeDiscoveryPopup.signalType === "new"
                     ? "NEW TRASH ACQUIRED"
                     : activeDiscoveryPopup.signalType === "duplicate"
@@ -1480,14 +1499,24 @@ ${shareUrl}`;
           {isBooting && <span>BOOTING...</span>}
         </button>
         <div className="status-panel">
-          <span>your regret: {formattedCount}</span>
-          <span>global regret: {formattedGlobalCount}</span>
-          <span>
-            garbage: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL} · loops: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL} · mythic: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")} · uber: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")} · achievements: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}
-          </span>
-          <span>
-            latest: {latestDiscovery ? `${latestDiscovery.type === "uber" ? "UBER - " : latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "none. press the stupid button."}
-          </span>
+          <div className="status-row status-counts">
+            <span className="stat-chunk">YOUR NOPES: {formattedCount}</span>
+            <span className={`stat-chunk worldwide-nopes ${globalCountPulse ? "is-updating" : ""}`}>
+              WORLDWIDE NOPES: {formattedGlobalCount}
+            </span>
+          </div>
+          <div className="status-row status-stats">
+            <span className="stat-chunk">GARBAGE: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL}</span>
+            <span className="stat-chunk">LOOPS: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL}</span>
+            <span className="stat-chunk">MYTHIC: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")}</span>
+            <span className="stat-chunk">UBER: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")}</span>
+            <span className="stat-chunk">ACHIEVEMENTS: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}</span>
+          </div>
+          <div className="status-row status-latest">
+            <span className="stat-chunk">
+              LATEST: {latestDiscovery ? `${latestDiscovery.type === "uber" ? "UBER - " : latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "NONE. PRESS THE STUPID BUTTON."}
+            </span>
+          </div>
         </div>
         <div className="main-actions">
           <button type="button" onClick={() => setIsStickerBookOpen(true)}>
@@ -1528,7 +1557,7 @@ ${shareUrl}`;
           take another pointless pill
         </a>
         <button className="dev-reset-button" type="button" onClick={() => setShowResetConfirm(true)}>
-          dev: [ regret everything ]
+          [ regret everything ]
         </button>
       </footer>
 
@@ -1610,13 +1639,25 @@ ${shareUrl}`;
 
             <div className="stickerbook-scroll">
               <div className="stickerbook-summary">
-                <span>garbage: {normalCollectedCount} / {NORMAL_TOTAL}</span>
-                <span>loops: {gifCollectedCount} / {GIF_TOTAL}</span>
-                <span>mythic waste: {mythicCollectedCount} / {MYTHIC_TOTAL}</span>
-                <span>uber nope: {uberCollectedCount} / {UBER_TOTAL}</span>
-                <span>achievements: {unlockedAchievementCount} / {achievements.length}</span>
-                <span>NOPEDEX COMPLETE = all non-Uber trash found</span>
-                <span>NOPEDEX ASCENDED = everything found, including Uber NOPEs</span>
+                <div className="stickerbook-counter-strip">
+                  <span>GARBAGE {normalCollectedCount}/{NORMAL_TOTAL}</span>
+                  <span>LOOPS {gifCollectedCount}/{GIF_TOTAL}</span>
+                  <span>MYTHIC {mythicCollectedCount}/{MYTHIC_TOTAL}</span>
+                  <span>UBER {uberCollectedCount}/{UBER_TOTAL}</span>
+                  <span>ACHIEVEMENTS {unlockedAchievementCount}/{achievements.length}</span>
+                </div>
+                <div className="completion-badges">
+                  <span className={`completion-badge ${nopedexComplete ? "unlocked" : "locked"}`}>
+                    <strong>NOPEDEX COMPLETE</strong>
+                    <em>status: {nopedexComplete ? "UNLOCKED" : "LOCKED"}</em>
+                    <small>all non-Uber NOPEs found</small>
+                  </span>
+                  <span className={`completion-badge ${nopedexAscended ? "unlocked" : "locked"}`}>
+                    <strong>NOPEDEX ASCENDED</strong>
+                    <em>status: {nopedexAscended ? "UNLOCKED" : "LOCKED"}</em>
+                    <small>everything found, including Uber NOPEs</small>
+                  </span>
+                </div>
               </div>
 
               <div className="stickerbook-controls primary-controls" aria-label="NOPEDEX view controls">
@@ -1676,7 +1717,7 @@ ${shareUrl}`;
                         <>
                           <div className="uber-section-title recovered">
                             <strong>UBER NOPE SIGNALS</strong>
-                            <span>impossible trash recovered.</span>
+                            <span>impossible NOPEs recovered.</span>
                           </div>
                           <div className="uber-grid">{getVisibleUberEntities().map(renderStickerCard)}</div>
                         </>
@@ -1687,7 +1728,7 @@ ${shareUrl}`;
                   {stickerTab === "all" && getVisibleMythicEntities().length > 0 && (
                     <section className="mythic-section" aria-label="MYTHIC NOPE RELICS">
                       <div className="mythic-section-title">
-                        <strong>MYTHIC WASTE</strong>
+                        <strong>MYTHIC NOPE</strong>
                         <span>known chase trash. drop chance: 0.5%.</span>
                       </div>
                       <div className="mythic-grid">{getVisibleMythicEntities().map(renderStickerCard)}</div>

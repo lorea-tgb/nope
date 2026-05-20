@@ -1,15 +1,15 @@
 export const CONTRACT = "EQApjQK1qpZ3BjECMaK0GkseWS7qfnhA5YXdP-YKUkK2Hnon";
 
 export const rarityLabels = {
-  common: "COMMON GARBAGE",
-  uncommon: "UNCOMMON TRASH",
-  rare: "RARE REGRET",
-  epic: "EPIC FAILURE",
+  common: "COMMON NOPE",
+  uncommon: "UNCOMMON NOPE",
+  rare: "RARE NOPE",
+  epic: "EPIC NOPE",
   glitch: "GLITCH LOOP",
   forbidden: "FORBIDDEN LOOP",
   cursed: "CURSED LOOP",
   illegal: "ILLEGAL LOOP",
-  mythic: "MYTHIC WASTE",
+  mythic: "MYTHIC NOPE",
   uber: "UBER NOPE",
 };
 
@@ -394,9 +394,12 @@ export const bootLines = [
   { text: "> Turns out it was definitely NOT Pepe.", important: true, pause: 720 },
   { text: "> NOPE machine ready.", important: true, pause: 620 },
   { text: `> contract: ${CONTRACT}` },
+  { text: "> contract is on TON.", pause: 900 },
+  { text: "> or NOT.", pause: 900 },
+  { text: "> obviously.", pause: 650 },
   { text: "> press the big stupid button." },
   { text: "> you might find something." },
-  { text: "> probably nope though." },
+  { text: "> probably not though." },
 ];
 
 export const nopeLabels = ["NOPE", "NOPE?", "NOOOOOPE", "ABSOLUTELY NOT", "STILL NOPE", "HARD PASS"];

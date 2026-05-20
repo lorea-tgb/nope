@@ -33,7 +33,7 @@ function getDiscoveryTitle(entity) {
     rare: "REGRET DETECTED",
     epic: "FAILURE UNLOCKED",
     glitch: "GLITCH LOOP LEAK",
-    mythic: "MYTHIC WASTE FOUND",
+    mythic: "MYTHIC NOPE FOUND",
     uber: "UBER NOPE BREACH",
     forbidden: "FORBIDDEN LOOP LEAK",
     cursed: "CURSED LOOP LEAK",

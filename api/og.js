@@ -32,9 +32,12 @@ function getDiscoveryTitle(entity) {
     uncommon: "QUESTIONABLE FIND",
     rare: "REGRET DETECTED",
     epic: "FAILURE UNLOCKED",
+    glitch: "GLITCH LOOP LEAK",
     mythic: "MYTHIC WASTE FOUND",
     uber: "UBER NOPE BREACH",
     forbidden: "FORBIDDEN LOOP LEAK",
+    cursed: "CURSED LOOP LEAK",
+    illegal: "ILLEGAL LOOP BREACH",
   };
 
   return eventLabels[entity.rarity] || "NOPEDEX DISCOVERY";
@@ -66,7 +69,10 @@ function getRarityAccent(entity) {
     uncommon: "#39ff14",
     rare: "#0098ea",
     epic: "#ff2bd6",
+    glitch: "#39ff14",
     forbidden: "#ff3d3d",
+    cursed: "#b84dff",
+    illegal: "#ffcc33",
     mythic: "#ffd34d",
     uber: "#fff06a",
   };

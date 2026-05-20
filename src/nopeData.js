@@ -5,7 +5,10 @@ export const rarityLabels = {
   uncommon: "UNCOMMON TRASH",
   rare: "RARE REGRET",
   epic: "EPIC FAILURE",
+  glitch: "GLITCH LOOP",
   forbidden: "FORBIDDEN LOOP",
+  cursed: "CURSED LOOP",
+  illegal: "ILLEGAL LOOP",
   mythic: "MYTHIC WASTE",
   uber: "UBER NOPE",
 };
@@ -313,10 +316,35 @@ standardNopeEntities.forEach((entity, index) => {
   entity.dropChance = chances[index % chances.length];
 });
 
+const gifLoopTiers = {
+  nope1: { dropChance: 0.8, rarity: "glitch" },
+  nope2: { dropChance: 0.8, rarity: "glitch" },
+  nope3: { dropChance: 0.8, rarity: "glitch" },
+  nope4: { dropChance: 0.8, rarity: "glitch" },
+  nope5: { dropChance: 0.8, rarity: "glitch" },
+  nope6: { dropChance: 0.8, rarity: "glitch" },
+  nope7: { dropChance: 0.8, rarity: "glitch" },
+  nope8: { dropChance: 0.8, rarity: "glitch" },
+  nope9: { dropChance: 0.4, rarity: "forbidden" },
+  nope10: { dropChance: 0.4, rarity: "forbidden" },
+  nope11: { dropChance: 0.4, rarity: "forbidden" },
+  nope12: { dropChance: 0.4, rarity: "forbidden" },
+  nope13: { dropChance: 0.4, rarity: "forbidden" },
+  nope14: { dropChance: 0.4, rarity: "forbidden" },
+  nope15: { dropChance: 0.2, rarity: "cursed" },
+  nope16: { dropChance: 0.2, rarity: "cursed" },
+  nope17: { dropChance: 0.2, rarity: "cursed" },
+  nope18: { dropChance: 0.2, rarity: "cursed" },
+  nope19: { dropChance: 0.1, rarity: "illegal" },
+  nope20: { dropChance: 0.1, rarity: "illegal" },
+};
+
 forbiddenNopeGifs.forEach((entity) => {
-  entity.rarity = "forbidden";
-  entity.rarityLabel = rarityLabels.forbidden;
-  entity.dropChance = 0.25;
+  const tier = gifLoopTiers[entity.id] || { dropChance: 0.4, rarity: "forbidden" };
+
+  entity.rarity = tier.rarity;
+  entity.rarityLabel = rarityLabels[tier.rarity];
+  entity.dropChance = tier.dropChance;
 });
 
 extraUberNopeRelics.forEach((entity) => {
@@ -338,10 +366,13 @@ export const stickerGridEntities = [...standardNopeEntities, ...forbiddenNopeGif
 export const allNopeEntities = [...standardNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics, ...uberNopeRelics];
 export const rarityPools = {
   common: standardNopeEntities.filter((entity) => entity.rarity === "common"),
+  cursed: forbiddenNopeGifs.filter((entity) => entity.rarity === "cursed"),
   uncommon: standardNopeEntities.filter((entity) => entity.rarity === "uncommon"),
   rare: standardNopeEntities.filter((entity) => entity.rarity === "rare"),
   epic: standardNopeEntities.filter((entity) => entity.rarity === "epic"),
-  forbidden: forbiddenNopeGifs,
+  forbidden: forbiddenNopeGifs.filter((entity) => entity.rarity === "forbidden"),
+  glitch: forbiddenNopeGifs.filter((entity) => entity.rarity === "glitch"),
+  illegal: forbiddenNopeGifs.filter((entity) => entity.rarity === "illegal"),
   mythic: mythicNopeRelics,
   uber: uberNopeRelics,
 };
@@ -418,6 +449,7 @@ export const achievements = [
   { id: "loop-sickness", name: "LOOP SICKNESS", description: "found 5 forbidden loops.", reward: "dizziness", check: ({ gifCollectedCount }) => gifCollectedCount >= 5 },
   { id: "animated-regret", name: "ANIMATED REGRET", description: "found 10 forbidden loops.", reward: "frames of shame", check: ({ gifCollectedCount }) => gifCollectedCount >= 10 },
   { id: "gif-criminal", name: "GIF CRIMINAL", description: "completed the forbidden loop set.", reward: "no parole", check: ({ gifCollectedCount }) => gifCollectedCount >= GIF_TOTAL },
+  { id: "illegal-movement", name: "ILLEGAL MOVEMENT", description: "found an illegal loop.", reward: "animated criminal record", check: ({ collectedIds }) => collectedIds.some((id) => forbiddenNopeGifs.some((entity) => entity.id === id && entity.rarity === "illegal")) },
   { id: "mythically-useless", name: "MYTHICALLY USELESS", description: "found mythic waste.", reward: "rare nothing", check: ({ mythicCollectedCount }) => mythicCollectedCount >= 1 },
   { id: "nope-or-no-achievement", name: "NOPE OR NO", description: "found NOPE OR NO.", reward: "both options rejected", check: ({ collectedIds }) => collectedIds.includes("nopeorno") },
   { id: "nope-or-nothing-achievement", name: "NOPE OR NOTHING", description: "found NOPE OR NOTHING.", reward: "all or absolutely nope", check: ({ collectedIds }) => collectedIds.includes("nopeornothing") },

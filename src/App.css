@@ -371,6 +371,24 @@ button {
   background: linear-gradient(90deg, #b00024, var(--glitch-pink), var(--pepe-green));
 }
 
+.share-card.rarity-glitch span {
+  color: #00120a;
+  background: linear-gradient(90deg, var(--pepe-green), #89dcff);
+}
+
+.share-card.rarity-cursed span {
+  color: #fff;
+  background: linear-gradient(90deg, #6f28ff, var(--glitch-pink));
+}
+
+.share-card.rarity-illegal span {
+  color: #00120a;
+  background: linear-gradient(90deg, #ff3030, #ffe45c, var(--glitch-pink));
+  box-shadow:
+    -2px 0 0 #000,
+    2px 0 0 var(--glitch-pink);
+}
+
 .share-card.mythic-card span {
   background: #e4d448;
   box-shadow: 2px 0 0 var(--ton-blue);
@@ -887,6 +905,44 @@ button {
     3px 0 0 var(--ton-blue),
     0 0 24px rgba(255, 43, 214, 0.38);
   animation: transmitOverlayIn 0.22s steps(2, end), forbiddenBuzz 0.38s steps(2, end) infinite;
+}
+
+.entity-transmission.rarity-glitch {
+  border-color: var(--pepe-green);
+  box-shadow:
+    5px 5px 0 #000,
+    -3px 0 0 var(--ton-blue),
+    3px 0 0 var(--pepe-green),
+    0 0 20px rgba(57, 255, 20, 0.34);
+}
+
+.entity-transmission.rarity-cursed {
+  border-color: #9a4dff;
+  box-shadow:
+    5px 5px 0 #000,
+    -5px 0 0 var(--glitch-pink),
+    4px 0 0 #9a4dff,
+    0 0 30px rgba(255, 43, 214, 0.52);
+  animation: transmitOverlayIn 0.18s steps(2, end), forbiddenBuzz 0.28s steps(2, end) infinite;
+}
+
+.entity-transmission.rarity-illegal {
+  border-color: #ffe45c;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 48, 48, 0.18) 0,
+      rgba(255, 48, 48, 0.18) 3px,
+      transparent 3px,
+      transparent 9px
+    ),
+    var(--panel-gray);
+  box-shadow:
+    5px 5px 0 #000,
+    -6px 0 0 #ff3030,
+    6px 0 0 #ffe45c,
+    0 0 38px rgba(255, 48, 48, 0.55);
+  animation: transmitOverlayIn 0.16s steps(2, end), forbiddenBuzz 0.22s steps(2, end) infinite;
 }
 
 .entity-transmission.mythic {
@@ -1589,6 +1645,48 @@ button {
   animation: breachOverlayFlicker 0.42s steps(2, end) infinite;
 }
 
+.breach-overlay.glitch {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.08) 0,
+      rgba(57, 255, 20, 0.08) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    radial-gradient(circle at 50% 48%, rgba(0, 152, 234, 0.16), transparent 34%),
+    rgba(0, 0, 0, 0.55);
+  animation-duration: 0.52s;
+}
+
+.breach-overlay.cursed {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 43, 214, 0.16) 0,
+      rgba(255, 43, 214, 0.16) 2px,
+      transparent 2px,
+      transparent 6px
+    ),
+    radial-gradient(circle at 50% 48%, rgba(154, 77, 255, 0.28), transparent 36%),
+    rgba(0, 0, 0, 0.68);
+  animation-duration: 0.28s;
+}
+
+.breach-overlay.illegal {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 48, 48, 0.18) 0,
+      rgba(255, 48, 48, 0.18) 2px,
+      transparent 2px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 50% 48%, rgba(255, 228, 92, 0.26), transparent 34%),
+    rgba(0, 0, 0, 0.74);
+  animation: breachOverlayFlicker 0.2s steps(2, end) infinite, illegalScreenPulse 0.34s steps(2, end) infinite;
+}
+
 .breach-overlay::before,
 .breach-overlay::after {
   content: "";
@@ -1646,6 +1744,36 @@ button {
   animation: breachCardGlitch 0.34s steps(2, end) infinite;
 }
 
+.breach-overlay.glitch .breach-card {
+  border-color: var(--pepe-green);
+  box-shadow:
+    0 0 0 4px #000,
+    0 0 28px rgba(57, 255, 20, 0.42),
+    -5px 0 0 var(--ton-blue),
+    5px 0 0 var(--pepe-green);
+  animation-duration: 0.42s;
+}
+
+.breach-overlay.cursed .breach-card {
+  border-color: #9a4dff;
+  box-shadow:
+    0 0 0 4px #000,
+    0 0 48px rgba(255, 43, 214, 0.6),
+    -8px 0 0 var(--glitch-pink),
+    8px 0 0 #9a4dff;
+  animation-duration: 0.24s;
+}
+
+.breach-overlay.illegal .breach-card {
+  border-color: #ffe45c;
+  box-shadow:
+    0 0 0 5px #000,
+    0 0 58px rgba(255, 48, 48, 0.64),
+    -10px 0 0 #ff3030,
+    10px 0 0 #ffe45c;
+  animation: breachCardGlitch 0.18s steps(2, end) infinite, illegalCardPulse 0.32s steps(2, end) infinite;
+}
+
 .breach-card p {
   margin: 0;
   width: 100%;
@@ -1657,6 +1785,17 @@ button {
   font-weight: 900;
   text-align: center;
   text-shadow: 2px 0 rgba(0, 152, 234, 0.5);
+}
+
+.breach-overlay.cursed .breach-card p {
+  color: #fff;
+  background: linear-gradient(90deg, #6f28ff, var(--glitch-pink));
+}
+
+.breach-overlay.illegal .breach-card p {
+  color: #00120a;
+  background: linear-gradient(90deg, #ff3030, #ffe45c, var(--glitch-pink));
+  text-shadow: 2px 0 rgba(255, 255, 255, 0.42);
 }
 
 .breach-card img {
@@ -2141,6 +2280,47 @@ button {
     #f7f7ea;
 }
 
+.sticker-card.rarity-glitch.collected {
+  background:
+    linear-gradient(135deg, rgba(57, 255, 20, 0.2), transparent 42%),
+    linear-gradient(225deg, rgba(0, 152, 234, 0.12), transparent 36%),
+    #f7f7ea;
+}
+
+.sticker-card.rarity-cursed.collected {
+  background:
+    linear-gradient(135deg, rgba(255, 43, 214, 0.22), transparent 42%),
+    linear-gradient(225deg, rgba(111, 40, 255, 0.18), transparent 36%),
+    #f7f7ea;
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    -3px 0 0 #6f28ff,
+    3px 0 0 var(--glitch-pink),
+    0 0 18px rgba(255, 43, 214, 0.34),
+    inset 2px 2px 0 #fff,
+    inset -2px -2px 0 #8d9187;
+}
+
+.sticker-card.rarity-illegal.collected {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 48, 48, 0.18) 0,
+      rgba(255, 48, 48, 0.18) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    linear-gradient(135deg, rgba(255, 228, 92, 0.24), rgba(255, 43, 214, 0.12)),
+    #f7f7ea;
+  box-shadow:
+    3px 3px 0 rgba(0, 0, 0, 0.5),
+    -4px 0 0 #ff3030,
+    4px 0 0 #ffe45c,
+    0 0 24px rgba(255, 48, 48, 0.42),
+    inset 2px 2px 0 #fff,
+    inset -2px -2px 0 #8d9187;
+}
+
 .sticker-card.mythic-card {
   border-color: #000;
   box-shadow:
@@ -2248,6 +2428,24 @@ button {
   color: #fff;
   background:
     linear-gradient(90deg, #b00024, var(--glitch-pink), var(--pepe-green));
+}
+
+.sticker-card.rarity-glitch span {
+  color: #00120a;
+  background: linear-gradient(90deg, var(--pepe-green), #89dcff);
+}
+
+.sticker-card.rarity-cursed span {
+  color: #fff;
+  background: linear-gradient(90deg, #6f28ff, var(--glitch-pink));
+}
+
+.sticker-card.rarity-illegal span {
+  color: #00120a;
+  background: linear-gradient(90deg, #ff3030, #ffe45c, var(--glitch-pink));
+  box-shadow:
+    -2px 0 0 #000,
+    2px 0 0 var(--glitch-pink);
 }
 
 .sticker-card.mythic-card span {
@@ -2803,6 +3001,35 @@ button {
   92% {
     clip-path: inset(28% 0 42% 0);
     transform: translate(3px, 0);
+  }
+}
+
+@keyframes illegalScreenPulse {
+  0%,
+  100% {
+    filter: brightness(1) contrast(1.08);
+    transform: translate(0, 0);
+  }
+
+  35% {
+    filter: brightness(1.38) contrast(1.35) saturate(1.55);
+    transform: translate(-3px, 2px);
+  }
+
+  70% {
+    filter: brightness(0.92) contrast(1.5) saturate(1.8);
+    transform: translate(3px, -2px);
+  }
+}
+
+@keyframes illegalCardPulse {
+  0%,
+  100% {
+    filter: brightness(1) contrast(1.08);
+  }
+
+  50% {
+    filter: brightness(1.45) contrast(1.45) saturate(1.8);
   }
 }
 

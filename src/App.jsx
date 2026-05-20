@@ -56,6 +56,65 @@ function formatDropChance(chance) {
   return `${Number(chance).toFixed(chance < 1 ? 2 : 1).replace(/\.?0+$/, "")}%`;
 }
 
+function getLoopLeakTitle(entity) {
+  if (entity.rarity === "illegal") {
+    return "ILLEGAL LOOP BREACH";
+  }
+
+  return `${entity.rarityLabel} LEAK`;
+}
+
+function getLoopFoundTitle(entity) {
+  if (entity.rarity === "illegal") {
+    return "ILLEGAL LOOP CONTAINED";
+  }
+
+  return `${entity.rarityLabel} CAPTURED`;
+}
+
+function getLoopBreachTitle(entity, mode = "discovery") {
+  if (mode === "chaos") {
+    return entity.rarity === "illegal" ? "OWNED LOOP MALFUNCTION" : "COLLECTED LOOP BREACH";
+  }
+
+  if (entity.rarity === "illegal") {
+    return "NOPE OS BREACH DETECTED";
+  }
+
+  if (entity.rarity === "cursed") {
+    return "CURSED LOOP BREACH";
+  }
+
+  if (entity.rarity === "glitch") {
+    return "GLITCH LOOP LEAK";
+  }
+
+  return "FORBIDDEN LOOP BREACH";
+}
+
+function getLoopBreachDuration(entity) {
+  const durations = {
+    cursed: [1400, 1800],
+    forbidden: [1100, 1400],
+    glitch: [900, 1200],
+    illegal: [1800, 2300],
+  };
+  const [min, max] = durations[entity.rarity] || durations.forbidden;
+
+  return randomBetween(min, max);
+}
+
+function createLoopBreachEvent(entity, mode = "discovery") {
+  return {
+    duration: getLoopBreachDuration(entity),
+    entity,
+    intensity: entity.rarity,
+    mode,
+    title: getLoopBreachTitle(entity, mode),
+    type: "breach",
+  };
+}
+
 function readStoredArray(key) {
   if (typeof window === "undefined") {
     return [];
@@ -472,6 +531,41 @@ export default function App() {
     showDiscoveryPopup(event);
   }
 
+  function getCollectedGifEntities(ids = collectedIdsRef.current) {
+    return forbiddenNopeGifs.filter((entity) => ids.includes(entity.id));
+  }
+
+  function getGifChaosChance(collectedGifCount) {
+    if (collectedGifCount >= 16) {
+      return 0.25;
+    }
+
+    if (collectedGifCount >= 9) {
+      return 0.16;
+    }
+
+    if (collectedGifCount >= 4) {
+      return 0.1;
+    }
+
+    if (collectedGifCount >= 1) {
+      return 0.05;
+    }
+
+    return 0;
+  }
+
+  function getCollectedGifChaosEvent(ids = collectedIdsRef.current) {
+    const collectedGifs = getCollectedGifEntities(ids);
+    const chaosChance = getGifChaosChance(collectedGifs.length);
+
+    if (chaosChance === 0 || !randomChance(chaosChance)) {
+      return null;
+    }
+
+    return createLoopBreachEvent(pickRandom(collectedGifs), "chaos");
+  }
+
   function getDiscoveryVisualEvent(entity, alreadyCollected) {
     if (!alreadyCollected && entity.type === "uber") {
       return {
@@ -493,9 +587,10 @@ export default function App() {
 
     if (!alreadyCollected && entity.type === "gif") {
       return {
-        duration: randomBetween(900, 1400),
+        duration: randomBetween(2500, 3200),
         entity,
-        type: "breach",
+        signalType: entity.rarity,
+        type: "transmission",
       };
     }
 
@@ -512,7 +607,7 @@ export default function App() {
       return {
         duration: randomBetween(900, 1400),
         entity,
-        signalType: entity.type === "uber" ? "uber" : entity.type === "mythic" ? "mythic" : entity.type === "gif" ? "forbidden" : "duplicate",
+        signalType: entity.type === "uber" ? "uber" : entity.type === "mythic" ? "mythic" : entity.type === "gif" ? entity.rarity : "duplicate",
         type: "transmission",
       };
     }
@@ -527,25 +622,13 @@ export default function App() {
 
     if (entity.type === "gif") {
       if (!alreadyCollected || randomChance(0.25)) {
-        return {
-          duration: randomBetween(900, 1400),
-          entity,
-          type: "breach",
-        };
+        return createLoopBreachEvent(entity, alreadyCollected ? "chaos" : "discovery");
       }
 
       return null;
     }
 
-    if ((!alreadyCollected && randomChance(0.2)) || (alreadyCollected && randomChance(0.03))) {
-      return {
-        duration: randomBetween(900, 1400),
-        entity: pickRandom(forbiddenNopeGifs),
-        type: "breach",
-      };
-    }
-
-    return null;
+    return getCollectedGifChaosEvent();
   }
 
   function getDiscoveryMessage(entity, alreadyCollected) {
@@ -570,7 +653,7 @@ export default function App() {
     }
 
     if (entity.type === "gif") {
-      return `FORBIDDEN GIF BREACH: ${entity.name}. this should not have happened.`;
+      return `${getLoopFoundTitle(entity)}: ${entity.name}. added to NOPEDEX.`;
     }
 
     return `new trash discovered: ${entity.name}. value gained: zero.`;
@@ -738,6 +821,7 @@ export default function App() {
         !alreadyCollected ? randomBetween(700, 1000) : 0,
       );
     } else {
+      showBreachOverlay(getCollectedGifChaosEvent());
       addInstantNopeLine(pickRandom(noHitMessages));
 
       queueAchievementUnlocks(
@@ -852,12 +936,19 @@ ${shareUrl}`;
     }
 
     if (entity.type === "gif") {
-      return `FORBIDDEN LOOP LEAK:
+      let warningLine = "";
+
+      if (entity.rarity === "illegal") {
+        warningLine = "NOPE OS should not have shown you this.\n";
+      } else if (entity.rarity === "cursed") {
+        warningLine = "this should not have happened.\n";
+      }
+
+      return `${getLoopLeakTitle(entity)}:
 ${entity.name}
 
 ${oddsText}
-this should not have happened.
-value: animated zero.
+${warningLine}value: animated zero.
 
 $NOPE
 
@@ -1042,8 +1133,8 @@ ${shareUrl}`;
         ) : (
           <>
             <div className="sticker-locked-mark">???</div>
-            <strong>{isMythic ? entity.name : isGif ? "FORBIDDEN LOOP MISSING" : "NOT FOUND"}</strong>
-            <span>{isMythic ? "MYTHIC WASTE" : isGif ? "FORBIDDEN LOOP MISSING" : entity.rarityLabel}</span>
+            <strong>{isMythic ? entity.name : isGif ? `${entity.rarityLabel} MISSING` : "NOT FOUND"}</strong>
+            <span>{isMythic ? "MYTHIC WASTE" : entity.rarityLabel}</span>
             <p>{isMythic ? "drop chance: 0.5%" : isGif ? "probability: disrespectful" : "press nope harder"}</p>
             <em>drop: {formatDropChance(entity.dropChance)}</em>
           </>
@@ -1194,12 +1285,12 @@ ${shareUrl}`;
 
           {activeDiscoveryPopup && (
             <aside
-              className={`entity-transmission ${activeDiscoveryPopup.entity.type === "gif" ? "forbidden" : ""} ${activeDiscoveryPopup.entity.type === "mythic" ? "mythic" : ""} ${activeDiscoveryPopup.entity.type === "uber" ? "uber" : ""}`}
+              className={`entity-transmission rarity-${activeDiscoveryPopup.entity.rarity} ${activeDiscoveryPopup.entity.type === "gif" ? "forbidden" : ""} ${activeDiscoveryPopup.entity.type === "mythic" ? "mythic" : ""} ${activeDiscoveryPopup.entity.type === "uber" ? "uber" : ""}`}
               aria-label="NOPE entity transmission"
             >
               <p className="panel-label">
-                {activeDiscoveryPopup.signalType === "forbidden"
-                  ? "corrupted-nope-signal.gif"
+                {activeDiscoveryPopup.entity.type === "gif"
+                  ? activeDiscoveryPopup.entity.rarity === "illegal" ? "illegal-loop-breach.gif" : "corrupted-loop-signal.gif"
                   : activeDiscoveryPopup.signalType === "uber"
                     ? "uber-nope-detected.sys"
                   : activeDiscoveryPopup.signalType === "mythic"
@@ -1211,8 +1302,8 @@ ${shareUrl}`;
                       : "corrupted-nope-signal.gif"}
               </p>
               <span className="signal-status">
-                {activeDiscoveryPopup.signalType === "forbidden"
-                  ? "FORBIDDEN LOOP FOUND"
+                {activeDiscoveryPopup.entity.type === "gif"
+                  ? getLoopFoundTitle(activeDiscoveryPopup.entity)
                   : activeDiscoveryPopup.signalType === "uber"
                     ? "UBER NOPE DETECTED"
                   : activeDiscoveryPopup.signalType === "mythic"
@@ -1234,7 +1325,13 @@ ${shareUrl}`;
               </div>
               <h2>{activeDiscoveryPopup.entity.name}</h2>
               <p>{activeDiscoveryPopup.entity.caption}</p>
-              <b>{activeDiscoveryPopup.signalType === "uber" ? "odds: offensive // value: zero" : "value: zero"}</b>
+              <b>
+                {activeDiscoveryPopup.signalType === "uber"
+                  ? "odds: offensive // value: zero"
+                  : activeDiscoveryPopup.entity.type === "gif"
+                    ? `added to NOPEDEX // odds: ${formatDropChance(activeDiscoveryPopup.entity.dropChance)} // value: animated zero`
+                    : "value: zero"}
+              </b>
             </aside>
           )}
         </section>
@@ -1306,9 +1403,9 @@ ${shareUrl}`;
       </footer>
 
       {activeBreachOverlay && (
-        <section className="breach-overlay" aria-label="Forbidden loop breach">
+        <section className={`breach-overlay ${activeBreachOverlay.intensity || "forbidden"}`} aria-label="Forbidden loop breach">
           <div className="breach-card">
-            <p>FORBIDDEN LOOP BREACH</p>
+            <p>{activeBreachOverlay.title || "FORBIDDEN LOOP BREACH"}</p>
             <img
               src={activeBreachOverlay.entity.image}
               alt={activeBreachOverlay.entity.name}
@@ -1317,7 +1414,7 @@ ${shareUrl}`;
               }}
             />
             <strong>{activeBreachOverlay.entity.name}</strong>
-            <span>value gained: zero</span>
+            <span>{activeBreachOverlay.entity.rarityLabel} // value: animated zero</span>
           </div>
         </section>
       )}

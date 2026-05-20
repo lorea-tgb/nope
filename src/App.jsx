@@ -816,8 +816,8 @@ export default function App() {
     return `${siteUrl}/share/${encodeURIComponent(entity.id)}`;
   }
 
-  // TODO: this static Vite route is human-readable, but true sticker-specific X/TG
-  // preview metadata needs a server-rendered share route or Vercel OG function.
+  // Vercel serves /share/:id through /api/share so social crawlers get
+  // sticker-specific OG tags and a generated /api/og card image.
   function getShareText(entity) {
     const shareUrl = getStickerShareUrl(entity);
     const dropText = `drop: ${formatDropChance(entity.dropChance)}`;

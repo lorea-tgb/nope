@@ -957,6 +957,10 @@ button {
   animation: transmitOverlayIn 0.34s steps(2, end), transmitBuzz 0.72s steps(2, end) infinite;
 }
 
+.entity-transmission.actionable {
+  pointer-events: auto;
+}
+
 .entity-transmission.forbidden {
   border-color: var(--glitch-pink);
   box-shadow:
@@ -1138,6 +1142,28 @@ button {
   border: 1px solid rgba(0, 0, 0, 0.38);
 }
 
+.entity-transmission button {
+  width: 100%;
+  padding: 6px 7px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: #ffe45c;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    3px 3px 0 #000;
+}
+
+.entity-transmission button:hover,
+.entity-transmission button:focus-visible {
+  background: var(--pepe-green);
+  outline: 2px solid var(--ton-blue);
+  outline-offset: 2px;
+}
+
 .achievement-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1154,6 +1180,25 @@ button {
       transparent 5px
     ),
     rgba(0, 0, 0, 0.72);
+  animation: achievementOverlayFade 0.42s ease-out;
+}
+
+.first-sticker-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8200;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 152, 234, 0.12) 0,
+      rgba(0, 152, 234, 0.12) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    rgba(0, 0, 0, 0.76);
   animation: achievementOverlayFade 0.42s ease-out;
 }
 
@@ -1248,6 +1293,35 @@ button {
     inset 2px 2px 0 rgba(255, 255, 255, 0.55),
     inset -2px -2px 0 rgba(0, 0, 0, 0.35),
     4px 4px 0 #000;
+}
+
+.first-sticker-modal-card {
+  width: min(440px, 100%);
+}
+
+.first-sticker-modal-media {
+  justify-self: center;
+  width: min(220px, 58vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 2px solid #000;
+  background:
+    linear-gradient(45deg, rgba(0, 152, 234, 0.12) 25%, transparent 25% 50%, rgba(57, 255, 20, 0.1) 50% 75%, transparent 75%),
+    #101712;
+  background-size: 16px 16px;
+}
+
+.first-sticker-modal-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+.first-sticker-modal-media img.image-missing {
+  opacity: 0.12;
 }
 
 .existential-modal-overlay {
@@ -1397,6 +1471,83 @@ button {
   box-shadow:
     0 0 0 2px #000,
     0 0 12px rgba(0, 152, 234, 0.24);
+}
+
+.next-badge-strip {
+  width: min(620px, 100%);
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px 5px;
+  border: 1px solid var(--pepe-green);
+  color: var(--soft-green);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.12) 0,
+      rgba(0, 152, 234, 0.12) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    rgba(0, 10, 7, 0.94);
+  font-size: clamp(0.64rem, 1.7vw, 0.76rem);
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 0 2px #000,
+    0 0 12px rgba(57, 255, 20, 0.18),
+    inset 0 0 12px rgba(0, 152, 234, 0.12);
+  animation: nextBadgeFlicker 5.2s steps(2, end) infinite;
+}
+
+.next-badge-strip:hover,
+.next-badge-strip:focus-visible {
+  border-color: var(--ton-blue);
+  color: #eaffee;
+  outline: 2px solid var(--pepe-green);
+  outline-offset: 2px;
+}
+
+.next-badge-strip span,
+.next-badge-strip strong,
+.next-badge-strip em {
+  margin: 0;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.next-badge-title {
+  color: #89dcff;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+}
+
+.next-badge-strip strong {
+  color: var(--pepe-green);
+}
+
+.next-badge-main {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.next-badge-main em {
+  color: var(--soft-green);
+}
+
+.next-badge-main strong + em::before {
+  content: "·";
+  margin-right: 6px;
+  color: rgba(137, 220, 255, 0.66);
 }
 
 .main-actions {
@@ -2514,6 +2665,14 @@ button {
     #f7f7ea;
 }
 
+.sticker-card.first-sticker-highlight {
+  animation: firstStickerHighlight 3.6s steps(2, end);
+}
+
+.sticker-card.uber-card-highlight {
+  animation: uberCardHighlight 4.2s steps(2, end);
+}
+
 .sticker-card.rarity-common.collected {
   border-color: #111;
   background:
@@ -3359,6 +3518,25 @@ button {
   }
 }
 
+@keyframes nextBadgeFlicker {
+  0%,
+  86%,
+  100% {
+    filter: brightness(1);
+  }
+
+  90% {
+    filter: brightness(1.22) saturate(1.15);
+    text-shadow:
+      1px 0 var(--ton-blue),
+      -1px 0 rgba(255, 43, 214, 0.42);
+  }
+
+  94% {
+    filter: brightness(0.94);
+  }
+}
+
 @keyframes nopedexPulse {
   0% {
     transform: translate(0, 0);
@@ -3452,6 +3630,68 @@ button {
   100% {
     transform: translate(0, 0) skew(0deg);
     filter: brightness(1);
+  }
+}
+
+@keyframes firstStickerHighlight {
+  0%,
+  100% {
+    border-color: #000;
+    filter: brightness(1);
+  }
+
+  12%,
+  72% {
+    border-color: var(--pepe-green);
+    filter: brightness(1.12) saturate(1.2);
+    box-shadow:
+      4px 4px 0 #000,
+      -4px 0 0 var(--ton-blue),
+      4px 0 0 var(--pepe-green),
+      0 0 26px rgba(57, 255, 20, 0.72),
+      inset 2px 2px 0 #fff,
+      inset -2px -2px 0 #8d9187;
+  }
+
+  38% {
+    transform: rotate(var(--sticker-tilt)) translate(-2px, 1px);
+  }
+
+  52% {
+    transform: rotate(var(--sticker-tilt)) translate(2px, -1px);
+  }
+}
+
+@keyframes uberCardHighlight {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  10%,
+  82% {
+    border-color: #ffe45c;
+    filter: brightness(1.22) saturate(1.35);
+    box-shadow:
+      5px 5px 0 #000,
+      -6px 0 0 var(--ton-blue),
+      6px 0 0 var(--pepe-green),
+      0 0 34px rgba(255, 228, 92, 0.82),
+      0 0 18px rgba(57, 255, 20, 0.56),
+      inset 2px 2px 0 #fff,
+      inset -2px -2px 0 #8d9187;
+  }
+
+  32% {
+    transform: rotate(var(--sticker-tilt)) translate(3px, -2px) skew(-1deg);
+  }
+
+  48% {
+    transform: rotate(var(--sticker-tilt)) translate(-3px, 2px) skew(1deg);
+  }
+
+  64% {
+    transform: rotate(var(--sticker-tilt)) translate(1px, 0);
   }
 }
 

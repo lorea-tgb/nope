@@ -530,7 +530,7 @@ export default function App() {
           return;
         }
 
-        await sleep(bootLine.important ? randomBetween(18, 34) : randomBetween(7, 18));
+        await sleep(bootLine.important ? randomBetween(18, 34) : randomBetween(3, 9));
 
         setLines((currentLines) =>
           currentLines.map((line) =>
@@ -559,7 +559,7 @@ export default function App() {
 
         await typeBootLine(bootLine);
 
-        await sleep(bootLine.pause ?? randomBetween(80, 230));
+        await sleep(bootLine.pause ?? randomBetween(35, 105));
       }
 
       if (!isCancelled && bootRunRef.current === runId) {
@@ -1567,11 +1567,9 @@ ${shareUrl}`;
           className="mega-nope image-nope-button"
           type="button"
           onClick={pressNope}
-          disabled={isBooting}
-          aria-label={isBooting ? "NOPE machine booting" : `Press ${buttonText}`}
+          aria-label={`Press ${buttonText}`}
         >
           <img src="/images/nopebutton.png" alt="NOPE" />
-          {isBooting && <span>BOOTING...</span>}
         </button>
         <div className="status-panel">
           <div className="status-row status-counts">

@@ -742,7 +742,7 @@ button {
 
 .terminal-shell {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid #000;
   background: var(--panel-gray);
   box-shadow:
@@ -791,7 +791,7 @@ button {
 }
 
 .terminal-screen {
-  padding: 7px;
+  padding: 5px;
   background:
     repeating-linear-gradient(
       90deg,
@@ -805,10 +805,11 @@ button {
 }
 
 .terminal-log {
-  min-height: 170px;
-  max-height: min(26vh, 240px);
+  height: 190px;
+  max-height: 190px;
   overflow-y: auto;
-  padding: 7px;
+  overflow-x: hidden;
+  padding: 6px;
   border: 2px inset #8a8a80;
   color: var(--soft-green);
   font-size: 0.86rem;
@@ -820,9 +821,9 @@ button {
   display: flex;
   align-items: baseline;
   gap: 7px;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   overflow-wrap: anywhere;
-  line-height: 1.28;
+  line-height: 1.22;
 }
 
 .terminal-line.system {
@@ -891,8 +892,8 @@ button {
 }
 
 .event-feed-footer {
-  margin-top: 8px;
-  padding: 5px 8px;
+  margin-top: 5px;
+  padding: 4px 7px;
   border: 1px solid rgba(57, 255, 20, 0.75);
   color: var(--pepe-green);
   background:
@@ -1080,7 +1081,8 @@ button {
 
 .transmission-media {
   width: 100%;
-  height: clamp(220px, 32vh, 320px);
+  aspect-ratio: 1 / 1;
+  max-height: 260px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -1341,13 +1343,13 @@ button {
   z-index: 1;
   width: min(860px, 100%);
   display: grid;
-  gap: 3px;
+  gap: 2px;
   justify-items: center;
 }
 
 .button-zone p {
   margin: 0;
-  padding: 4px 10px;
+  padding: 3px 9px;
   border: 2px solid var(--pepe-green);
   color: var(--pepe-green);
   background:
@@ -3619,23 +3621,23 @@ button {
   }
 
   .terminal-screen {
-    padding: 8px;
+    padding: 5px;
   }
 
   .terminal-log {
-    min-height: 150px;
-    max-height: 220px;
-    padding: 7px;
+    height: 150px;
+    max-height: 150px;
+    padding: 6px;
     font-size: 0.84rem;
   }
 
   .terminal-line {
-    margin-bottom: 5px;
+    margin-bottom: 4px;
   }
 
   .event-feed-footer {
-    margin-top: 6px;
-    padding: 4px 6px;
+    margin-top: 4px;
+    padding: 3px 6px;
   }
 
   .button-zone p {
@@ -3668,20 +3670,19 @@ button {
   }
 
   .entity-transmission {
-    position: fixed;
-    top: 8vh;
-    left: 50%;
-    right: auto;
+    position: absolute;
+    top: 42px;
+    left: auto;
+    right: 10px;
     z-index: 5000;
-    width: min(90vw, 360px);
+    width: min(300px, 86vw);
     min-height: 0;
-    max-height: 78vh;
+    max-height: min(72vh, 460px);
     margin-left: 0;
-    transform: translateX(-50%);
   }
 
   .transmission-media {
-    height: min(46vh, 320px);
+    max-height: 240px;
   }
 
   .entity-transmission h2 {
@@ -3737,19 +3738,18 @@ button {
   }
 
   .terminal-log {
-    min-height: 145px;
-    max-height: 205px;
+    height: 150px;
+    max-height: 150px;
     font-size: 0.82rem;
   }
 
   .entity-transmission {
-    top: 7vh;
-    width: min(90vw, 340px);
-    max-height: 80vh;
+    width: min(290px, 86vw);
+    max-height: 72vh;
   }
 
   .transmission-media {
-    height: min(42vh, 260px);
+    max-height: 230px;
   }
 
   .entity-transmission h2 {

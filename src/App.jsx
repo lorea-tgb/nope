@@ -2048,18 +2048,80 @@ ${shareUrl}`;
     }
   }
 
-  function renderAchievementCard(achievement) {
+  function getAchievementDisplayTier(achievementId) {
+    const cursedAchievementIds = new Set([
+      "absolute-degenerate",
+      "ascended-into-nope",
+      "both-options-rejected",
+      "final-boss-press",
+      "god-left-the-chat",
+      "mythic-bonfire",
+      "mythic-recycling",
+      "mythically-useless",
+      "nopedex-heretic",
+      "nope-or-no-achievement",
+      "nope-or-nothing-achievement",
+      "probability-launderer",
+      "total-nopeification",
+      "uberly-pointless",
+    ]);
+    const specialAchievementIds = new Set([
+      "again-really",
+      "ash-collector",
+      "ashes-to-nopedex",
+      "burn-notice",
+      "burn-pile-curator",
+      "common-mistake",
+      "duplicate-damage",
+      "emotional-recycling",
+      "epic-waste-facility",
+      "feed-the-machine",
+      "found-in-the-ashes",
+      "fuel-goblin",
+      "fuel-hoarder",
+      "industrial-regret",
+      "machine-is-hungry",
+      "phoenix-nopedex",
+      "rarely-worth-it",
+      "scorched-earth",
+      "trash-alchemist",
+      "upgraded-nothing",
+    ]);
+
+    if (cursedAchievementIds.has(achievementId)) {
+      return { className: "achievement-tier-cursed", label: "CURSED" };
+    }
+
+    if (specialAchievementIds.has(achievementId)) {
+      return { className: "achievement-tier-special", label: "BAD IDEA" };
+    }
+
+    return { className: "achievement-tier-basic", label: "BASIC" };
+  }
+
+  function renderAchievementCard(achievement, index) {
     const isUnlocked = unlockedAchievements.includes(achievement.id);
+    const displayTier = getAchievementDisplayTier(achievement.id);
 
     return (
       <article
-        className={`achievement-card ${isUnlocked ? "achievement-unlocked" : "achievement-locked"}`}
+        className={`achievement-card ${displayTier.className} ${isUnlocked ? "achievement-unlocked" : "achievement-locked"}`}
         key={achievement.id}
+        style={{ "--achievement-tilt": `${((index % 5) - 2) * 0.45}deg` }}
       >
-        <span>{isUnlocked ? "UNLOCKED" : "LOCKED"}</span>
+        <div className="achievement-card-badges">
+          <span className="achievement-status-badge">{isUnlocked ? "UNLOCKED" : "LOCKED"}</span>
+          <span className="achievement-tier-badge">{displayTier.label}</span>
+        </div>
+        <div className="achievement-card-mark" aria-hidden="true">
+          {isUnlocked ? "OWNED" : "???"}
+        </div>
         <strong>{achievement.name}</strong>
         <p>{achievement.description}</p>
-        <em>reward: {achievement.reward}</em>
+        <em className="achievement-reward">
+          <small>reward:</small>
+          {achievement.reward}
+        </em>
         {isUnlocked ? (
           <div className="sticker-share-row achievement-share-row" aria-label={`Share ${achievement.name}`}>
             <button type="button" onClick={() => openAchievementShareWindow(achievement, "x")}>
@@ -2851,8 +2913,8 @@ ${shareUrl}`;
                 <section className="achievement-section" aria-label="NOPE OS achievements">
                   <div className="achievement-section-title">
                     <strong>ACHIEVEMENTS.dat</strong>
-                    <span>unlocked: {unlockedAchievementCount.toString().padStart(3, "0")} / {achievements.length.toString().padStart(3, "0")}</span>
-                    <span>reward value: zero</span>
+                    <span className="achievement-unlocked-stat">unlocked: {unlockedAchievementCount.toString().padStart(3, "0")} / {achievements.length.toString().padStart(3, "0")}</span>
+                    <span className="achievement-zero-stat">reward value: zero</span>
                   </div>
                   <div className="achievement-grid">{getVisibleAchievements().map(renderAchievementCard)}</div>
                 </section>

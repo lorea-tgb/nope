@@ -1495,6 +1495,7 @@ button {
 }
 
 .z-chamber-modal-card button,
+.z-token-modal-card button,
 .z-chamber-panel button {
   padding: 8px 10px;
   border: 2px solid #000;
@@ -1505,6 +1506,90 @@ button {
     inset 2px 2px 0 rgba(255, 255, 255, 0.52),
     inset -2px -2px 0 rgba(0, 0, 0, 0.36),
     3px 3px 0 #000;
+}
+
+.z-token-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9350;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.12) 0,
+      rgba(57, 255, 20, 0.12) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    rgba(0, 0, 0, 0.8);
+}
+
+.z-token-modal-card {
+  width: min(540px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px;
+  border: 3px solid #ffe45c;
+  color: var(--text);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 43, 214, 0.1) 0,
+      rgba(255, 43, 214, 0.1) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    #020806;
+  text-align: center;
+  box-shadow:
+    0 0 0 4px #000,
+    -7px 0 0 var(--ton-blue),
+    7px 0 0 var(--pepe-green),
+    0 0 42px rgba(255, 228, 92, 0.42);
+}
+
+.z-token-modal-card p,
+.z-token-modal-card strong,
+.z-token-modal-card span,
+.z-token-modal-card b,
+.z-token-modal-card em,
+.z-token-modal-card small {
+  margin: 0;
+  font-style: normal;
+}
+
+.z-token-modal-card p {
+  width: 100%;
+  padding: 7px 9px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: linear-gradient(90deg, #ffe45c, var(--pepe-green), var(--glitch-pink));
+  font-size: clamp(1.1rem, 4vw, 1.5rem);
+  font-weight: 900;
+}
+
+.z-token-modal-card strong {
+  color: #fff;
+}
+
+.z-token-modal-card span,
+.z-token-modal-card b,
+.z-token-modal-card em,
+.z-token-modal-card small {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 228, 92, 0.42);
+  color: #dff6ff;
+  background: rgba(0, 12, 8, 0.62);
+}
+
+.z-token-modal-card em,
+.achievement-z-roll-badge {
+  color: #00120a;
+  background: #ffe45c;
+  font-weight: 900;
 }
 
 .z-chamber-modal-card button:disabled {

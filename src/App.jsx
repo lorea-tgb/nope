@@ -44,6 +44,7 @@ const STORAGE_KEYS = {
   zNopeAcquired: "nope_znope_acquired",
   zRollAttempts: "nope_z_roll_attempts",
   zRollFailures: "nope_z_roll_failures",
+  zTokenClaimedAchievementIds: "nope_z_token_claimed_achievement_ids",
   zRollTokens: "nope_z_roll_tokens",
 };
 
@@ -72,6 +73,32 @@ const DUPLICATE_GRINDER_RECIPES = [
   { cost: 4, source: "epic", target: "mythic", button: "GRIND EPICS" },
   { cost: 5, source: "mythic", target: "uber", button: "GRIND MYTHICS" },
 ];
+const Z_ROLL_ACHIEVEMENT_IDS = new Set([
+  "absolute-degenerate",
+  "again-really",
+  "ascended-into-nope",
+  "ashes-to-nopedex",
+  "both-options-rejected",
+  "burn-pile-curator",
+  "final-boss-press",
+  "five-z-rolls-still-nope",
+  "fuel-hoarder",
+  "god-left-the-chat",
+  "industrial-regret",
+  "mythic-bonfire",
+  "mythic-recycling",
+  "mythically-useless",
+  "nopedex-heretic",
+  "nope-or-no-achievement",
+  "nope-or-nothing-achievement",
+  "phoenix-nopedex",
+  "probability-launderer",
+  "scorched-earth",
+  "ten-z-rolls-zero-z",
+  "the-final-no",
+  "total-nopeification",
+  "uberly-pointless",
+]);
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -263,6 +290,11 @@ export default function App() {
   const [znopeAcquired, setZnopeAcquired] = useState(() =>
     readStoredString(STORAGE_KEYS.zNopeAcquired) === "true" || readStoredArray(STORAGE_KEYS.collectedIds).includes("znope"),
   );
+  const [zTokenClaimedAchievementIds, setZTokenClaimedAchievementIds] = useState(() =>
+    readStoredArray(STORAGE_KEYS.zTokenClaimedAchievementIds),
+  );
+  const [zTokenPopupQueue, setZTokenPopupQueue] = useState([]);
+  const [activeZTokenPopup, setActiveZTokenPopup] = useState(null);
   const [unlockedAchievements, setUnlockedAchievements] = useState(() =>
     readStoredArray(STORAGE_KEYS.unlockedAchievements),
   );
@@ -350,6 +382,9 @@ export default function App() {
   const zRollAttemptsRef = useRef(zRollAttempts);
   const zRollFailuresRef = useRef(zRollFailures);
   const znopeAcquiredRef = useRef(znopeAcquired);
+  const zTokenClaimedAchievementIdsRef = useRef(zTokenClaimedAchievementIds);
+  const zTokenPopupQueueRef = useRef(zTokenPopupQueue);
+  const activeZTokenPopupRef = useRef(activeZTokenPopup);
   const unlockedAchievementsRef = useRef(unlockedAchievements);
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
@@ -467,6 +502,7 @@ export default function App() {
     activeAchievementInspect ||
     isZChamberOpen ||
     activeZRollResult ||
+    activeZTokenPopup ||
     achievementQueue.length > 0,
   );
   const isInspectModalBlocked = Boolean(
@@ -480,7 +516,8 @@ export default function App() {
     showResetConfirm ||
     showGrinderReadyPrompt ||
     isZChamberOpen ||
-    activeZRollResult,
+    activeZRollResult ||
+    activeZTokenPopup,
   );
   const stickerBookNavItems = [
     ["all", "ALL TRASH", "ALL"],
@@ -734,6 +771,19 @@ export default function App() {
   }, [znopeAcquired]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zTokenClaimedAchievementIds, JSON.stringify(zTokenClaimedAchievementIds));
+    zTokenClaimedAchievementIdsRef.current = zTokenClaimedAchievementIds;
+  }, [zTokenClaimedAchievementIds]);
+
+  useEffect(() => {
+    zTokenPopupQueueRef.current = zTokenPopupQueue;
+  }, [zTokenPopupQueue]);
+
+  useEffect(() => {
+    activeZTokenPopupRef.current = activeZTokenPopup;
+  }, [activeZTokenPopup]);
+
+  useEffect(() => {
     isZChamberOpenRef.current = isZChamberOpen;
   }, [isZChamberOpen]);
 
@@ -870,7 +920,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || activeZTokenPopup || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -881,7 +931,7 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt]);
+  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, activeZTokenPopup, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt]);
 
   useEffect(() => {
     if (showIntro) {
@@ -1051,6 +1101,12 @@ export default function App() {
     setDuplicateCopies(copies);
   }
 
+  function setZTokenPopupQueueSynced(nextQueue) {
+    const queue = typeof nextQueue === "function" ? nextQueue(zTokenPopupQueueRef.current) : nextQueue;
+    zTokenPopupQueueRef.current = queue;
+    setZTokenPopupQueue(queue);
+  }
+
   function setSacrificedIdsSynced(nextIds) {
     const ids = typeof nextIds === "function" ? nextIds(sacrificedIdsRef.current) : nextIds;
     sacrificedIdsRef.current = ids;
@@ -1104,6 +1160,7 @@ export default function App() {
         activeGoodFindModalRef.current ||
         activeAchievementRef.current ||
         showGrinderReadyPromptRef.current ||
+        activeZTokenPopupRef.current ||
         activeStickerInspectEntity ||
         activeAchievementInspect ||
         isZChamberOpenRef.current ||
@@ -1116,6 +1173,28 @@ export default function App() {
       const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
       setAchievementQueueSynced(remainingAchievements);
       setActiveAchievementSynced(nextAchievement);
+    }, delay);
+  }
+
+  function startNextZTokenPopup(delay = 0) {
+    window.setTimeout(() => {
+      if (
+        activeAchievementRef.current ||
+        activeGoodFindModalRef.current ||
+        activeCraftResultRef.current ||
+        activeZTokenPopupRef.current ||
+        isZChamberOpenRef.current ||
+        activeZRollResultRef.current ||
+        achievementQueueRef.current.length > 0 ||
+        zTokenPopupQueueRef.current.length === 0
+      ) {
+        return;
+      }
+
+      const [nextPopup, ...remainingPopups] = zTokenPopupQueueRef.current;
+      setZTokenPopupQueueSynced(remainingPopups);
+      activeZTokenPopupRef.current = nextPopup;
+      setActiveZTokenPopup(nextPopup);
     }, delay);
   }
 
@@ -1511,10 +1590,39 @@ export default function App() {
     unlockedAchievementsRef.current = nextUnlockedIds;
     setUnlockedAchievements(nextUnlockedIds);
     setAchievementQueueSynced((currentQueue) => [...currentQueue, ...newAchievements]);
+    awardZRollTokensForAchievements(newAchievements);
 
     if (!activeAchievementRef.current) {
       startNextAchievement(delay);
     }
+  }
+
+  function awardZRollTokensForAchievements(newAchievements) {
+    const claimedSet = new Set(zTokenClaimedAchievementIdsRef.current);
+    const zRewardAchievements = newAchievements.filter(
+      (achievement) => Z_ROLL_ACHIEVEMENT_IDS.has(achievement.id) && !claimedSet.has(achievement.id),
+    );
+
+    if (zRewardAchievements.length === 0) {
+      return;
+    }
+
+    zRewardAchievements.forEach((achievement) => claimedSet.add(achievement.id));
+    const nextClaimedIds = [...claimedSet];
+    const nextTokens = zRollTokensRef.current + zRewardAchievements.length;
+    zTokenClaimedAchievementIdsRef.current = nextClaimedIds;
+    zRollTokensRef.current = nextTokens;
+    setZTokenClaimedAchievementIds(nextClaimedIds);
+    setZRollTokens(nextTokens);
+    setZTokenPopupQueueSynced((currentQueue) => [
+      ...currentQueue,
+      ...zRewardAchievements.map((achievement, index) => ({
+        achievement,
+        tokenCount: nextTokens - zRewardAchievements.length + index + 1,
+      })),
+    ]);
+    addInstantNopeLine(`Z Chamber access granted: +${zRewardAchievements.length} roll${zRewardAchievements.length === 1 ? "" : "s"}.`);
+    startNextZTokenPopup(700);
   }
 
   function updateAchievementStats(updates) {
@@ -1543,6 +1651,7 @@ export default function App() {
     }
 
     setActiveAchievementSynced(null);
+    startNextZTokenPopup(450);
   }
 
   function openStickerBook() {
@@ -2053,6 +2162,28 @@ export default function App() {
     addInstantNopeLine("dev Z roll injected. probability is suspicious.");
   }
 
+  function forceZAchievement() {
+    const claimedSet = new Set(zTokenClaimedAchievementIdsRef.current);
+    const forcedAchievement = achievements.find(
+      (achievement) => Z_ROLL_ACHIEVEMENT_IDS.has(achievement.id) && !claimedSet.has(achievement.id),
+    );
+
+    if (!forcedAchievement) {
+      addInstantNopeLine("dev Z achievement unavailable. reset clears claimed chamber ammo.");
+      return;
+    }
+
+    if (!unlockedAchievementsRef.current.includes(forcedAchievement.id)) {
+      const nextUnlockedIds = [...unlockedAchievementsRef.current, forcedAchievement.id];
+      unlockedAchievementsRef.current = nextUnlockedIds;
+      setUnlockedAchievements(nextUnlockedIds);
+      setAchievementQueueSynced((currentQueue) => [...currentQueue, forcedAchievement]);
+    }
+
+    awardZRollTokensForAchievements([forcedAchievement]);
+    startNextAchievement(0);
+  }
+
   function closeZChamber() {
     isZChamberOpenRef.current = false;
     activeZRollResultRef.current = null;
@@ -2064,6 +2195,18 @@ export default function App() {
   function openZChamber() {
     isZChamberOpenRef.current = true;
     setIsZChamberOpen(true);
+  }
+
+  function closeZTokenPopup() {
+    activeZTokenPopupRef.current = null;
+    setActiveZTokenPopup(null);
+    startNextZTokenPopup(450);
+  }
+
+  function enterZChamberFromTokenPopup() {
+    activeZTokenPopupRef.current = null;
+    setActiveZTokenPopup(null);
+    openZChamber();
   }
 
   function openZNopeInBook() {
@@ -2080,6 +2223,47 @@ export default function App() {
       setHighlightedStickerId(null);
     }, 4200);
     startNextAchievement(450);
+  }
+
+  function awardZNopeSuccess(result = 1, { countAttempt = true } = {}) {
+    if (!zNopeEntity) {
+      return;
+    }
+
+    if (znopeAcquiredRef.current) {
+      activeZRollResultRef.current = { type: "already" };
+      setActiveZRollResult({ type: "already" });
+      return;
+    }
+
+    const nextAttempts = countAttempt ? zRollAttemptsRef.current + 1 : zRollAttemptsRef.current;
+    zRollAttemptsRef.current = nextAttempts;
+    if (countAttempt) {
+      setZRollAttempts(nextAttempts);
+    }
+    znopeAcquiredRef.current = true;
+    setZnopeAcquired(true);
+    const nextCollectedIds = collectedIdsRef.current.includes(zNopeEntity.id)
+      ? collectedIdsRef.current
+      : [...collectedIdsRef.current, zNopeEntity.id];
+    collectedIdsRef.current = nextCollectedIds;
+    setCollectedIds(nextCollectedIds);
+    setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== zNopeEntity.id));
+    const nextStats = updateAchievementStats({ zNopeAcquired: 1, ...(countAttempt ? { zRollAttempts: 1 } : {}) });
+    setLatestDiscoveryId(zNopeEntity.id);
+    addInstantNopeLine("Z NOPE acquired. probability has stopped taking calls.");
+    activeZRollResultRef.current = { result, type: "success" };
+    setActiveZRollResult({ result, type: "success" });
+    queueAchievementUnlocks(buildAchievementSnapshot({
+      achievementStats: nextStats,
+      collectedIds: nextCollectedIds,
+      zNopeAcquired: 1,
+      zRollAttempts: nextAttempts,
+    }), 650);
+  }
+
+  function forceZSuccess() {
+    awardZNopeSuccess(1, { countAttempt: true });
   }
 
   function rollZChamber() {
@@ -2108,25 +2292,7 @@ export default function App() {
     setZRollAttempts(nextAttempts);
 
     if (result === 1) {
-      znopeAcquiredRef.current = true;
-      setZnopeAcquired(true);
-      const nextCollectedIds = collectedIdsRef.current.includes(zNopeEntity.id)
-        ? collectedIdsRef.current
-        : [...collectedIdsRef.current, zNopeEntity.id];
-      collectedIdsRef.current = nextCollectedIds;
-      setCollectedIds(nextCollectedIds);
-      setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== zNopeEntity.id));
-      const nextStats = updateAchievementStats({ zNopeAcquired: 1, zRollAttempts: 1 });
-      setLatestDiscoveryId(zNopeEntity.id);
-      addInstantNopeLine("Z NOPE acquired. probability has stopped taking calls.");
-      activeZRollResultRef.current = { result, type: "success" };
-      setActiveZRollResult({ result, type: "success" });
-      queueAchievementUnlocks(buildAchievementSnapshot({
-        achievementStats: nextStats,
-        collectedIds: nextCollectedIds,
-        zNopeAcquired: 1,
-        zRollAttempts: nextAttempts,
-      }), 650);
+      awardZNopeSuccess(result, { countAttempt: false });
       return;
     }
 
@@ -2528,6 +2694,7 @@ ${shareUrl}`;
   function renderAchievementCard(achievement, index) {
     const isUnlocked = unlockedAchievements.includes(achievement.id);
     const displayTier = getAchievementDisplayTier(achievement.id);
+    const grantsZRoll = Z_ROLL_ACHIEVEMENT_IDS.has(achievement.id);
 
     return (
       <article
@@ -2542,6 +2709,7 @@ ${shareUrl}`;
         <div className="achievement-card-badges">
           <span className="achievement-status-badge">{isUnlocked ? "UNLOCKED" : "LOCKED"}</span>
           <span className="achievement-tier-badge">{displayTier.label}</span>
+          {grantsZRoll && <span className="achievement-z-roll-badge">Z ROLL</span>}
         </div>
         <div className="achievement-card-mark" aria-hidden="true">
           {isUnlocked ? "OWNED" : "???"}
@@ -2790,6 +2958,7 @@ ${shareUrl}`;
     const achievement = activeAchievementInspect;
     const isUnlocked = unlockedAchievements.includes(achievement.id);
     const displayTier = getAchievementDisplayTier(achievement.id);
+    const grantsZRoll = Z_ROLL_ACHIEVEMENT_IDS.has(achievement.id);
 
     return (
       <section
@@ -2805,6 +2974,7 @@ ${shareUrl}`;
           <p>{isUnlocked ? "ACHIEVEMENT UNLOCKED" : "ACHIEVEMENT LOCKED"}</p>
           <strong>{achievement.name}</strong>
           <span>{displayTier.label}</span>
+          {grantsZRoll && <span>Z reward: +1 chamber roll</span>}
           <em>{achievement.description}</em>
           <b>reward: {achievement.reward}</b>
           <small>status: {isUnlocked ? "unlocked" : "thankfully not achieved yet."}</small>
@@ -2841,9 +3011,9 @@ ${shareUrl}`;
             ? "the final no has been documented."
             : zRollTokens > 0
               ? `rolls available: ${zRollTokens}`
-              : "no Z rolls available."}
+              : "unlock cursed achievements to roll for Z NOPE."}
         </span>
-        {!isAcquired && zRollTokens === 0 && <em>unlock cursed achievements later. probably.</em>}
+        {!isAcquired && zRollTokens === 0 && <em>hard achievements become chamber ammo.</em>}
         {isAcquired && zNopeEntity ? (
           <div className="z-chamber-card-wrap">{renderStickerCard(zNopeEntity, 0)}</div>
         ) : (
@@ -2938,6 +3108,34 @@ ${shareUrl}`;
               </div>
             </>
           )}
+        </div>
+      </section>
+    );
+  }
+
+  function renderZTokenPopup() {
+    if (!activeZTokenPopup) {
+      return null;
+    }
+
+    return (
+      <section className="z-token-modal-overlay" aria-modal="true" role="dialog" onClick={(event) => handleModalBackdropClick(event, closeZTokenPopup)}>
+        <div className="z-token-modal-card">
+          <p>Z CHAMBER ACCESS GRANTED</p>
+          <small>{activeZTokenPopup.achievement.name}</small>
+          <strong>A cursed achievement opened the Z Chamber.</strong>
+          <span>One roll.</span>
+          <span>One percent.</span>
+          <b>Probably NOPE.</b>
+          <em>Z ROLLS AVAILABLE: {zRollTokens}</em>
+          <div className="z-chamber-actions">
+            <button type="button" onClick={enterZChamberFromTokenPopup}>
+              ENTER THE Z CHAMBER
+            </button>
+            <button type="button" onClick={closeZTokenPopup}>
+              NOT YET. I FEAR SUCCESS.
+            </button>
+          </div>
         </div>
       </section>
     );
@@ -3245,6 +3443,12 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={addDevZRoll}>
           [ add z roll ]
         </button>
+        <button className="dev-reset-button" type="button" onClick={forceZAchievement}>
+          [ force z achievement ]
+        </button>
+        <button className="dev-reset-button" type="button" onClick={forceZSuccess}>
+          [ force z success ]
+        </button>
         {zRollTokens > 0 && !znopeAcquired && (
           <button className="dev-reset-button" type="button" onClick={openZChamber}>
             [ enter z chamber ]
@@ -3287,6 +3491,7 @@ ${shareUrl}`;
 
       {renderStickerInspectModal()}
       {renderAchievementInspectModal()}
+      {renderZTokenPopup()}
       {renderZChamberModal()}
 
       {activeSacrificeEntity && (

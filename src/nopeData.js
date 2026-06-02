@@ -11,6 +11,7 @@ export const rarityLabels = {
   illegal: "ILLEGAL LOOP",
   mythic: "MYTHIC NOPE",
   uber: "UBER NOPE",
+  z: "Z NOPE",
 };
 
 export const defaultAchievementStats = {
@@ -30,10 +31,12 @@ export const defaultAchievementStats = {
   shareCopyCount: 0,
   shareCount: 0,
   uberSacrificeCount: 0,
+  zNopeAcquired: 0,
+  zRollAttempts: 0,
+  zRollFailures: 0,
 };
 
 const UBER_IDS = [
-  "znope",
   "speednope",
   "00nope",
   "matrixnope",
@@ -296,9 +299,20 @@ normalNopeEntities.forEach((entity) => {
     return;
   }
 
+  if (entity.id === "znope") {
+    entity.name = "Z NOPE";
+    entity.type = "z";
+    entity.rarity = "z";
+    entity.rarityLabel = rarityLabels.z;
+    entity.dropChance = 1;
+    entity.caption = "the final no.";
+    return;
+  }
+
   entity.type = "image";
 });
 
+export const zNopeEntity = normalNopeEntities.find((entity) => entity.id === "znope");
 export const standardNopeEntities = normalNopeEntities.filter((entity) => entity.type === "image");
 
 standardNopeEntities.forEach((entity, index) => {
@@ -375,7 +389,7 @@ export const GIF_TOTAL = forbiddenNopeGifs.length;
 export const MYTHIC_TOTAL = mythicNopeRelics.length;
 export const UBER_TOTAL = uberNopeRelics.length;
 export const stickerGridEntities = [...standardNopeEntities, ...forbiddenNopeGifs];
-export const allNopeEntities = [...standardNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics, ...uberNopeRelics];
+export const allNopeEntities = [...standardNopeEntities, ...forbiddenNopeGifs, ...mythicNopeRelics, ...uberNopeRelics, zNopeEntity].filter(Boolean);
 export const rarityPools = {
   common: standardNopeEntities.filter((entity) => entity.rarity === "common"),
   cursed: forbiddenNopeGifs.filter((entity) => entity.rarity === "cursed"),
@@ -498,6 +512,11 @@ export const achievements = [
   { id: "public-embarrassment", name: "PUBLIC EMBARRASSMENT", description: "shared 5 worthless finds.", reward: "social damage", check: ({ shareCount }) => shareCount >= 5 },
   { id: "copypasta-contagion", name: "COPYPASTA CONTAGION", description: "copied share text 10 times.", reward: "clipboard infection", check: ({ shareCopyCount }) => shareCopyCount >= 10 },
   { id: "contract-said-non", name: "THE CONTRACT SAID NON", description: "copied the contract address.", reward: "non confirmed", check: ({ contractCopyCount }) => contractCopyCount >= 1 },
+  { id: "z-nope-failed-once", name: "Z? NOPE.", description: "rolled for Z NOPE and did not get Z NOPE.", reward: "predictable disappointment", check: ({ zRollFailures }) => zRollFailures >= 1 },
+  { id: "five-z-rolls-still-nope", name: "FIVE Z ROLLS AND STILL NOPE", description: "rolled five times. Z said no.", reward: "premium frustration", check: ({ zRollFailures }) => zRollFailures >= 5 },
+  { id: "ten-z-rolls-zero-z", name: "TEN Z ROLLS. ZERO Z.", description: "missed Z NOPE ten times.", reward: "statistical bruising", check: ({ zRollFailures }) => zRollFailures >= 10 },
+  { id: "the-final-no", name: "THE FINAL NO", description: "pulled the rarest NOPE.", reward: "holy refusal", check: ({ zNopeAcquired }) => zNopeAcquired >= 1 },
+  { id: "first-try-disgusting", name: "FIRST TRY? DISGUSTING.", description: "hit Z NOPE first try.", reward: "unfair universe", check: ({ zNopeAcquired, zRollAttempts }) => zNopeAcquired >= 1 && zRollAttempts === 1 },
   { id: "rare-mistake-achievement", name: "RARE MISTAKE", description: "discovered a rare mistake.", reward: "statistically unimpressive", check: ({ rareCollectedCount }) => rareCollectedCount >= 1 },
   { id: "epic-failure-achievement", name: "EPIC FAILURE", description: "discovered an epic failure.", reward: "larger disappointment", check: ({ epicCollectedCount }) => epicCollectedCount >= 1 },
   { id: "common-sense-lost", name: "COMMON SENSE LOST", description: "collected 25 common trash stickers.", reward: "common sense not found", check: ({ commonCollectedCount }) => commonCollectedCount >= 25 },
@@ -511,7 +530,7 @@ export function getRank(count) {
 }
 
 export function pickDiscoveryEntity() {
-  const hits = allNopeEntities.filter((entity) => Math.random() * 100 < entity.dropChance);
+  const hits = allNopeEntities.filter((entity) => entity.id !== "znope" && Math.random() * 100 < entity.dropChance);
 
   if (hits.length === 0) {
     return null;

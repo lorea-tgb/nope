@@ -1397,6 +1397,122 @@ button {
   white-space: normal;
 }
 
+.z-chamber-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 228, 92, 0.14) 0,
+      rgba(255, 228, 92, 0.14) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    radial-gradient(circle at 50% 45%, rgba(57, 255, 20, 0.16), transparent 38%),
+    rgba(0, 0, 0, 0.86);
+}
+
+.z-chamber-modal-card {
+  width: min(560px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 14px;
+  border: 3px solid #ffe45c;
+  color: var(--text);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(0, 152, 234, 0.12) 0,
+      rgba(0, 152, 234, 0.12) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    #020806;
+  text-align: center;
+  box-shadow:
+    0 0 0 4px #000,
+    -8px 0 0 var(--ton-blue),
+    8px 0 0 var(--glitch-pink),
+    0 0 54px rgba(255, 228, 92, 0.52);
+}
+
+.z-chamber-modal-card p {
+  width: 100%;
+  margin: 0;
+  padding: 7px 9px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: linear-gradient(90deg, #ffe45c, var(--pepe-green), var(--glitch-pink));
+  font-size: clamp(1.2rem, 4vw, 1.7rem);
+  font-weight: 900;
+  text-shadow: 2px 0 rgba(255, 255, 255, 0.46);
+  animation: grinderReadyHeaderTear 1.4s steps(2, end) infinite;
+}
+
+.z-chamber-modal-card strong,
+.z-chamber-modal-card span,
+.z-chamber-modal-card em,
+.z-chamber-modal-card b,
+.z-chamber-modal-card small {
+  margin: 0;
+  font-style: normal;
+}
+
+.z-chamber-modal-card strong {
+  color: #fff;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  text-shadow: 2px 0 var(--ton-blue), -2px 0 var(--glitch-pink);
+}
+
+.z-chamber-modal-card span,
+.z-chamber-modal-card em,
+.z-chamber-modal-card small,
+.z-chamber-modal-card b {
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 228, 92, 0.44);
+  color: #dff6ff;
+  background: rgba(0, 12, 8, 0.66);
+}
+
+.z-chamber-modal-card b {
+  color: #ffe45c;
+}
+
+.z-chamber-media {
+  width: min(260px, 72vw);
+}
+
+.z-chamber-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.z-chamber-modal-card button,
+.z-chamber-panel button {
+  padding: 8px 10px;
+  border: 2px solid #000;
+  color: #00120a;
+  background: #ffe45c;
+  font-weight: 900;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.52),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.36),
+    3px 3px 0 #000;
+}
+
+.z-chamber-modal-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  filter: saturate(0.64);
+}
+
 .sacrifice-modal-overlay {
   z-index: 8950;
   background:
@@ -2402,6 +2518,7 @@ button {
 
 .mythic-inspect-card,
 .uber-inspect-card,
+.z-inspect-card,
 .achievement-inspect-card.achievement-tier-cursed {
   border-color: #ffe45c;
   box-shadow:
@@ -2412,6 +2529,7 @@ button {
 }
 
 .uber-inspect-card .inspect-detail-panel p,
+.z-inspect-card .inspect-detail-panel p,
 .achievement-inspect-card.achievement-tier-cursed p {
   background: linear-gradient(90deg, #ffe45c, var(--glitch-pink), var(--pepe-green));
 }
@@ -3001,6 +3119,54 @@ button {
       transparent 6px
     ),
     rgba(0, 12, 8, 0.9);
+}
+
+.z-chamber-panel {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 10px;
+  border-bottom: 2px solid #000;
+  color: #eaffee;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 228, 92, 0.08) 0,
+      rgba(255, 228, 92, 0.08) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    linear-gradient(90deg, rgba(0, 152, 234, 0.12), rgba(57, 255, 20, 0.1)),
+    rgba(0, 12, 8, 0.92);
+  text-align: center;
+}
+
+.z-chamber-panel strong {
+  color: #ffe45c;
+  font-size: clamp(1rem, 2.6vw, 1.25rem);
+  text-shadow: 2px 0 var(--ton-blue), -2px 0 var(--glitch-pink);
+}
+
+.z-chamber-panel span,
+.z-chamber-panel em,
+.z-chamber-panel small {
+  font-style: normal;
+}
+
+.z-signal-teaser {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 2px dashed #ffe45c;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.z-signal-teaser b {
+  color: var(--pepe-green);
+}
+
+.z-chamber-card-wrap {
+  width: min(210px, 100%);
 }
 
 .stickerbook-counter-strip,
@@ -4226,6 +4392,26 @@ button {
     #f7f7ea;
 }
 
+.sticker-card.rarity-z,
+.share-card.z-card {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 228, 92, 0.24) 0,
+      rgba(255, 228, 92, 0.24) 4px,
+      transparent 4px,
+      transparent 12px
+    ),
+    linear-gradient(135deg, rgba(0, 152, 234, 0.3), rgba(57, 255, 20, 0.2), rgba(255, 43, 214, 0.18)),
+    #f7f7ea;
+  box-shadow:
+    4px 4px 0 rgba(0, 0, 0, 0.58),
+    -4px 0 0 var(--ton-blue),
+    4px 0 0 var(--glitch-pink),
+    0 0 28px rgba(255, 228, 92, 0.42),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.5);
+}
+
 .sticker-card.uber-card.uber-card-highlight {
   animation: uberCardHighlight 4.2s steps(2, end);
 }
@@ -4326,6 +4512,14 @@ button {
   box-shadow:
     -2px 0 0 var(--ton-blue),
     2px 0 0 var(--pepe-green);
+}
+
+.sticker-card.rarity-z span {
+  color: #00120a;
+  background: linear-gradient(90deg, #ffe45c, var(--pepe-green), var(--glitch-pink));
+  box-shadow:
+    -2px 0 0 var(--ton-blue),
+    2px 0 0 var(--glitch-pink);
 }
 
 .sticker-card.mythic-card .sticker-locked-mark {

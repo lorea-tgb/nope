@@ -38,6 +38,7 @@ function getDiscoveryTitle(entity) {
     forbidden: "FORBIDDEN LOOP LEAK",
     cursed: "CURSED LOOP LEAK",
     illegal: "ILLEGAL LOOP BREACH",
+    z: "THE FINAL NO",
   };
 
   return eventLabels[entity.rarity] || "NOPEDEX DISCOVERY";
@@ -50,6 +51,10 @@ function getStickerValueLines(entity) {
 
   if (entity.type === "uber") {
     return ["probability: insulted", "value: still zero"];
+  }
+
+  if (entity.type === "z") {
+    return ["source: Z CHAMBER", "value: still zero"];
   }
 
   if (entity.type === "gif") {
@@ -75,6 +80,7 @@ function getRarityAccent(entity) {
     illegal: "#ffcc33",
     mythic: "#ffd34d",
     uber: "#fff06a",
+    z: "#ffe45c",
   };
 
   return rarityColors[entity.rarity] || "#39ff14";

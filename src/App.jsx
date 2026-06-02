@@ -23,6 +23,7 @@ import {
   standardNopeEntities,
   stickerGridEntities,
   uberNopeRelics,
+  zNopeEntity,
 } from "./nopeData";
 
 
@@ -40,6 +41,10 @@ const STORAGE_KEYS = {
   nopeCount: "nopeMachine.nopeCount",
   sacrificedIds: "nope_sacrificed_ids",
   unlockedAchievements: "nopeMachine.unlockedAchievements",
+  zNopeAcquired: "nope_znope_acquired",
+  zRollAttempts: "nope_z_roll_attempts",
+  zRollFailures: "nope_z_roll_failures",
+  zRollTokens: "nope_z_roll_tokens",
 };
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
@@ -252,6 +257,12 @@ export default function App() {
   const [duplicateCopies, setDuplicateCopies] = useState(() =>
     readStoredObject(STORAGE_KEYS.duplicateCopies, {}),
   );
+  const [zRollTokens, setZRollTokens] = useState(() => readStoredNumber(STORAGE_KEYS.zRollTokens));
+  const [zRollAttempts, setZRollAttempts] = useState(() => readStoredNumber(STORAGE_KEYS.zRollAttempts));
+  const [zRollFailures, setZRollFailures] = useState(() => readStoredNumber(STORAGE_KEYS.zRollFailures));
+  const [znopeAcquired, setZnopeAcquired] = useState(() =>
+    readStoredString(STORAGE_KEYS.zNopeAcquired) === "true" || readStoredArray(STORAGE_KEYS.collectedIds).includes("znope"),
+  );
   const [unlockedAchievements, setUnlockedAchievements] = useState(() =>
     readStoredArray(STORAGE_KEYS.unlockedAchievements),
   );
@@ -264,6 +275,8 @@ export default function App() {
   const [activeUberSacrificeEntity, setActiveUberSacrificeEntity] = useState(null);
   const [activeStickerInspectEntity, setActiveStickerInspectEntity] = useState(null);
   const [activeAchievementInspect, setActiveAchievementInspect] = useState(null);
+  const [isZChamberOpen, setIsZChamberOpen] = useState(false);
+  const [activeZRollResult, setActiveZRollResult] = useState(null);
   const [uberSacrificeStep, setUberSacrificeStep] = useState(1);
   const [activeSacrificeEffect, setActiveSacrificeEffect] = useState(null);
   const [duplicateStreak, setDuplicateStreak] = useState(0);
@@ -333,12 +346,18 @@ export default function App() {
   const achievementStatsRef = useRef(achievementStats);
   const duplicateMaterialsRef = useRef(duplicateMaterials);
   const duplicateCopiesRef = useRef(duplicateCopies);
+  const zRollTokensRef = useRef(zRollTokens);
+  const zRollAttemptsRef = useRef(zRollAttempts);
+  const zRollFailuresRef = useRef(zRollFailures);
+  const znopeAcquiredRef = useRef(znopeAcquired);
   const unlockedAchievementsRef = useRef(unlockedAchievements);
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
   const activeGoodFindModalRef = useRef(activeGoodFindModal);
   const activeCraftResultRef = useRef(activeCraftResult);
   const showGrinderReadyPromptRef = useRef(showGrinderReadyPrompt);
+  const isZChamberOpenRef = useRef(isZChamberOpen);
+  const activeZRollResultRef = useRef(activeZRollResult);
   const forcedStickerBookPopupCountRef = useRef(forcedStickerBookPopupCount);
   const bootRunRef = useRef(0);
   const globalNopeCountRef = useRef(globalNopeCount);
@@ -408,8 +427,11 @@ export default function App() {
       ...getCollectionCounts(collectedIds),
       collectedIds,
       nopeCount,
+      zNopeAcquired: znopeAcquired ? 1 : 0,
+      zRollAttempts,
+      zRollFailures,
     }),
-    [achievementStats, collectedIds, nopeCount],
+    [achievementStats, collectedIds, nopeCount, zRollAttempts, zRollFailures, znopeAcquired],
   );
   const nextBadges = useMemo(() => {
     const unlockedSet = new Set(unlockedAchievements);
@@ -443,6 +465,8 @@ export default function App() {
     activeSacrificeEffect ||
     activeStickerInspectEntity ||
     activeAchievementInspect ||
+    isZChamberOpen ||
+    activeZRollResult ||
     achievementQueue.length > 0,
   );
   const isInspectModalBlocked = Boolean(
@@ -454,7 +478,9 @@ export default function App() {
     showFirstStickerPopup ||
     pendingFirstStickerPopup ||
     showResetConfirm ||
-    showGrinderReadyPrompt,
+    showGrinderReadyPrompt ||
+    isZChamberOpen ||
+    activeZRollResult,
   );
   const stickerBookNavItems = [
     ["all", "ALL TRASH", "ALL"],
@@ -688,6 +714,34 @@ export default function App() {
   }, [duplicateCopies]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zRollTokens, String(zRollTokens));
+    zRollTokensRef.current = zRollTokens;
+  }, [zRollTokens]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zRollAttempts, String(zRollAttempts));
+    zRollAttemptsRef.current = zRollAttempts;
+  }, [zRollAttempts]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zRollFailures, String(zRollFailures));
+    zRollFailuresRef.current = zRollFailures;
+  }, [zRollFailures]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zNopeAcquired, String(znopeAcquired));
+    znopeAcquiredRef.current = znopeAcquired;
+  }, [znopeAcquired]);
+
+  useEffect(() => {
+    isZChamberOpenRef.current = isZChamberOpen;
+  }, [isZChamberOpen]);
+
+  useEffect(() => {
+    activeZRollResultRef.current = activeZRollResult;
+  }, [activeZRollResult]);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.lastGrinderPromptNopeCount, String(lastGrinderPromptNopeCount));
   }, [lastGrinderPromptNopeCount]);
 
@@ -816,7 +870,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || showGrinderReadyPrompt || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -827,7 +881,7 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, achievementQueue.length, pendingFirstStickerPopup, showGrinderReadyPrompt]);
+  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt]);
 
   useEffect(() => {
     if (showIntro) {
@@ -1052,6 +1106,8 @@ export default function App() {
         showGrinderReadyPromptRef.current ||
         activeStickerInspectEntity ||
         activeAchievementInspect ||
+        isZChamberOpenRef.current ||
+        activeZRollResultRef.current ||
         achievementQueueRef.current.length === 0
       ) {
         return;
@@ -1367,7 +1423,9 @@ export default function App() {
       "duplicate-damage": [snapshot.duplicateCount, 10, "duplicates"],
       "emotional-recycling": [snapshot.duplicateCount, 50, "duplicates"],
       "feed-the-machine": [snapshot.sacrificeCount, 5, "sacrifices"],
+      "five-z-rolls-still-nope": [snapshot.zRollFailures, 5, "failed Z rolls"],
       "final-boss-press": [snapshot.nopeCount, 500, "NOPE presses"],
+      "first-try-disgusting": [snapshot.zNopeAcquired && snapshot.zRollAttempts === 1 ? 1 : 0, 1, "first-try Z"],
       "found-in-the-ashes": [snapshot.restoredFromBurnCount, 1, "restored NOPEs"],
       "forbidden-behaviour": [snapshot.gifCollectedCount, 1, "loops"],
       "fuel-goblin": [snapshot.duplicateMaterialEarnedCount, 25, "duplicate fuel"],
@@ -1392,7 +1450,9 @@ export default function App() {
       "scorched-earth": [snapshot.sacrificeCount, 25, "sacrifices"],
       "spread-the-disease": [snapshot.shareCount, 1, "shares"],
       "sticker-gremlin": [snapshot.normalCollectedCount, 50, "stickers"],
+      "ten-z-rolls-zero-z": [snapshot.zRollFailures, 10, "failed Z rolls"],
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
+      "the-final-no": [snapshot.zNopeAcquired, 1, "Z NOPE"],
       "trash-alchemist": [snapshot.grinderUseCount, 1, "grinder uses"],
       "total-nopeification": [
         snapshot.normalCollectedCount + snapshot.gifCollectedCount + snapshot.mythicCollectedCount,
@@ -1402,6 +1462,7 @@ export default function App() {
       "trash-collector": [snapshot.normalCollectedCount, 10, "stickers"],
       "uberly-pointless": [snapshot.uberCollectedCount, 1, "Uber NOPEs"],
       "why-are-you-like-this": [snapshot.normalCollectedCount, NORMAL_TOTAL, "stickers"],
+      "z-nope-failed-once": [snapshot.zRollFailures, 1, "failed Z rolls"],
     };
     const progress = progressMap[achievement.id];
 
@@ -1430,6 +1491,9 @@ export default function App() {
       collectedIds: ids,
       nopeCount: overrides.nopeCount ?? nopeCountRef.current,
       sacrificedIds: burnedIds,
+      zNopeAcquired: overrides.zNopeAcquired ?? (znopeAcquiredRef.current ? 1 : 0),
+      zRollAttempts: overrides.zRollAttempts ?? zRollAttemptsRef.current,
+      zRollFailures: overrides.zRollFailures ?? zRollFailuresRef.current,
     };
   }
 
@@ -1982,6 +2046,104 @@ export default function App() {
     addInstantNopeLine("dev material injected. shamefully useful.");
   }
 
+  function addDevZRoll() {
+    const nextTokens = zRollTokensRef.current + 1;
+    zRollTokensRef.current = nextTokens;
+    setZRollTokens(nextTokens);
+    addInstantNopeLine("dev Z roll injected. probability is suspicious.");
+  }
+
+  function closeZChamber() {
+    isZChamberOpenRef.current = false;
+    activeZRollResultRef.current = null;
+    setIsZChamberOpen(false);
+    setActiveZRollResult(null);
+    startNextAchievement(450);
+  }
+
+  function openZChamber() {
+    isZChamberOpenRef.current = true;
+    setIsZChamberOpen(true);
+  }
+
+  function openZNopeInBook() {
+    isZChamberOpenRef.current = false;
+    activeZRollResultRef.current = null;
+    setIsZChamberOpen(false);
+    setActiveZRollResult(null);
+    setIsStickerBookOpen(true);
+    setStickerTab("all");
+    setStickerFilter("found");
+    setHighlightedStickerId("znope");
+    window.clearTimeout(firstStickerHighlightTimerRef.current);
+    firstStickerHighlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedStickerId(null);
+    }, 4200);
+    startNextAchievement(450);
+  }
+
+  function rollZChamber() {
+    if (!zNopeEntity) {
+      return;
+    }
+
+    if (znopeAcquiredRef.current) {
+      activeZRollResultRef.current = { type: "already" };
+      setActiveZRollResult({ type: "already" });
+      return;
+    }
+
+    if (zRollTokensRef.current <= 0) {
+      activeZRollResultRef.current = { type: "empty" };
+      setActiveZRollResult({ type: "empty" });
+      return;
+    }
+
+    const result = randomBetween(1, 100);
+    const nextTokens = zRollTokensRef.current - 1;
+    const nextAttempts = zRollAttemptsRef.current + 1;
+    zRollTokensRef.current = nextTokens;
+    zRollAttemptsRef.current = nextAttempts;
+    setZRollTokens(nextTokens);
+    setZRollAttempts(nextAttempts);
+
+    if (result === 1) {
+      znopeAcquiredRef.current = true;
+      setZnopeAcquired(true);
+      const nextCollectedIds = collectedIdsRef.current.includes(zNopeEntity.id)
+        ? collectedIdsRef.current
+        : [...collectedIdsRef.current, zNopeEntity.id];
+      collectedIdsRef.current = nextCollectedIds;
+      setCollectedIds(nextCollectedIds);
+      setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== zNopeEntity.id));
+      const nextStats = updateAchievementStats({ zNopeAcquired: 1, zRollAttempts: 1 });
+      setLatestDiscoveryId(zNopeEntity.id);
+      addInstantNopeLine("Z NOPE acquired. probability has stopped taking calls.");
+      activeZRollResultRef.current = { result, type: "success" };
+      setActiveZRollResult({ result, type: "success" });
+      queueAchievementUnlocks(buildAchievementSnapshot({
+        achievementStats: nextStats,
+        collectedIds: nextCollectedIds,
+        zNopeAcquired: 1,
+        zRollAttempts: nextAttempts,
+      }), 650);
+      return;
+    }
+
+    const nextFailures = zRollFailuresRef.current + 1;
+    zRollFailuresRef.current = nextFailures;
+    setZRollFailures(nextFailures);
+    const nextStats = updateAchievementStats({ zRollAttempts: 1, zRollFailures: 1 });
+    addInstantNopeLine(`Z Chamber rolled ${result}. that is not 1.`);
+    activeZRollResultRef.current = { result, type: "failure" };
+    setActiveZRollResult({ result, type: "failure" });
+    queueAchievementUnlocks(buildAchievementSnapshot({
+      achievementStats: nextStats,
+      zRollAttempts: nextAttempts,
+      zRollFailures: nextFailures,
+    }), 450);
+  }
+
   function forceCommonDuplicate() {
     const collectedCommon = standardNopeEntities.find((entity) => entity.rarity === "common" && collectedIdsRef.current.includes(entity.id));
 
@@ -2126,6 +2288,18 @@ export default function App() {
   function getShareText(entity) {
     const shareUrl = getStickerShareUrl(entity);
     const oddsText = `odds: ${formatDropChance(entity.dropChance)}`;
+
+    if (entity.type === "z" || entity.id === "znope") {
+      return `I pulled Z NOPE from the Z CHAMBER.
+
+odds: 1%
+source: cursed achievement roll
+value: still zero.
+
+$NOPE
+
+${shareUrl}`;
+    }
 
     if (entity.type === "uber") {
       return `UBER NOPE BREACH:
@@ -2309,8 +2483,13 @@ ${shareUrl}`;
       "nope-or-no-achievement",
       "nope-or-nothing-achievement",
       "probability-launderer",
+      "five-z-rolls-still-nope",
+      "first-try-disgusting",
       "total-nopeification",
+      "ten-z-rolls-zero-z",
+      "the-final-no",
       "uberly-pointless",
+      "z-nope-failed-once",
     ]);
     const specialAchievementIds = new Set([
       "again-really",
@@ -2538,7 +2717,13 @@ ${shareUrl}`;
     const totalCopies = duplicateCount + 1;
     const canShare = isCollected && !isSacrificed;
     const statusText = isSacrificed ? "sacrificed" : isCollected ? "collected" : "not found";
-    const valueText = entity.type === "gif" ? "value: animated zero." : entity.type === "uber" ? "value: probability insulted." : "value: emotionally zero.";
+    const valueText = entity.type === "gif"
+      ? "value: animated zero."
+      : entity.type === "z"
+        ? "value: still zero."
+        : entity.type === "uber"
+          ? "value: probability insulted."
+          : "value: emotionally zero.";
 
     return (
       <section
@@ -2547,7 +2732,7 @@ ${shareUrl}`;
         role="dialog"
         onClick={(event) => handleModalBackdropClick(event, closeInspectModals)}
       >
-        <div className={`inspect-modal-card sticker-inspect-card rarity-${entity.rarity} ${isSacrificed ? "sacrificed" : ""} ${entity.type === "gif" ? "gif-inspect-card" : ""} ${entity.type === "mythic" ? "mythic-inspect-card" : ""} ${entity.type === "uber" ? "uber-inspect-card" : ""}`}>
+        <div className={`inspect-modal-card sticker-inspect-card rarity-${entity.rarity} ${isSacrificed ? "sacrificed" : ""} ${entity.type === "gif" ? "gif-inspect-card" : ""} ${entity.type === "mythic" ? "mythic-inspect-card" : ""} ${entity.type === "uber" ? "uber-inspect-card" : ""} ${entity.type === "z" ? "z-inspect-card" : ""}`}>
           <button className="inspect-close-button" type="button" onClick={closeInspectModals} aria-label="Close sticker preview">
             X
           </button>
@@ -2645,6 +2830,119 @@ ${shareUrl}`;
     );
   }
 
+  function renderZChamberPanel() {
+    const isAcquired = znopeAcquired || collectedIds.includes("znope");
+
+    return (
+      <section className={`z-chamber-panel ${isAcquired ? "acquired" : zRollTokens > 0 ? "ready" : "locked"}`} aria-label="Z Chamber">
+        <strong>{isAcquired ? "Z NOPE ACQUIRED" : zRollTokens > 0 ? "Z CHAMBER READY" : "Z CHAMBER LOCKED"}</strong>
+        <span>
+          {isAcquired
+            ? "the final no has been documented."
+            : zRollTokens > 0
+              ? `rolls available: ${zRollTokens}`
+              : "no Z rolls available."}
+        </span>
+        {!isAcquired && zRollTokens === 0 && <em>unlock cursed achievements later. probably.</em>}
+        {isAcquired && zNopeEntity ? (
+          <div className="z-chamber-card-wrap">{renderStickerCard(zNopeEntity, 0)}</div>
+        ) : (
+          <div className="z-signal-teaser">
+            <b>Z SIGNAL</b>
+            <small>status: unresolved</small>
+            <small>source: Z CHAMBER only</small>
+          </div>
+        )}
+        {zRollTokens > 0 && !isAcquired && (
+          <button type="button" onClick={openZChamber}>
+            [ ENTER Z CHAMBER ]
+          </button>
+        )}
+      </section>
+    );
+  }
+
+  function renderZChamberModal() {
+    if (!isZChamberOpen && !activeZRollResult) {
+      return null;
+    }
+
+    const isSuccess = activeZRollResult?.type === "success";
+    const isFailure = activeZRollResult?.type === "failure";
+    const isAlready = activeZRollResult?.type === "already";
+    const isEmpty = activeZRollResult?.type === "empty";
+
+    return (
+      <section className="z-chamber-modal-overlay" aria-modal="true" role="dialog" onClick={(event) => handleModalBackdropClick(event, closeZChamber)}>
+        <div className={`z-chamber-modal-card ${isSuccess ? "success" : isFailure ? "failure" : ""}`}>
+          {isSuccess && zNopeEntity ? (
+            <>
+              <p>THE FINAL NO HAS ARRIVED</p>
+              <div className="first-sticker-modal-media z-chamber-media">
+                <img
+                  src={zNopeEntity.image}
+                  alt={zNopeEntity.name}
+                  onError={(event) => {
+                    event.currentTarget.classList.add("image-missing");
+                  }}
+                />
+              </div>
+              <strong>Z NOPE</strong>
+              <span>rarity: Z NOPE</span>
+              <em>odds: 1%</em>
+              <em>source: Z CHAMBER</em>
+              <b>value: still zero</b>
+              <small>The rarest refusal has entered your NOPEDEX.</small>
+              <small>Probability has stopped taking calls.</small>
+              <button type="button" onClick={openZNopeInBook}>
+                OPEN STICKER BOOK. WORSHIP NOTHING.
+              </button>
+            </>
+          ) : isFailure ? (
+            <>
+              <p>Z SAID NOPE</p>
+              <strong>ROLL RESULT: {activeZRollResult.result} / 100</strong>
+              <span>You needed 1.</span>
+              <span>You got {activeZRollResult.result}.</span>
+              <b>That is not 1.</b>
+              <div className="z-chamber-actions">
+                {zRollTokens > 0 ? (
+                  <button type="button" onClick={rollZChamber}>
+                    ROLL AGAIN IF YOU CAN
+                  </button>
+                ) : (
+                  <button type="button" disabled>
+                    NO ROLLS LEFT. BRILLIANT.
+                  </button>
+                )}
+                <button type="button" onClick={closeZChamber}>
+                  LEAVE THE CHAMBER
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p>Z CHAMBER</p>
+              <strong>{isAlready ? "Z NOPE ALREADY ACQUIRED." : "Z ROLLS: " + zRollTokens}</strong>
+              <span>{isAlready ? "the machine cannot improve on refusal." : "Roll 1-100."}</span>
+              {!isAlready && <span>Roll 1 and receive Z NOPE.</span>}
+              {!isAlready && <span>Roll anything else and receive emotional damage.</span>}
+              {isEmpty && <b>NO Z ROLLS REMAIN.</b>}
+              <div className="z-chamber-actions">
+                <button type="button" onClick={rollZChamber} disabled={zRollTokens <= 0 || znopeAcquired}>
+                  {zRollTokens <= 0 ? "NO Z ROLLS REMAIN." : "ROLL THE Z"}
+                </button>
+                <button type="button" onClick={closeZChamber}>
+                  LEAVE BEFORE IT GETS WORSE
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+    );
+  }
+
   if (shareEntity !== null) {
     const entity = shareEntity || null;
 
@@ -2658,7 +2956,7 @@ ${shareUrl}`;
         </div>
 
         {entity ? (
-          <section className={`share-card rarity-${entity.rarity} ${entity.type === "uber" ? "uber-card" : ""} ${entity.type === "mythic" ? "mythic-card" : ""} ${entity.type === "gif" ? "gif-card" : ""}`}>
+          <section className={`share-card rarity-${entity.rarity} ${entity.type === "uber" ? "uber-card" : ""} ${entity.type === "mythic" ? "mythic-card" : ""} ${entity.type === "gif" ? "gif-card" : ""} ${entity.type === "z" ? "z-card" : ""}`}>
             <p>NOPEDEX DISCOVERY</p>
             <div className="share-media">
               <img
@@ -2673,7 +2971,7 @@ ${shareUrl}`;
             <span>{entity.rarityLabel}</span>
             <em>odds: {formatDropChance(entity.dropChance)}</em>
             <small>{entity.caption}</small>
-            <b>{entity.type === "gif" ? "value: animated zero" : entity.type === "uber" ? "value: still zero" : "value: emotionally zero"}</b>
+            <b>{entity.type === "gif" ? "value: animated zero" : entity.type === "z" ? "value: still zero" : entity.type === "uber" ? "value: still zero" : "value: emotionally zero"}</b>
             <button type="button" onClick={() => { window.location.href = "/"; }}>
               [ ENTER NOPE MACHINE ]
             </button>
@@ -2944,6 +3242,14 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={forceCommonDuplicate}>
           [ force common duplicate ]
         </button>
+        <button className="dev-reset-button" type="button" onClick={addDevZRoll}>
+          [ add z roll ]
+        </button>
+        {zRollTokens > 0 && !znopeAcquired && (
+          <button className="dev-reset-button" type="button" onClick={openZChamber}>
+            [ enter z chamber ]
+          </button>
+        )}
       </footer>
 
       {activeBreachOverlay && (
@@ -2981,6 +3287,7 @@ ${shareUrl}`;
 
       {renderStickerInspectModal()}
       {renderAchievementInspectModal()}
+      {renderZChamberModal()}
 
       {activeSacrificeEntity && (
         <section
@@ -3186,7 +3493,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !showGrinderReadyPrompt && (
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && (
         <section
           className="achievement-modal-overlay"
           aria-modal="true"
@@ -3312,6 +3619,8 @@ ${shareUrl}`;
                   </span>
                 </div>
               </div>
+
+              {renderZChamberPanel()}
 
               <div className="stickerbook-controls primary-controls" aria-label="NOPEDEX view controls">
                 {stickerBookNavItems.map(([value, label]) => (

@@ -31,8 +31,10 @@ const STORAGE_KEYS = {
   collectedIds: "nopeMachine.collectedIds",
   firstStickerForced: "nope_first_sticker_forced",
   firstStickerPopupSeen: "nope_first_sticker_popup_seen",
+  forcedStickerBookPopupCount: "nope_forced_stickerbook_popup_count",
   introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
+  lastGrinderPromptNopeCount: "nope_last_grinder_prompt_count",
   duplicateMaterials: "nope_duplicate_materials",
   duplicateCopies: "nope_duplicate_copies",
   nopeCount: "nopeMachine.nopeCount",
@@ -42,6 +44,7 @@ const STORAGE_KEYS = {
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
 const IMPORTANT_MODAL_ACTION_DELAY = 1000;
+const GRINDER_PROMPT_NOPE_COOLDOWN = 20;
 const SACRIFICE_MATERIAL_GAIN = 3;
 const DEFAULT_DUPLICATE_MATERIALS = {
   common: 0,
@@ -261,6 +264,16 @@ export default function App() {
   const [activeUberSacrificeEntity, setActiveUberSacrificeEntity] = useState(null);
   const [uberSacrificeStep, setUberSacrificeStep] = useState(1);
   const [activeSacrificeEffect, setActiveSacrificeEffect] = useState(null);
+  const [duplicateStreak, setDuplicateStreak] = useState(0);
+  const [showGrinderReadyPrompt, setShowGrinderReadyPrompt] = useState(false);
+  const [lastGrinderPromptNopeCount, setLastGrinderPromptNopeCount] = useState(() =>
+    readStoredNumber(STORAGE_KEYS.lastGrinderPromptNopeCount),
+  );
+  const [isGrinderPromptPulsing, setIsGrinderPromptPulsing] = useState(false);
+  const [forcedStickerBookPopupCount, setForcedStickerBookPopupCount] = useState(() =>
+    readStoredNumber(STORAGE_KEYS.forcedStickerBookPopupCount),
+  );
+  const [activeGoodFindCanSkip, setActiveGoodFindCanSkip] = useState(false);
   const [pendingFirstStickerPopup, setPendingFirstStickerPopup] = useState(false);
   const [showFirstStickerPopup, setShowFirstStickerPopup] = useState(false);
   const [activeBreachOverlay, setActiveBreachOverlay] = useState(null);
@@ -309,6 +322,7 @@ export default function App() {
   const nopeIdleTimerRef = useRef(null);
   const stickerBookOverlayRef = useRef(null);
   const stickerBookScrollRef = useRef(null);
+  const duplicateGrinderSectionRef = useRef(null);
   const terminalLogRef = useRef(null);
   const lineIdRef = useRef(0);
   const nopeCountRef = useRef(nopeCount);
@@ -322,12 +336,15 @@ export default function App() {
   const activeAchievementRef = useRef(activeAchievement);
   const activeGoodFindModalRef = useRef(activeGoodFindModal);
   const activeCraftResultRef = useRef(activeCraftResult);
+  const showGrinderReadyPromptRef = useRef(showGrinderReadyPrompt);
+  const forcedStickerBookPopupCountRef = useRef(forcedStickerBookPopupCount);
   const bootRunRef = useRef(0);
   const globalNopeCountRef = useRef(globalNopeCount);
   const globalSyncMessageRef = useRef(false);
   const globalFlushInProgressRef = useRef(false);
   const globalFlushIntervalRef = useRef(null);
   const globalPulseTimerRef = useRef(null);
+  const grinderPromptPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
   const telegramDiscoveryHapticCooldownRef = useRef(false);
   const telegramDiscoveryHapticTimerRef = useRef(null);
@@ -409,6 +426,21 @@ export default function App() {
   const isGrinderReady = DUPLICATE_GRINDER_RECIPES.some(
     (recipe) => (duplicateMaterials[recipe.source] ?? 0) >= recipe.cost,
   );
+  const isGrinderReadyPromptBlocked = Boolean(
+    activeAchievement ||
+    activeGoodFindModal ||
+    activeCraftResult ||
+    activeSacrificeEntity ||
+    activeUberSacrificeEntity ||
+    activeDiscoveryPopup ||
+    activeBreachOverlay ||
+    showFirstStickerPopup ||
+    pendingFirstStickerPopup ||
+    showResetConfirm ||
+    showExistentialPopup ||
+    activeSacrificeEffect ||
+    achievementQueue.length > 0,
+  );
   const stickerBookNavItems = [
     ["all", "ALL TRASH", "ALL"],
     ["normal", "WORTHLESS NOPES", "NOPES"],
@@ -457,7 +489,7 @@ export default function App() {
     telegramSignalLineRef.current = true;
     addLine(createLine(
       "nope",
-      `Telegram signal detected${telegramUser?.first_name ? `: ${telegramUser.first_name}` : ""}.`,
+      `Telegram signal detected${telegramUser?.first_name ? `: ${telegramUser.first_name}` : ""}. suspicious.`,
     ));
   }, [telegramUser?.first_name, telegramWebApp]);
 
@@ -486,6 +518,7 @@ export default function App() {
       window.clearTimeout(ambientClearTimerRef.current);
       window.clearTimeout(nopeIdleTimerRef.current);
       window.clearTimeout(globalPulseTimerRef.current);
+      window.clearTimeout(grinderPromptPulseTimerRef.current);
       window.clearTimeout(telegramDiscoveryHapticTimerRef.current);
       window.clearInterval(globalFlushIntervalRef.current);
     };
@@ -562,7 +595,7 @@ export default function App() {
 
         if (!globalSyncMessageRef.current) {
           globalSyncMessageRef.current = true;
-          addGlobalStatusLine("global regret temporarily unavailable.");
+          addGlobalStatusLine("global NOPEs temporarily unavailable. humanity paused?");
         }
 
         return;
@@ -579,7 +612,7 @@ export default function App() {
 
       if (!globalSyncMessageRef.current) {
         globalSyncMessageRef.current = true;
-        addGlobalStatusLine("global regret synced.");
+        addGlobalStatusLine("global NOPEs synced. humanity remains busy.");
       }
     }
 
@@ -640,6 +673,19 @@ export default function App() {
   }, [duplicateCopies]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.lastGrinderPromptNopeCount, String(lastGrinderPromptNopeCount));
+  }, [lastGrinderPromptNopeCount]);
+
+  useEffect(() => {
+    showGrinderReadyPromptRef.current = showGrinderReadyPrompt;
+  }, [showGrinderReadyPrompt]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.forcedStickerBookPopupCount, String(forcedStickerBookPopupCount));
+    forcedStickerBookPopupCountRef.current = forcedStickerBookPopupCount;
+  }, [forcedStickerBookPopupCount]);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.unlockedAchievements, JSON.stringify(unlockedAchievements));
     unlockedAchievementsRef.current = unlockedAchievements;
   }, [unlockedAchievements]);
@@ -649,6 +695,33 @@ export default function App() {
       window.localStorage.setItem(STORAGE_KEYS.latestDiscoveryId, latestDiscoveryId);
     }
   }, [latestDiscoveryId]);
+
+  useEffect(() => {
+    if (
+      duplicateStreak < 3 ||
+      !isGrinderReady ||
+      showGrinderReadyPrompt ||
+      isGrinderReadyPromptBlocked ||
+      nopeCount - lastGrinderPromptNopeCount < GRINDER_PROMPT_NOPE_COOLDOWN
+    ) {
+      return;
+    }
+
+    const promptTimer = window.setTimeout(() => {
+      setLastGrinderPromptNopeCount(nopeCount);
+      showGrinderReadyPromptRef.current = true;
+      setShowGrinderReadyPrompt(true);
+    }, 0);
+
+    return () => window.clearTimeout(promptTimer);
+  }, [
+    duplicateStreak,
+    isGrinderReady,
+    isGrinderReadyPromptBlocked,
+    lastGrinderPromptNopeCount,
+    nopeCount,
+    showGrinderReadyPrompt,
+  ]);
 
   useEffect(() => {
     if (!isStickerBookOpen || !highlightedStickerId) {
@@ -684,7 +757,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || showGrinderReadyPrompt || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -695,7 +768,7 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, achievementQueue.length, pendingFirstStickerPopup]);
+  }, [activeAchievement, achievementQueue.length, pendingFirstStickerPopup, showGrinderReadyPrompt]);
 
   useEffect(() => {
     if (showIntro) {
@@ -892,8 +965,13 @@ export default function App() {
   function setActiveGoodFindModalSynced(nextEntity) {
     activeGoodFindModalRef.current = nextEntity;
     if (nextEntity) {
+      setActiveGoodFindCanSkip(forcedStickerBookPopupCountRef.current >= 5);
+      const nextCount = forcedStickerBookPopupCountRef.current + 1;
+      forcedStickerBookPopupCountRef.current = nextCount;
+      setForcedStickerBookPopupCount(nextCount);
       armImportantModalActionDelay();
     } else {
+      setActiveGoodFindCanSkip(false);
       setIsImportantModalActionReady(true);
     }
     setActiveGoodFindModal(nextEntity);
@@ -908,7 +986,13 @@ export default function App() {
     window.clearTimeout(achievementDelayTimerRef.current);
 
     achievementDelayTimerRef.current = window.setTimeout(() => {
-      if (activeCraftResultRef.current || activeGoodFindModalRef.current || activeAchievementRef.current || achievementQueueRef.current.length === 0) {
+      if (
+        activeCraftResultRef.current ||
+        activeGoodFindModalRef.current ||
+        activeAchievementRef.current ||
+        showGrinderReadyPromptRef.current ||
+        achievementQueueRef.current.length === 0
+      ) {
         return;
       }
 
@@ -1061,11 +1145,11 @@ export default function App() {
 
   function getDiscoveryMessage(entity, alreadyCollected) {
     if (alreadyCollected && entity.type === "uber") {
-      return `duplicate Uber NOPE detected: ${entity.name}. probability wasted harder.`;
+      return `duplicate UBER NOPE detected: ${entity.name}. probability wasted harder.`;
     }
 
     if (alreadyCollected && entity.type === "mythic") {
-      return `duplicate mythic waste detected: ${entity.name}. probability wasted.`;
+      return `duplicate MYTHIC NOPE detected: ${entity.name}. probability wasted.`;
     }
 
     if (alreadyCollected) {
@@ -1077,7 +1161,7 @@ export default function App() {
     }
 
     if (entity.type === "mythic") {
-      return `MYTHIC NOPE DISCOVERED: ${entity.name}. value gained: somehow still zero.`;
+      return `MYTHIC NOPE DETECTED: ${entity.name}. probability wasted.`;
     }
 
     if (entity.type === "gif") {
@@ -1113,10 +1197,18 @@ export default function App() {
 
   function getGoodFindProbabilityLine(entity) {
     if (entity.type === "uber") {
-      return "probability: insulted";
+      return "probability has been insulted.";
     }
 
-    return entity.type === "gif" ? "probability briefly failed." : "This is statistically embarrassing.";
+    if (entity.type === "mythic") {
+      return "probability briefly failed.";
+    }
+
+    if (entity.type === "gif" && entity.rarity === "illegal") {
+      return "NOPE OS should not have shown you this.";
+    }
+
+    return null;
   }
 
   function getDuplicateMaterialTier(entity) {
@@ -1151,7 +1243,7 @@ export default function App() {
       [materialTier]: (currentMaterials[materialTier] ?? 0) + 1,
     }));
     const nextStats = updateAchievementStats({ duplicateMaterialEarnedCount: 1 });
-    addInstantNopeLine(`duplicate ${DUPLICATE_MATERIAL_LABELS[materialTier]} converted into grinder material.`);
+    addInstantNopeLine(`duplicate ${DUPLICATE_MATERIAL_LABELS[materialTier]} converted into grinder fuel. probably legal.`);
 
     return nextStats;
   }
@@ -1357,6 +1449,32 @@ export default function App() {
     stickerBookScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function openGrinderFromReadyPrompt() {
+    showGrinderReadyPromptRef.current = false;
+    setShowGrinderReadyPrompt(false);
+    setDuplicateStreak(0);
+    setIsStickerBookOpen(true);
+    setStickerTab("grinder");
+    setStickerFilter("all");
+    setIsGrinderPromptPulsing(true);
+    window.clearTimeout(grinderPromptPulseTimerRef.current);
+    grinderPromptPulseTimerRef.current = window.setTimeout(() => {
+      duplicateGrinderSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      grinderPromptPulseTimerRef.current = window.setTimeout(() => {
+        setIsGrinderPromptPulsing(false);
+      }, 1800);
+    }, 120);
+    startNextAchievement(450);
+  }
+
+  function dismissGrinderReadyPromptToButton() {
+    showGrinderReadyPromptRef.current = false;
+    setShowGrinderReadyPrompt(false);
+    setDuplicateStreak(0);
+    setIsStickerBookOpen(false);
+    startNextAchievement(450);
+  }
+
   function handleStickerBookScroll() {
     if (
       isStickerBookTearing ||
@@ -1426,6 +1544,19 @@ export default function App() {
     setActiveGoodFindModalSynced(null);
     focusStickerInBook(entityId, "all");
     startNextAchievement(700);
+  }
+
+  function dismissGoodFindToButton() {
+    if (!isImportantModalActionReady) {
+      return;
+    }
+
+    window.clearTimeout(discoveryTimerRef.current);
+    window.clearTimeout(breachTimerRef.current);
+    setActiveDiscoveryPopup(null);
+    setActiveBreachOverlay(null);
+    setActiveGoodFindModalSynced(null);
+    startNextAchievement(450);
   }
 
   function dismissCraftResult() {
@@ -1552,6 +1683,18 @@ export default function App() {
     window.location.reload();
   }
 
+  function handleModalBackdropClick(event, onBackdropClose, { respectImportantDelay = false } = {}) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    if (respectImportantDelay && !isImportantModalActionReady) {
+      return;
+    }
+
+    onBackdropClose();
+  }
+
   function resetNopeIdleTimer() {
     window.clearTimeout(nopeIdleTimerRef.current);
     setIsNopeIdle(false);
@@ -1564,7 +1707,7 @@ export default function App() {
       setIsNopeIdle(true);
 
       if (randomChance(0.35)) {
-        addInstantNopeLine("button awaiting poor decision.");
+        addInstantNopeLine("button awaiting poor decision. again.");
       }
     }, randomBetween(6000, 8000));
   }
@@ -1632,6 +1775,7 @@ export default function App() {
     }
 
     if (!alreadyCollected) {
+      setDuplicateStreak(0);
       nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
       collectedIdsRef.current = nextCollectedIds;
       setCollectedIds(nextCollectedIds);
@@ -1641,6 +1785,11 @@ export default function App() {
         addInstantNopeLine(`${discoveredEntity.name} recovered from the burn pile.`);
       }
     } else {
+      if (options.trackDuplicateStreak !== false) {
+        setDuplicateStreak((currentStreak) => (
+          getDuplicateMaterialTier(discoveredEntity) ? currentStreak + 1 : 0
+        ));
+      }
       nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
       addDuplicateCopy(discoveredEntity);
       if (options.awardDuplicateMaterial !== false) {
@@ -1724,6 +1873,8 @@ export default function App() {
       return;
     }
 
+    setDuplicateStreak(0);
+
     const targetPool = getGrinderTargetPool(recipe.target);
 
     if (targetPool.length === 0) {
@@ -1742,7 +1893,7 @@ export default function App() {
 
     setDuplicateMaterialsSynced(nextMaterials);
     const nextStats = updateAchievementStats(getGrinderAchievementUpdates(recipe.target));
-    addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]}s.`);
+    addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]} fuel.`);
     addInstantNopeLine(`recycled output generated: ${resultEntity.name}.`);
     setActiveCraftResultSynced({
       entity: resultEntity,
@@ -1753,6 +1904,7 @@ export default function App() {
       achievementStats: nextStats,
       awardDuplicateMaterial: false,
       suppressGoodFindModal: true,
+      trackDuplicateStreak: false,
     });
   }
 
@@ -1812,6 +1964,7 @@ export default function App() {
     if (discoveredEntity) {
       processDiscoveryEntity(discoveredEntity, nextCount);
     } else {
+      setDuplicateStreak(0);
       showBreachOverlay(getCollectedGifChaosEvent());
       addInstantNopeLine(pickRandom(noHitMessages));
 
@@ -1834,7 +1987,7 @@ export default function App() {
     }, 430);
 
     if (rankChanged) {
-      addInstantNopeLine(`rank updated: ${nextRank}. achievement value: zero.`);
+      addInstantNopeLine(`rank updated: ${nextRank}. value still zero.`);
     }
   }
 
@@ -1927,11 +2080,12 @@ ${shareUrl}`;
     }
 
     if (entity.type === "mythic") {
-      return `I pulled a MYTHIC NOPE from the NOPEDEX:
+      return `MYTHIC NOPE BREACH:
 ${entity.name}
 
 ${oddsText}
-value: somehow still zero.
+probability wasted.
+value: still zero.
 
 $NOPE
 
@@ -2159,15 +2313,18 @@ ${shareUrl}`;
     const currentAmount = duplicateMaterials[recipe.source] ?? 0;
     const neededAmount = Math.max(recipe.cost - currentAmount, 0);
     const canGrind = neededAmount === 0;
+    const sourceName = DUPLICATE_MATERIAL_LABELS[recipe.source].replace(" NOPE", "");
+    const targetName = (recipe.target === "uber" ? "UBER NOPE" : DUPLICATE_MATERIAL_LABELS[recipe.target]).replace(" NOPE", "");
 
     return (
-      <article className="grinder-recipe-card" key={recipe.source}>
-        <strong>{DUPLICATE_MATERIAL_LABELS[recipe.source]} MATERIAL: {currentAmount}</strong>
-        <span>GRIND {recipe.cost} -&gt; {recipe.target === "uber" ? "UBER NOPE" : DUPLICATE_MATERIAL_LABELS[recipe.target]}</span>
+      <article className={`grinder-recipe-card ${canGrind ? "ready" : "idle"}`} key={recipe.source}>
+        <strong>{sourceName} FUEL</strong>
+        <span className="grinder-fuel-count">{currentAmount} / {recipe.cost}</span>
+        <span className="grinder-recipe-line">{recipe.cost} {sourceName} &rarr; 1 {targetName}</span>
         <button type="button" onClick={() => grindDuplicateMaterial(recipe)} disabled={!canGrind}>
-          [ {recipe.button} ]
+          {canGrind ? "FEED THE MACHINE" : "NOT ENOUGH TRASH"}
         </button>
-        <em>{canGrind ? "ready to recycle regret" : `need ${neededAmount} more duplicate trash`}</em>
+        <em>{canGrind ? "ready to upgrade disappointment." : `machine still hungry: ${neededAmount} more fuel`}</em>
       </article>
     );
   }
@@ -2360,7 +2517,7 @@ ${shareUrl}`;
       {ambientWarning && <div className="glitch-warning">{ambientWarning}</div>}
       <header className="os-header" aria-label="NOPE OS">
         <strong>NOPE OS 0.0.1</strong>
-        <span>press nope. collect garbage. close nothing.</span>
+        <span>press NOPE. collect garbage. flex nothing.</span>
       </header>
 
       <section className="machine-layout" aria-label="NOPE Machine">
@@ -2427,7 +2584,7 @@ ${shareUrl}`;
                   : activeDiscoveryPopup.signalType === "mythic"
                     ? "MYTHIC NOPE FOUND"
                   : activeDiscoveryPopup.signalType === "new"
-                    ? "NEW TRASH ACQUIRED"
+                    ? "NEW TRASH DISCOVERED"
                     : activeDiscoveryPopup.signalType === "duplicate"
                       ? "DUPLICATE TRASH"
                       : "NOPE SIGNAL"}
@@ -2445,7 +2602,7 @@ ${shareUrl}`;
               <p>{activeDiscoveryPopup.entity.caption}</p>
               <b>
                 {activeDiscoveryPopup.signalType === "uber"
-                  ? "odds: offensive // value: zero"
+                  ? "odds: offensive // probability insulted"
                   : activeDiscoveryPopup.entity.type === "gif"
                     ? `added to NOPEDEX // odds: ${formatDropChance(activeDiscoveryPopup.entity.dropChance)} // value: animated zero`
                     : "value: zero"}
@@ -2524,7 +2681,7 @@ ${shareUrl}`;
               addInstantNopeLine("existential crisis acknowledged.");
             }}
           >
-            why the hell am I pressing this?
+            why am I pressing this?
           </button>
         )}
       </section>
@@ -2596,7 +2753,12 @@ ${shareUrl}`;
       )}
 
       {activeSacrificeEntity && (
-        <section className="achievement-modal-overlay sacrifice-modal-overlay" aria-modal="true" role="dialog">
+        <section
+          className="achievement-modal-overlay sacrifice-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, cancelSacrifice)}
+        >
           <div className="achievement-modal-card first-sticker-modal-card sacrifice-modal-card">
             <p>SACRIFICE NOPE?</p>
             <div className="first-sticker-modal-media">
@@ -2612,7 +2774,7 @@ ${shareUrl}`;
             <span>{activeSacrificeEntity.rarityLabel}</span>
             <em>This NOPE will leave your active NOPEDEX.</em>
             <em>It can be found again.</em>
-            <b>The grinder will receive +{SACRIFICE_MATERIAL_GAIN} {activeSacrificeEntity.rarityLabel} fuel.</b>
+            <b>The grinder gets +{SACRIFICE_MATERIAL_GAIN} {activeSacrificeEntity.rarityLabel} fuel.</b>
             <span>This is probably a terrible idea.</span>
             <div className="sacrifice-modal-actions">
               <button type="button" onClick={cancelSacrifice}>
@@ -2627,7 +2789,12 @@ ${shareUrl}`;
       )}
 
       {activeUberSacrificeEntity && (
-        <section className="achievement-modal-overlay sacrifice-modal-overlay uber-sacrifice-modal-overlay" aria-modal="true" role="dialog">
+        <section
+          className="achievement-modal-overlay sacrifice-modal-overlay uber-sacrifice-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, cancelUberSacrifice)}
+        >
           <div className="achievement-modal-card first-sticker-modal-card sacrifice-modal-card uber-sacrifice-modal-card">
             {uberSacrificeStep === 1 ? (
               <>
@@ -2643,7 +2810,7 @@ ${shareUrl}`;
                 </div>
                 <strong>{activeUberSacrificeEntity.name}</strong>
                 <span>This is an UBER NOPE.</span>
-                <em>Burning it will remove it from your active NOPEDEX.</em>
+                <em>Burning it removes it from your active NOPEDEX.</em>
                 <em>It can be found again.</em>
                 <em>Probably.</em>
                 <b>This is a terrible idea.</b>
@@ -2689,11 +2856,16 @@ ${shareUrl}`;
       )}
 
       {activeCraftResult && (
-        <section className="achievement-modal-overlay grinder-modal-overlay" aria-modal="true" role="dialog">
+        <section
+          className="achievement-modal-overlay grinder-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, dismissCraftResult)}
+        >
           <div className="achievement-modal-card first-sticker-modal-card grinder-modal-card">
             <p>DUPLICATE GRINDER ONLINE</p>
-            <small>DUPLICATES ENTERED THE GRINDER.</small>
-            <span>NOPE OS IS MAKING A TERRIBLE DECISION.</span>
+            <small>REPEATED NOPES ENTERED THE GRINDER.</small>
+            <span>NOPE OS is making a terrible decision.</span>
             <div className="first-sticker-modal-media">
               <img
                 src={activeCraftResult.entity.image}
@@ -2709,14 +2881,23 @@ ${shareUrl}`;
             <em>value: still zero</em>
             <b>{activeCraftResult.wasNew ? "NEW NOPE ADDED TO NOPEDEX" : "DUPLICATE GENERATED - you upgraded disappointment."}</b>
             <button type="button" onClick={dismissCraftResult}>
-              [ accept recycled trash ]
+              [ accept recycled disappointment ]
             </button>
           </div>
         </section>
       )}
 
       {activeGoodFindModal && (
-        <section className={`first-sticker-modal-overlay good-find-modal-overlay rarity-${activeGoodFindModal.rarity} ${activeGoodFindModal.type === "uber" ? "uber-modal-overlay" : ""}`} aria-modal="true" role="dialog">
+        <section
+          className={`first-sticker-modal-overlay good-find-modal-overlay rarity-${activeGoodFindModal.rarity} ${activeGoodFindModal.type === "uber" ? "uber-modal-overlay" : ""}`}
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => {
+            if (activeGoodFindCanSkip) {
+              handleModalBackdropClick(event, dismissGoodFindToButton, { respectImportantDelay: true });
+            }
+          }}
+        >
           <div className={`achievement-modal-card first-sticker-modal-card good-find-modal-card rarity-${activeGoodFindModal.rarity} ${activeGoodFindModal.type === "uber" ? "uber-modal-card" : ""}`}>
             <p>{getGoodFindTitle(activeGoodFindModal)}</p>
             <div className="first-sticker-modal-media">
@@ -2732,17 +2913,56 @@ ${shareUrl}`;
             <span>{activeGoodFindModal.rarityLabel}</span>
             <em>odds: {formatDropChance(activeGoodFindModal.dropChance)}</em>
             {activeGoodFindModal.caption && <span>{activeGoodFindModal.caption}</span>}
-            <em>{getGoodFindProbabilityLine(activeGoodFindModal)}</em>
+            {getGoodFindProbabilityLine(activeGoodFindModal) && <em>{getGoodFindProbabilityLine(activeGoodFindModal)}</em>}
             <b>value: still zero</b>
-            <button type="button" onClick={() => openGoodFindInBook(activeGoodFindModal.id)} disabled={!isImportantModalActionReady}>
-              OPEN STICKER BOOK. FLEX NOTHING.
-            </button>
+            {activeGoodFindCanSkip && <small>NOPE OS has noticed you know where the sticker book is.</small>}
+            <div className={`good-find-actions ${activeGoodFindCanSkip ? "has-skip" : ""}`}>
+              <button type="button" onClick={() => openGoodFindInBook(activeGoodFindModal.id)} disabled={!isImportantModalActionReady}>
+                OPEN STICKER BOOK. FLEX NOTHING.
+              </button>
+              {activeGoodFindCanSkip && (
+                <button className="good-find-secondary-button" type="button" onClick={dismissGoodFindToButton} disabled={!isImportantModalActionReady}>
+                  BACK TO THE BUTTON
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && (
-        <section className="achievement-modal-overlay" aria-modal="true" role="dialog">
+      {showGrinderReadyPrompt && (
+        <section
+          className="achievement-modal-overlay grinder-ready-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, dismissGrinderReadyPromptToButton)}
+        >
+          <div className="achievement-modal-card grinder-ready-modal-card">
+            <p>DUPLICATE HELL DETECTED</p>
+            <small>NOPE OS MACHINE ALERT</small>
+            <strong>You keep pulling the same trash.</strong>
+            <span>The grinder is hungry.</span>
+            <span>This is probably why it exists.</span>
+            <b>GRINDER FUEL READY</b>
+            <div className="grinder-ready-actions">
+              <button type="button" onClick={openGrinderFromReadyPrompt}>
+                TAKE ME TO THE FUCKIN GRINDER
+              </button>
+              <button type="button" onClick={dismissGrinderReadyPromptToButton}>
+                TAKE ME BACK TO THE BUTTON
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !showGrinderReadyPrompt && (
+        <section
+          className="achievement-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, dismissAchievement, { respectImportantDelay: true })}
+        >
           <div className="achievement-modal-card">
             <p>NOPE OS REWARD SYSTEM</p>
             <small>ACHIEVEMENT UNLOCKED</small>
@@ -2773,11 +2993,11 @@ ${shareUrl}`;
             </div>
             <strong>{firstStickerEntity.name}</strong>
             <span>
-              POOR NOPE has entered your NOPEDEX.
+              POOR NOPE entered your NOPEDEX.
               <br />
-              It is worth nothing.
+              value: emotionally zero.
               <br />
-              You may still feel something. That is a bug.
+              feeling proud is a bug.
             </span>
             <b>value gained: zero</b>
             <button type="button" onClick={openFirstStickerInBook} disabled={!isImportantModalActionReady}>
@@ -2788,10 +3008,15 @@ ${shareUrl}`;
       )}
 
       {showExistentialPopup && (
-        <section className="existential-modal-overlay" aria-modal="true" role="dialog">
+        <section
+          className="existential-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, () => setShowExistentialPopup(false))}
+        >
           <div className="existential-modal-card">
             <p>WHY ARE YOU PRESSING THIS?</p>
-            <strong>for no fucking reason at all.</strong>
+            <strong>for no good reason. obviously.</strong>
             <span>-NOPE</span>
             <button type="button" onClick={() => setShowExistentialPopup(false)}>
               [ erm... yea... nope ]
@@ -2801,10 +3026,15 @@ ${shareUrl}`;
       )}
 
       {showResetConfirm && (
-        <section className="reset-modal-overlay" aria-modal="true" role="dialog">
+        <section
+          className="reset-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, () => setShowResetConfirm(false))}
+        >
           <div className="reset-modal-card">
             <strong>WIPE NOPE PROGRESS?</strong>
-            <p>This deletes your NOPEDEX, achievements, rank, count, intro state, and all collected trash.</p>
+            <p>This deletes your NOPEDEX, achievements, rank, count, intro state, and collected garbage.</p>
             <div className="reset-modal-actions">
               <button type="button" onClick={() => setShowResetConfirm(false)}>
                 [ cancel ]
@@ -2823,7 +3053,7 @@ ${shareUrl}`;
             <div className="stickerbook-titlebar">
               <div>
                 <strong>NOPEDEX STICKER BOOK</strong>
-                <span>collect them all. achieve nothing.</span>
+                <span>collect garbage. achieve nothing.</span>
               </div>
               <button type="button" onClick={() => setIsStickerBookOpen(false)}>
                 [ CLOSE NOPEDEX ]
@@ -2886,11 +3116,15 @@ ${shareUrl}`;
               )}
 
               {stickerTab === "grinder" ? (
-                <section className="duplicate-grinder-section" aria-label="Duplicate Grinder">
+                <section
+                  className={`duplicate-grinder-section ${isGrinderPromptPulsing ? "grinder-prompt-pulse" : ""}`}
+                  ref={duplicateGrinderSectionRef}
+                  aria-label="Duplicate Grinder"
+                >
                   <div className="achievement-section-title grinder-section-title">
                     <strong>DUPLICATE GRINDER</strong>
-                    <span>turn repeated trash into rarer trash.</span>
-                    <span>loops and Uber duplicates are currently too cursed to recycle.</span>
+                    <span>feed repeated NOPEs into the machine.</span>
+                    <span>receive rarer disappointment.</span>
                   </div>
                   <div className="grinder-recipe-grid">{DUPLICATE_GRINDER_RECIPES.map(renderGrinderRecipe)}</div>
                   <section className="burn-pile-section" aria-label="Sacrificed NOPEs">
@@ -2947,7 +3181,7 @@ ${shareUrl}`;
                     <section className="mythic-section" aria-label="MYTHIC NOPE RELICS">
                       <div className="mythic-section-title">
                         <strong>MYTHIC NOPE</strong>
-                        <span>known chase trash. drop chance: 0.5%.</span>
+                        <span>known chase NOPE. drop chance: 0.5%.</span>
                       </div>
                       <div className="mythic-grid">{getVisibleMythicEntities().map(renderStickerCard)}</div>
                     </section>

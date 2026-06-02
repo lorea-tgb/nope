@@ -30,8 +30,8 @@ function getDiscoveryTitle(entity) {
   const eventLabels = {
     common: "TRASH RECOVERED",
     uncommon: "QUESTIONABLE FIND",
-    rare: "REGRET DETECTED",
-    epic: "FAILURE UNLOCKED",
+    rare: "RARE NOPE DETECTED",
+    epic: "EPIC FAILURE RECOVERED",
     glitch: "GLITCH LOOP LEAK",
     mythic: "MYTHIC NOPE FOUND",
     uber: "UBER NOPE BREACH",
@@ -424,7 +424,7 @@ function createAchievementCard(achievement) {
               marginTop: 20,
             },
           },
-          "$NOPE - press nope. collect garbage."
+          "$NOPE - press NOPE. collect garbage."
         )
       )
     )

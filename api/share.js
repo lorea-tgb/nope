@@ -26,7 +26,7 @@ function escapeHtml(value) {
 
 function getStickerValue(entity) {
   if (entity?.type === "uber") {
-    return "probability: insulted - value: still zero";
+    return "probability has been insulted - value: still zero";
   }
 
   if (entity?.type === "gif") {

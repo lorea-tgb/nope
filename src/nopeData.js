@@ -392,24 +392,24 @@ export const rarityPools = {
 export const bootLines = [
   { text: "> connecting to TON..." },
   { text: "> checking for Pepe..." },
-  { text: "> Pepe not found.", important: true, pause: 180 },
+  { text: "> Pepe rejected.", important: true, pause: 180 },
   { text: "> checking utility..." },
   { text: "> utility not found.", important: true, pause: 180 },
   { text: "> checking contract..." },
   { text: "> contract detected." },
   { text: "> last 3 chars: non", important: true, pause: 220 },
-  { text: "> coincidence? probably." },
+  { text: "> coincidence? legally unclear." },
   { text: "> bullish? nope.", important: true, pause: 220 },
-  { text: "> TON probably needed a Pepe." },
-  { text: "> Turns out it was definitely NOT Pepe.", important: true, pause: 260 },
+  { text: "> TON probably needed a mascot." },
+  { text: "> turns out it got NOPE.", important: true, pause: 260 },
   { text: "> NOPE machine ready.", important: true, pause: 220 },
   { text: `> contract: ${CONTRACT}` },
   { text: "> contract is on TON.", pause: 900 },
   { text: "> or NOT.", pause: 900 },
   { text: "> obviously.", pause: 650 },
   { text: "> press the big stupid button." },
-  { text: "> you might find something." },
-  { text: "> probably not though." },
+  { text: "> press NOPE. collect worthless trash." },
+  { text: "> value forecast: zero." },
 ];
 
 export const nopeLabels = ["NOPE", "NOPE?", "NOOOOOPE", "ABSOLUTELY NOT", "STILL NOPE", "HARD PASS"];
@@ -431,7 +431,7 @@ export const noHitMessages = [
   "nothing found. still somehow your fault.",
   "failed pull. emotional damage applied.",
   "packet rejected. try being luckier.",
-  "no trash recovered. shame.",
+  "empty pull. emotional damage applied.",
 ];
 
 export const ranks = [
@@ -463,10 +463,10 @@ export const achievements = [
   { id: "animated-regret", name: "ANIMATED REGRET", description: "found 10 forbidden loops.", reward: "frames of shame", check: ({ gifCollectedCount }) => gifCollectedCount >= 10 },
   { id: "gif-criminal", name: "GIF CRIMINAL", description: "completed the forbidden loop set.", reward: "no parole", check: ({ gifCollectedCount }) => gifCollectedCount >= GIF_TOTAL },
   { id: "illegal-movement", name: "ILLEGAL MOVEMENT", description: "found an illegal loop.", reward: "animated criminal record", check: ({ collectedIds }) => collectedIds.some((id) => forbiddenNopeGifs.some((entity) => entity.id === id && entity.rarity === "illegal")) },
-  { id: "mythically-useless", name: "MYTHICALLY USELESS", description: "found mythic waste.", reward: "rare nothing", check: ({ mythicCollectedCount }) => mythicCollectedCount >= 1 },
+  { id: "mythically-useless", name: "MYTHICALLY USELESS", description: "found a mythic NOPE.", reward: "rare nothing", check: ({ mythicCollectedCount }) => mythicCollectedCount >= 1 },
   { id: "nope-or-no-achievement", name: "NOPE OR NO", description: "found NOPE OR NO.", reward: "both options rejected", check: ({ collectedIds }) => collectedIds.includes("nopeorno") },
   { id: "nope-or-nothing-achievement", name: "NOPE OR NOTHING", description: "found NOPE OR NOTHING.", reward: "all or absolutely nope", check: ({ collectedIds }) => collectedIds.includes("nopeornothing") },
-  { id: "both-options-rejected", name: "BOTH OPTIONS REJECTED", description: "found both NOPE OR Uber relics.", reward: "choice deleted", check: ({ collectedIds }) => collectedIds.includes("nopeorno") && collectedIds.includes("nopeornothing") },
+  { id: "both-options-rejected", name: "BOTH OPTIONS REJECTED", description: "found both NOPE OR Uber NOPEs.", reward: "choice deleted", check: ({ collectedIds }) => collectedIds.includes("nopeorno") && collectedIds.includes("nopeornothing") },
   { id: "uberly-pointless", name: "UBERLY POINTLESS", description: "found an Uber NOPE.", reward: "probability trauma", check: ({ uberCollectedCount }) => uberCollectedCount >= 1 },
   { id: "duplicate-damage", name: "DUPLICATE DAMAGE", description: "found 10 duplicates.", reward: "recycled disappointment", check: ({ duplicateCount }) => duplicateCount >= 10 },
   { id: "emotional-recycling", name: "EMOTIONAL RECYCLING", description: "found 50 duplicates.", reward: "reused pain", check: ({ duplicateCount }) => duplicateCount >= 50 },
@@ -474,7 +474,7 @@ export const achievements = [
   { id: "trash-alchemist", name: "TRASH ALCHEMIST", description: "used the duplicate grinder.", reward: "recycled disappointment", check: ({ grinderUseCount }) => grinderUseCount >= 1 },
   { id: "upgraded-nothing", name: "UPGRADED NOTHING", description: "crafted a higher-tier NOPE.", reward: "premium zero", check: ({ grinderUseCount }) => grinderUseCount >= 1 },
   { id: "common-mistake", name: "COMMON MISTAKE", description: "turned common trash into uncommon trash.", reward: "slightly improved nothing", check: ({ grinderCraftUncommonCount }) => grinderCraftUncommonCount >= 1 },
-  { id: "rarely-worth-it", name: "RARELY WORTH IT", description: "generated a rare NOPE from recycled regret.", reward: "statistical nonsense", check: ({ grinderCraftRareCount }) => grinderCraftRareCount >= 1 },
+  { id: "rarely-worth-it", name: "RARELY WORTH IT", description: "generated a rare NOPE from recycled trash.", reward: "statistical nonsense", check: ({ grinderCraftRareCount }) => grinderCraftRareCount >= 1 },
   { id: "epic-waste-facility", name: "EPIC WASTE FACILITY", description: "manufactured an epic failure.", reward: "industrial disappointment", check: ({ grinderCraftEpicCount }) => grinderCraftEpicCount >= 1 },
   { id: "mythic-recycling", name: "MYTHIC RECYCLING", description: "recycled enough trash to offend probability.", reward: "mythic zero", check: ({ grinderCraftMythicCount }) => grinderCraftMythicCount >= 1 },
   { id: "probability-launderer", name: "PROBABILITY LAUNDERER", description: "laundered duplicates into an Uber NOPE.", reward: "suspicious luck", check: ({ grinderCraftUberCount }) => grinderCraftUberCount >= 1 },
@@ -485,7 +485,7 @@ export const achievements = [
   { id: "burn-notice", name: "BURN NOTICE", description: "sacrificed a NOPE to the grinder.", reward: "smoke damage", check: ({ sacrificeCount }) => sacrificeCount >= 1 },
   { id: "feed-the-machine", name: "FEED THE MACHINE", description: "fed 5 collected NOPEs to the grinder.", reward: "questionable commitment", check: ({ sacrificeCount }) => sacrificeCount >= 5 },
   { id: "ash-collector", name: "ASH COLLECTOR", description: "sent 10 NOPEs to the burn pile.", reward: "warm regrets", check: ({ sacrificeCount }) => sacrificeCount >= 10 },
-  { id: "scorched-earth", name: "SCORCHED EARTH", description: "burned 25 NOPEs because apparently that was the plan.", reward: "strategic self-sabotage", check: ({ sacrificeCount }) => sacrificeCount >= 25 },
+  { id: "scorched-earth", name: "SCORCHED EARTH", description: "burned 25 NOPEs. apparently on purpose.", reward: "strategic self-sabotage", check: ({ sacrificeCount }) => sacrificeCount >= 25 },
   { id: "burn-pile-curator", name: "BURN PILE CURATOR", description: "curated a pile of burned NOPEs.", reward: "ash management", check: ({ burnPileCount }) => burnPileCount >= 10 },
   { id: "mythic-bonfire", name: "MYTHIC BONFIRE", description: "burned a mythic NOPE.", reward: "expensive smoke", check: ({ sacrificedMythicCount }) => sacrificedMythicCount >= 1 },
   { id: "found-in-the-ashes", name: "FOUND IN THE ASHES", description: "recovered a NOPE from the burn pile.", reward: "second-hand hope", check: ({ restoredFromBurnCount }) => restoredFromBurnCount >= 1 },
@@ -501,9 +501,9 @@ export const achievements = [
   { id: "rare-mistake-achievement", name: "RARE MISTAKE", description: "discovered a rare mistake.", reward: "statistically unimpressive", check: ({ rareCollectedCount }) => rareCollectedCount >= 1 },
   { id: "epic-failure-achievement", name: "EPIC FAILURE", description: "discovered an epic failure.", reward: "larger disappointment", check: ({ epicCollectedCount }) => epicCollectedCount >= 1 },
   { id: "common-sense-lost", name: "COMMON SENSE LOST", description: "collected 25 common trash stickers.", reward: "common sense not found", check: ({ commonCollectedCount }) => commonCollectedCount >= 25 },
-  { id: "rubbish-with-range", name: "RUBBISH WITH RANGE", description: "collected 10 uncommon rubbish stickers.", reward: "premium garbage", check: ({ uncommonCollectedCount }) => uncommonCollectedCount >= 10 },
+  { id: "rubbish-with-range", name: "RUBBISH WITH RANGE", description: "collected 10 uncommon NOPEs.", reward: "premium zero", check: ({ uncommonCollectedCount }) => uncommonCollectedCount >= 10 },
   { id: "total-nopeification", name: "TOTAL NOPEIFICATION", description: "completed the non-Uber NOPEDEX.", reward: "seek help", check: ({ normalCollectedCount, gifCollectedCount, mythicCollectedCount }) => normalCollectedCount >= NORMAL_TOTAL && gifCollectedCount >= GIF_TOTAL && mythicCollectedCount >= MYTHIC_TOTAL },
-  { id: "ascended-into-nope", name: "ASCENDED INTO NOPE", description: "found every Uber NOPE.", reward: "Telegram tag maybe, eventually", check: ({ uberCollectedCount }) => uberCollectedCount >= UBER_TOTAL },
+  { id: "ascended-into-nope", name: "ASCENDED INTO NOPE", description: "found every Uber NOPE.", reward: "ascended zero", check: ({ uberCollectedCount }) => uberCollectedCount >= UBER_TOTAL },
 ];
 
 export function getRank(count) {

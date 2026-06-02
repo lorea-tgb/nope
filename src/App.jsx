@@ -34,6 +34,7 @@ const STORAGE_KEYS = {
   introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
   duplicateMaterials: "nope_duplicate_materials",
+  duplicateCopies: "nope_duplicate_copies",
   nopeCount: "nopeMachine.nopeCount",
   sacrificedIds: "nope_sacrificed_ids",
   unlockedAchievements: "nopeMachine.unlockedAchievements",
@@ -245,6 +246,9 @@ export default function App() {
   const [duplicateMaterials, setDuplicateMaterials] = useState(() =>
     readStoredObject(STORAGE_KEYS.duplicateMaterials, DEFAULT_DUPLICATE_MATERIALS),
   );
+  const [duplicateCopies, setDuplicateCopies] = useState(() =>
+    readStoredObject(STORAGE_KEYS.duplicateCopies, {}),
+  );
   const [unlockedAchievements, setUnlockedAchievements] = useState(() =>
     readStoredArray(STORAGE_KEYS.unlockedAchievements),
   );
@@ -254,6 +258,8 @@ export default function App() {
   const [activeGoodFindModal, setActiveGoodFindModal] = useState(null);
   const [activeCraftResult, setActiveCraftResult] = useState(null);
   const [activeSacrificeEntity, setActiveSacrificeEntity] = useState(null);
+  const [activeUberSacrificeEntity, setActiveUberSacrificeEntity] = useState(null);
+  const [uberSacrificeStep, setUberSacrificeStep] = useState(1);
   const [activeSacrificeEffect, setActiveSacrificeEffect] = useState(null);
   const [pendingFirstStickerPopup, setPendingFirstStickerPopup] = useState(false);
   const [showFirstStickerPopup, setShowFirstStickerPopup] = useState(false);
@@ -310,6 +316,7 @@ export default function App() {
   const sacrificedIdsRef = useRef(sacrificedIds);
   const achievementStatsRef = useRef(achievementStats);
   const duplicateMaterialsRef = useRef(duplicateMaterials);
+  const duplicateCopiesRef = useRef(duplicateCopies);
   const unlockedAchievementsRef = useRef(unlockedAchievements);
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
@@ -399,6 +406,16 @@ export default function App() {
       .slice(0, 3);
   }, [achievementSnapshot, unlockedAchievements]);
   const activeNextBadge = nextBadges[nextBadgeIndex % Math.max(nextBadges.length, 1)] ?? null;
+  const isGrinderReady = DUPLICATE_GRINDER_RECIPES.some(
+    (recipe) => (duplicateMaterials[recipe.source] ?? 0) >= recipe.cost,
+  );
+  const stickerBookNavItems = [
+    ["all", "ALL TRASH", "ALL"],
+    ["normal", "WORTHLESS NOPES", "NOPES"],
+    ["gif", "FORBIDDEN LOOPS", "LOOPS"],
+    ["grinder", isGrinderReady ? "DUPLICATE GRINDER // READY" : "DUPLICATE GRINDER", "GRINDER"],
+    ["achievements", "ACHIEVEMENTS", "BADGES"],
+  ];
 
   function createLine(speaker, text = "", isTypingLine = false, important = false) {
     const id = lineIdRef.current;
@@ -618,6 +635,11 @@ export default function App() {
   }, [duplicateMaterials]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.duplicateCopies, JSON.stringify(duplicateCopies));
+    duplicateCopiesRef.current = duplicateCopies;
+  }, [duplicateCopies]);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.unlockedAchievements, JSON.stringify(unlockedAchievements));
     unlockedAchievementsRef.current = unlockedAchievements;
   }, [unlockedAchievements]);
@@ -835,6 +857,12 @@ export default function App() {
     const materials = typeof nextMaterials === "function" ? nextMaterials(duplicateMaterialsRef.current) : nextMaterials;
     duplicateMaterialsRef.current = materials;
     setDuplicateMaterials(materials);
+  }
+
+  function setDuplicateCopiesSynced(nextCopies) {
+    const copies = typeof nextCopies === "function" ? nextCopies(duplicateCopiesRef.current) : nextCopies;
+    duplicateCopiesRef.current = copies;
+    setDuplicateCopies(copies);
   }
 
   function setSacrificedIdsSynced(nextIds) {
@@ -1114,7 +1142,7 @@ export default function App() {
     const materialTier = getDuplicateMaterialTier(entity);
 
     if (!materialTier) {
-      return;
+      return achievementStatsRef.current;
     }
 
     setDuplicateMaterialsSynced((currentMaterials) => ({
@@ -1122,7 +1150,17 @@ export default function App() {
       ...currentMaterials,
       [materialTier]: (currentMaterials[materialTier] ?? 0) + 1,
     }));
+    const nextStats = updateAchievementStats({ duplicateMaterialEarnedCount: 1 });
     addInstantNopeLine(`duplicate ${DUPLICATE_MATERIAL_LABELS[materialTier]} converted into grinder material.`);
+
+    return nextStats;
+  }
+
+  function addDuplicateCopy(entity) {
+    setDuplicateCopiesSynced((currentCopies) => ({
+      ...currentCopies,
+      [entity.id]: (currentCopies[entity.id] ?? 0) + 1,
+    }));
   }
 
   async function copyContract(event) {
@@ -1164,28 +1202,45 @@ export default function App() {
     const progressMap = {
       "again-really": [snapshot.duplicateCount, 100, "duplicates"],
       "animated-regret": [snapshot.gifCollectedCount, 10, "loops"],
+      "ashes-to-nopedex": [snapshot.restoredFromBurnCount, 10, "restored NOPEs"],
       "ascended-into-nope": [snapshot.uberCollectedCount, UBER_TOTAL, "Uber NOPEs"],
+      "ash-collector": [snapshot.sacrificeCount, 10, "sacrifices"],
+      "absolute-degenerate": [snapshot.uberSacrificeCount, 1, "Uber sacrifices"],
+      "burn-notice": [snapshot.sacrificeCount, 1, "sacrifices"],
+      "burn-pile-curator": [snapshot.burnPileCount, 10, "burn pile NOPEs"],
       "common-sense-lost": [snapshot.commonCollectedCount, 25, "common trash stickers"],
       "contract-said-non": [snapshot.contractCopyCount, 1, "contract copies"],
       "copypasta-contagion": [snapshot.shareCopyCount, 10, "share copies"],
       "duplicate-damage": [snapshot.duplicateCount, 10, "duplicates"],
       "emotional-recycling": [snapshot.duplicateCount, 50, "duplicates"],
+      "feed-the-machine": [snapshot.sacrificeCount, 5, "sacrifices"],
       "final-boss-press": [snapshot.nopeCount, 500, "NOPE presses"],
+      "found-in-the-ashes": [snapshot.restoredFromBurnCount, 1, "restored NOPEs"],
       "forbidden-behaviour": [snapshot.gifCollectedCount, 1, "loops"],
+      "fuel-goblin": [snapshot.duplicateMaterialEarnedCount, 25, "duplicate fuel"],
+      "fuel-hoarder": [snapshot.duplicateMaterialEarnedCount, 100, "duplicate fuel"],
+      "god-left-the-chat": [snapshot.godSacrificeCount, 1, "divine sacrifices"],
       "garbage-curator": [snapshot.normalCollectedCount, 25, "stickers"],
       "gif-criminal": [snapshot.gifCollectedCount, GIF_TOTAL, "loops"],
       "high-priest-press": [snapshot.nopeCount, 100, "NOPE presses"],
+      "industrial-regret": [snapshot.grinderUseCount, 25, "grinder uses"],
       "loop-sickness": [snapshot.gifCollectedCount, 5, "loops"],
+      "machine-is-hungry": [snapshot.grinderUseCount, 10, "grinder uses"],
       "mild-regret": [snapshot.nopeCount, 10, "NOPE presses"],
+      "mythic-bonfire": [snapshot.sacrificedMythicCount, 1, "mythic sacrifices"],
       "mythically-useless": [snapshot.mythicCollectedCount, 1, "mythic NOPEs"],
+      "nopedex-heretic": [snapshot.uberSacrificeCount, 3, "Uber sacrifices"],
       "nope-enjoyer-press": [snapshot.nopeCount, 50, "NOPE presses"],
       "nopedex-damage": [snapshot.normalCollectedCount, 100, "stickers"],
       "operationally-useless-press": [snapshot.nopeCount, 250, "NOPE presses"],
+      "phoenix-nopedex": [snapshot.restoredFromBurnCount, 5, "restored NOPEs"],
       "public-embarrassment": [snapshot.shareCount, 5, "shares"],
       "rubbish-with-range": [snapshot.uncommonCollectedCount, 10, "uncommon trash stickers"],
+      "scorched-earth": [snapshot.sacrificeCount, 25, "sacrifices"],
       "spread-the-disease": [snapshot.shareCount, 1, "shares"],
       "sticker-gremlin": [snapshot.normalCollectedCount, 50, "stickers"],
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
+      "trash-alchemist": [snapshot.grinderUseCount, 1, "grinder uses"],
       "total-nopeification": [
         snapshot.normalCollectedCount + snapshot.gifCollectedCount + snapshot.mythicCollectedCount,
         NORMAL_TOTAL + GIF_TOTAL + MYTHIC_TOTAL,
@@ -1212,13 +1267,16 @@ export default function App() {
 
   function buildAchievementSnapshot(overrides = {}) {
     const ids = overrides.collectedIds ?? collectedIdsRef.current;
+    const burnedIds = overrides.sacrificedIds ?? sacrificedIdsRef.current;
     const stats = { ...achievementStatsRef.current, ...(overrides.achievementStats ?? {}) };
 
     return {
       ...stats,
       ...getCollectionCounts(ids),
+      burnPileCount: burnedIds.length,
       collectedIds: ids,
       nopeCount: overrides.nopeCount ?? nopeCountRef.current,
+      sacrificedIds: burnedIds,
     };
   }
 
@@ -1288,6 +1346,17 @@ export default function App() {
     animateScrollToTop(stickerBookScrollRef.current);
   }
 
+  function switchStickerTab(nextTab) {
+    setStickerTab(nextTab);
+    isStickerBookAutoScrollingRef.current = true;
+    stickerBookOverlayRef.current?.classList.remove("stickerbook-scroll-glitching");
+    window.clearTimeout(stickerBookScrollGlitchTimerRef.current);
+    stickerBookScrollGlitchTimerRef.current = window.setTimeout(() => {
+      isStickerBookAutoScrollingRef.current = false;
+    }, 500);
+    stickerBookScrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function handleStickerBookScroll() {
     if (
       isStickerBookTearing ||
@@ -1296,6 +1365,7 @@ export default function App() {
       activeAchievement ||
       activeCraftResult ||
       activeSacrificeEntity ||
+      activeUberSacrificeEntity ||
       activeSacrificeEffect ||
       activeBreachOverlay ||
       activeDiscoveryPopup ||
@@ -1379,38 +1449,99 @@ export default function App() {
     setActiveSacrificeEntity(entity);
   }
 
+  function requestUberSacrifice(entity) {
+    if (!entity || entity.type !== "uber" || !collectedIdsRef.current.includes(entity.id) || sacrificedIdsRef.current.includes(entity.id)) {
+      return;
+    }
+
+    setActiveUberSacrificeEntity(entity);
+    setUberSacrificeStep(1);
+  }
+
   function cancelSacrifice() {
     setActiveSacrificeEntity(null);
   }
 
-  function confirmSacrifice() {
-    const entity = activeSacrificeEntity;
-    const materialTier = getDuplicateMaterialTier(entity);
+  function cancelUberSacrifice() {
+    setActiveUberSacrificeEntity(null);
+    setUberSacrificeStep(1);
+  }
+
+  function continueUberSacrifice() {
+    setUberSacrificeStep(2);
+  }
+
+  function getSacrificeAchievementUpdates(entity, materialGain) {
+    const updates = {
+      duplicateMaterialEarnedCount: materialGain,
+      sacrificeCount: 1,
+    };
+
+    if (entity.type === "mythic" || entity.rarity === "mythic") {
+      updates.sacrificedMythicCount = 1;
+    }
+
+    if (entity.type === "uber") {
+      updates.uberSacrificeCount = 1;
+    }
+
+    if (entity.id === "godnope" || entity.id === "godteirnope") {
+      updates.godSacrificeCount = 1;
+    }
+
+    return updates;
+  }
+
+  function completeSacrifice(entity, { isUber = false } = {}) {
+    const materialTier = isUber ? "mythic" : getDuplicateMaterialTier(entity);
+    const materialGain = isUber ? 5 : SACRIFICE_MATERIAL_GAIN;
 
     if (!entity || !materialTier || !collectedIdsRef.current.includes(entity.id) || sacrificedIdsRef.current.includes(entity.id)) {
       setActiveSacrificeEntity(null);
+      cancelUberSacrifice();
       return;
     }
 
-    setCollectedIds((currentIds) => {
-      const nextIds = currentIds.filter((id) => id !== entity.id);
-      collectedIdsRef.current = nextIds;
-      return nextIds;
-    });
-    setSacrificedIdsSynced((currentIds) => [...new Set([...currentIds, entity.id])]);
+    const nextSacrificedIds = [...new Set([...sacrificedIdsRef.current, entity.id])];
+    const nextCollectedIds = collectedIdsRef.current.filter((id) => id !== entity.id);
+    collectedIdsRef.current = nextCollectedIds;
+    setCollectedIds(nextCollectedIds);
+    setSacrificedIdsSynced(nextSacrificedIds);
     setDuplicateMaterialsSynced((currentMaterials) => ({
       ...DEFAULT_DUPLICATE_MATERIALS,
       ...currentMaterials,
-      [materialTier]: (currentMaterials[materialTier] ?? 0) + SACRIFICE_MATERIAL_GAIN,
+      [materialTier]: (currentMaterials[materialTier] ?? 0) + materialGain,
     }));
+    const nextStats = updateAchievementStats(getSacrificeAchievementUpdates(entity, materialGain));
+
     setActiveSacrificeEntity(null);
+    cancelUberSacrifice();
     setActiveSacrificeEffect(entity);
     window.clearTimeout(sacrificeEffectTimerRef.current);
     sacrificeEffectTimerRef.current = window.setTimeout(() => {
       setActiveSacrificeEffect(null);
-    }, 900);
-    addInstantNopeLine(`${entity.name} fed to the grinder.`);
+    }, isUber ? 1300 : 900);
+
+    if (isUber) {
+      addInstantNopeLine("UBER NOPE sacrificed. probability is filing a complaint.");
+    } else {
+      addInstantNopeLine(`${entity.name} fed to the grinder.`);
+    }
+
     addInstantNopeLine("active collection decreased. brilliant work.");
+    queueAchievementUnlocks(buildAchievementSnapshot({
+      achievementStats: nextStats,
+      collectedIds: nextCollectedIds,
+      sacrificedIds: nextSacrificedIds,
+    }));
+  }
+
+  function confirmSacrifice() {
+    completeSacrifice(activeSacrificeEntity);
+  }
+
+  function confirmUberSacrifice() {
+    completeSacrifice(activeUberSacrificeEntity, { isUber: true });
   }
 
   function resetNopeProgress() {
@@ -1485,6 +1616,7 @@ export default function App() {
 
   function processDiscoveryEntity(discoveredEntity, nextCount, options = {}) {
     const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
+    const isRestoringSacrificed = !alreadyCollected && sacrificedIdsRef.current.includes(discoveredEntity.id);
     const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
     const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
     let nextAchievementStats = achievementStatsRef.current;
@@ -1503,13 +1635,16 @@ export default function App() {
       nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
       collectedIdsRef.current = nextCollectedIds;
       setCollectedIds(nextCollectedIds);
-      if (sacrificedIdsRef.current.includes(discoveredEntity.id)) {
+      if (isRestoringSacrificed) {
         setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== discoveredEntity.id));
+        nextAchievementStats = updateAchievementStats({ restoredFromBurnCount: 1 });
+        addInstantNopeLine(`${discoveredEntity.name} recovered from the burn pile.`);
       }
     } else {
       nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
+      addDuplicateCopy(discoveredEntity);
       if (options.awardDuplicateMaterial !== false) {
-        addDuplicateMaterial(discoveredEntity);
+        nextAchievementStats = addDuplicateMaterial(discoveredEntity);
       }
     }
 
@@ -1529,6 +1664,9 @@ export default function App() {
         achievementStats: nextAchievementStats,
         collectedIds: nextCollectedIds,
         nopeCount: nextCount,
+        sacrificedIds: isRestoringSacrificed
+          ? sacrificedIdsRef.current.filter((id) => id !== discoveredEntity.id)
+          : sacrificedIdsRef.current,
       }),
       !alreadyCollected ? randomBetween(700, 1000) : 0,
     );
@@ -1561,6 +1699,24 @@ export default function App() {
     return standardNopeEntities.filter((entity) => entity.rarity === targetTier);
   }
 
+  function getGrinderAchievementUpdates(targetTier) {
+    const targetStatMap = {
+      epic: "grinderCraftEpicCount",
+      mythic: "grinderCraftMythicCount",
+      rare: "grinderCraftRareCount",
+      uber: "grinderCraftUberCount",
+      uncommon: "grinderCraftUncommonCount",
+    };
+    const updates = { grinderUseCount: 1 };
+    const targetStat = targetStatMap[targetTier];
+
+    if (targetStat) {
+      updates[targetStat] = 1;
+    }
+
+    return updates;
+  }
+
   function grindDuplicateMaterial(recipe) {
     const currentAmount = duplicateMaterialsRef.current[recipe.source] ?? 0;
 
@@ -1585,6 +1741,7 @@ export default function App() {
     };
 
     setDuplicateMaterialsSynced(nextMaterials);
+    const nextStats = updateAchievementStats(getGrinderAchievementUpdates(recipe.target));
     addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]}s.`);
     addInstantNopeLine(`recycled output generated: ${resultEntity.name}.`);
     setActiveCraftResultSynced({
@@ -1593,6 +1750,7 @@ export default function App() {
       wasNew,
     });
     processDiscoveryEntity(resultEntity, nopeCountRef.current, {
+      achievementStats: nextStats,
       awardDuplicateMaterial: false,
       suppressGoodFindModal: true,
     });
@@ -1978,16 +2136,20 @@ ${shareUrl}`;
     const isMythic = entity.type === "mythic";
     const isUber = entity.type === "uber";
     const canSacrifice = isSacrificeEligible(entity);
+    const duplicateCount = isCollected && !sacrificedIds.includes(entity.id) ? duplicateCopies[entity.id] ?? 0 : 0;
+    const totalCopies = duplicateCount + 1;
+    const hasDuplicates = totalCopies > 1;
 
     return (
       <article
-        className={`sticker-card ${isCollected ? "collected" : "locked"} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} rarity-${entity.rarity} ${highlightedStickerId === entity.id ? isUber ? "uber-card-highlight" : "first-sticker-highlight" : ""}`}
+        className={`sticker-card ${isCollected ? "collected" : "locked"} ${hasDuplicates ? "has-duplicates" : ""} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} rarity-${entity.rarity} ${highlightedStickerId === entity.id ? isUber ? "uber-card-highlight" : "first-sticker-highlight" : ""}`}
         data-sticker-id={entity.id}
         key={entity.id}
         style={{ "--sticker-tilt": `${((index % 5) - 2) * 1.25}deg` }}
       >
         {isCollected ? (
           <>
+            {hasDuplicates && <b className="sticker-duplicate-badge">x{totalCopies}</b>}
             <div className="sticker-media">
               <img
                 src={entity.image}
@@ -2016,6 +2178,11 @@ ${shareUrl}`;
             {canSacrifice && (
               <button className="sticker-sacrifice-button" type="button" onClick={() => requestSacrifice(entity)}>
                 BURN FOR FUEL
+              </button>
+            )}
+            {isUber && !sacrificedIds.includes(entity.id) && (
+              <button className="sticker-sacrifice-button uber-sacrifice-button" type="button" onClick={() => requestUberSacrifice(entity)}>
+                SACRIFICE UBER
               </button>
             )}
           </>
@@ -2351,7 +2518,7 @@ ${shareUrl}`;
       )}
 
       {activeSacrificeEffect && (
-        <section className="sacrifice-effect-overlay" aria-label="NOPE sacrifice effect">
+        <section className={`sacrifice-effect-overlay ${activeSacrificeEffect.type === "uber" ? "uber-sacrifice-effect-overlay" : ""}`} aria-label="NOPE sacrifice effect">
           <div className="sacrifice-effect-card">
             <img
               src={activeSacrificeEffect.image}
@@ -2393,6 +2560,68 @@ ${shareUrl}`;
                 [ burn it. obviously. ]
               </button>
             </div>
+          </div>
+        </section>
+      )}
+
+      {activeUberSacrificeEntity && (
+        <section className="achievement-modal-overlay sacrifice-modal-overlay uber-sacrifice-modal-overlay" aria-modal="true" role="dialog">
+          <div className="achievement-modal-card first-sticker-modal-card sacrifice-modal-card uber-sacrifice-modal-card">
+            {uberSacrificeStep === 1 ? (
+              <>
+                <p>SACRIFICE UBER NOPE?</p>
+                <div className="first-sticker-modal-media">
+                  <img
+                    src={activeUberSacrificeEntity.image}
+                    alt={activeUberSacrificeEntity.name}
+                    onError={(event) => {
+                      event.currentTarget.classList.add("image-missing");
+                    }}
+                  />
+                </div>
+                <strong>{activeUberSacrificeEntity.name}</strong>
+                <span>This is an UBER NOPE.</span>
+                <em>Burning it will remove it from your active NOPEDEX.</em>
+                <em>It can be found again.</em>
+                <em>Probably.</em>
+                <b>This is a terrible idea.</b>
+                <div className="sacrifice-modal-actions">
+                  <button type="button" onClick={cancelUberSacrifice}>
+                    [ cancel ]
+                  </button>
+                  <button type="button" onClick={continueUberSacrifice}>
+                    [ continue terrible idea ]
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>FINAL BAD DECISION</p>
+                <div className="first-sticker-modal-media">
+                  <img
+                    src={activeUberSacrificeEntity.image}
+                    alt={activeUberSacrificeEntity.name}
+                    onError={(event) => {
+                      event.currentTarget.classList.add("image-missing");
+                    }}
+                  />
+                </div>
+                <strong>{activeUberSacrificeEntity.name}</strong>
+                <span>You are about to burn an UBER NOPE for basically no reason.</span>
+                <em>The game will remember this.</em>
+                <em>Your collection will suffer.</em>
+                <em>Your ego may improve.</em>
+                <b>The grinder receives +5 MYTHIC NOPE fuel.</b>
+                <div className="sacrifice-modal-actions">
+                  <button type="button" onClick={cancelUberSacrifice}>
+                    [ no, I like having things ]
+                  </button>
+                  <button type="button" onClick={confirmUberSacrifice}>
+                    [ burn the Uber. obviously. ]
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </section>
       )}
@@ -2450,7 +2679,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeCraftResult && !activeGoodFindModal && (
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && (
         <section className="achievement-modal-overlay" aria-modal="true" role="dialog">
           <div className="achievement-modal-card">
             <p>NOPE OS REWARD SYSTEM</p>
@@ -2563,18 +2792,12 @@ ${shareUrl}`;
               </div>
 
               <div className="stickerbook-controls primary-controls" aria-label="NOPEDEX view controls">
-                {[
-                  ["all", "ALL TRASH"],
-                  ["normal", "WORTHLESS NOPES"],
-                  ["gif", "FORBIDDEN LOOPS"],
-                  ["grinder", "DUPLICATE GRINDER"],
-                  ["achievements", "ACHIEVEMENTS"],
-                ].map(([value, label]) => (
+                {stickerBookNavItems.map(([value, label]) => (
                   <button
-                    className={stickerTab === value ? "active" : ""}
+                    className={`${stickerTab === value ? "active" : ""} ${value === "grinder" ? `grinder-nav-tab ${isGrinderReady ? "ready" : "idle"}` : ""}`}
                     key={value}
                     type="button"
-                    onClick={() => setStickerTab(value)}
+                    onClick={() => switchStickerTab(value)}
                   >
                     {label}
                   </button>
@@ -2677,9 +2900,23 @@ ${shareUrl}`;
                 </>
               )}
             </div>
-            <button className="stickerbook-top-button" type="button" onClick={scrollStickerBookToTop}>
-              Back to Top? Fine...
-            </button>
+            <div className="stickerbook-floating-nav" aria-label="Floating NOPEDEX navigation">
+              <div className="stickerbook-floating-tabs">
+                {stickerBookNavItems.map(([value, , shortLabel]) => (
+                  <button
+                    className={`${stickerTab === value ? "active" : ""} ${value === "grinder" ? `grinder-nav-tab ${isGrinderReady ? "ready" : "idle"}` : ""}`}
+                    key={value}
+                    type="button"
+                    onClick={() => switchStickerTab(value)}
+                  >
+                    {shortLabel}
+                  </button>
+                ))}
+              </div>
+              <button className="stickerbook-top-button" type="button" onClick={scrollStickerBookToTop}>
+                Back to Top? Fine...
+              </button>
+            </div>
           </div>
         </section>
       )}

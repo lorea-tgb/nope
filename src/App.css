@@ -1371,6 +1371,20 @@ button {
   background: linear-gradient(90deg, #ff5a2a, var(--glitch-pink));
 }
 
+.uber-sacrifice-modal-card {
+  border-color: #ffe45c;
+  box-shadow:
+    0 0 0 4px #000,
+    -7px 0 0 var(--ton-blue),
+    7px 0 0 var(--glitch-pink),
+    0 0 52px rgba(255, 228, 92, 0.5);
+}
+
+.uber-sacrifice-modal-card p {
+  color: #00120a;
+  background: linear-gradient(90deg, #ffe45c, var(--glitch-pink));
+}
+
 .sacrifice-modal-actions {
   display: flex;
   justify-content: center;
@@ -1430,6 +1444,30 @@ button {
 .sacrifice-effect-card span {
   color: #fff;
   font-weight: 900;
+}
+
+.uber-sacrifice-effect-overlay {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 228, 92, 0.13) 0,
+      rgba(255, 228, 92, 0.13) 2px,
+      transparent 2px,
+      transparent 7px
+    ),
+    rgba(0, 0, 0, 0.38);
+  animation-duration: 1300ms;
+}
+
+.uber-sacrifice-effect-overlay .sacrifice-effect-card {
+  width: min(340px, 80vw);
+  border-color: #ffe45c;
+  box-shadow:
+    0 0 0 4px #000,
+    -6px 0 0 var(--ton-blue),
+    6px 0 0 var(--pepe-green),
+    0 0 58px rgba(255, 228, 92, 0.7);
+  animation-duration: 1300ms;
 }
 
 .first-sticker-modal-card {
@@ -2484,26 +2522,86 @@ button {
   scrollbar-color: var(--pepe-green) #03100b;
 }
 
-.stickerbook-top-button {
+.stickerbook-floating-nav {
   position: absolute;
   right: 14px;
   bottom: 12px;
-  z-index: 4;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.stickerbook-floating-tabs {
+  min-width: 0;
+  max-width: min(100%, 560px);
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 4px;
+  border: 2px solid #000;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(57, 255, 20, 0.08) 0,
+      rgba(57, 255, 20, 0.08) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    rgba(1, 10, 7, 0.94);
+  box-shadow:
+    3px 3px 0 #000,
+    0 0 14px rgba(0, 152, 234, 0.28);
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pepe-green) #020806;
+}
+
+.stickerbook-floating-tabs button,
+.stickerbook-top-button {
   padding: 7px 9px;
   border: 2px solid #000;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.stickerbook-floating-tabs button {
+  flex: 0 0 auto;
+  color: var(--pepe-green);
+  background: rgba(0, 12, 8, 0.96);
+  box-shadow:
+    inset 0 0 9px rgba(57, 255, 20, 0.08),
+    2px 2px 0 #000;
+}
+
+.stickerbook-floating-tabs button.active {
+  color: #00120a;
+  background: var(--pepe-green);
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.35),
+    0 0 0 2px var(--ton-blue);
+}
+
+.stickerbook-top-button {
+  flex: 0 0 auto;
   color: #00120a;
   background:
     linear-gradient(90deg, var(--pepe-green), #89dcff),
     var(--pepe-green);
-  font-size: 0.72rem;
-  font-weight: 900;
   box-shadow:
     inset 2px 2px 0 rgba(255, 255, 255, 0.45),
     inset -2px -2px 0 rgba(0, 0, 0, 0.34),
     3px 3px 0 #000,
     0 0 16px rgba(0, 152, 234, 0.36);
+  pointer-events: auto;
 }
 
+.stickerbook-floating-tabs button:hover,
+.stickerbook-floating-tabs button:focus-visible,
 .stickerbook-top-button:hover,
 .stickerbook-top-button:focus-visible {
   background:
@@ -2511,6 +2609,50 @@ button {
     #ffe45c;
   outline: 2px solid var(--ton-blue);
   outline-offset: 2px;
+}
+
+.stickerbook-controls .grinder-nav-tab,
+.stickerbook-floating-tabs .grinder-nav-tab {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--ton-blue);
+  text-shadow:
+    1px 0 rgba(255, 43, 214, 0.55),
+    0 0 8px rgba(57, 255, 20, 0.28);
+  animation: grinderIdleFlicker 2.4s steps(2, end) infinite;
+}
+
+.stickerbook-controls .grinder-nav-tab::after,
+.stickerbook-floating-tabs .grinder-nav-tab::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(0, 152, 234, 0.2), transparent);
+  transform: translateX(-120%);
+  animation: grinderScanline 2.2s linear infinite;
+}
+
+.stickerbook-controls .grinder-nav-tab.ready,
+.stickerbook-floating-tabs .grinder-nav-tab.ready {
+  border-color: var(--pepe-green);
+  color: #eaffee;
+  box-shadow:
+    inset 0 0 12px rgba(57, 255, 20, 0.18),
+    2px 2px 0 #000,
+    -2px 0 0 rgba(255, 43, 214, 0.65),
+    0 0 18px rgba(57, 255, 20, 0.38);
+  animation: grinderReadyPulse 1.9s steps(2, end) infinite;
+}
+
+.stickerbook-controls .grinder-nav-tab.ready::before,
+.stickerbook-floating-tabs .grinder-nav-tab.ready::before {
+  content: "READY";
+  margin-right: 6px;
+  padding: 1px 4px;
+  color: #00120a;
+  background: var(--pepe-green);
+  text-shadow: none;
 }
 
 .stickerbook-summary {
@@ -3091,6 +3233,8 @@ button {
 }
 
 .sticker-card {
+  position: relative;
+  isolation: isolate;
   min-height: 278px;
   display: flex;
   flex-direction: column;
@@ -3103,6 +3247,49 @@ button {
     inset 2px 2px 0 #fff,
     inset -2px -2px 0 #8d9187;
   transform: rotate(var(--sticker-tilt));
+}
+
+.sticker-card.has-duplicates::before,
+.sticker-card.has-duplicates::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  border: 1px solid rgba(57, 255, 20, 0.34);
+  background:
+    linear-gradient(135deg, rgba(0, 152, 234, 0.12), transparent 45%),
+    rgba(0, 20, 10, 0.48);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.42);
+}
+
+.sticker-card.has-duplicates::before {
+  transform: translate(5px, 5px);
+}
+
+.sticker-card.has-duplicates::after {
+  border-color: rgba(0, 152, 234, 0.3);
+  transform: translate(9px, 9px);
+}
+
+.sticker-duplicate-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 3px 6px;
+  border: 2px solid var(--ton-blue);
+  color: var(--pepe-green);
+  background: rgba(1, 8, 6, 0.94);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow:
+    2px 2px 0 #000,
+    -1px 0 0 var(--glitch-pink),
+    0 0 12px rgba(57, 255, 20, 0.42);
+  text-shadow:
+    1px 0 var(--ton-blue),
+    0 0 8px rgba(57, 255, 20, 0.65);
 }
 
 .sticker-card.collected {
@@ -3450,6 +3637,30 @@ button {
   outline-offset: 2px;
 }
 
+.uber-sacrifice-button {
+  color: #00120a;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 228, 92, 0.9) 0,
+      rgba(255, 228, 92, 0.9) 5px,
+      rgba(255, 43, 214, 0.62) 5px,
+      rgba(255, 43, 214, 0.62) 10px
+    ),
+    #ffe45c;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.38),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.38),
+    2px 2px 0 #000,
+    0 0 14px rgba(255, 228, 92, 0.42);
+}
+
+.uber-sacrifice-button:hover,
+.uber-sacrifice-button:focus-visible {
+  background: linear-gradient(90deg, #ffe45c, var(--glitch-pink));
+  outline-color: #ffe45c;
+}
+
 .sticker-card.locked {
   justify-content: center;
   align-items: center;
@@ -3487,6 +3698,43 @@ button {
 .sticker-card.locked span {
   color: #00120a;
   background: #8fa096;
+}
+
+@keyframes grinderIdleFlicker {
+  0%,
+  82%,
+  100% {
+    filter: brightness(1);
+  }
+
+  88% {
+    filter: brightness(1.18) saturate(1.2);
+  }
+
+  94% {
+    filter: brightness(0.94);
+  }
+}
+
+@keyframes grinderReadyPulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.24) saturate(1.32);
+  }
+}
+
+@keyframes grinderScanline {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(120%);
+  }
 }
 
 @keyframes badScreen {
@@ -4610,6 +4858,25 @@ button {
 
   .stickerbook-window {
     height: 96vh;
+  }
+
+  .stickerbook-floating-nav {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    gap: 5px;
+  }
+
+  .stickerbook-floating-tabs {
+    flex: 1 1 auto;
+    max-width: none;
+  }
+
+  .stickerbook-floating-tabs button,
+  .stickerbook-top-button {
+    padding: 6px 7px;
+    font-size: 0.62rem;
+    white-space: nowrap;
   }
 
   .stickerbook-titlebar {

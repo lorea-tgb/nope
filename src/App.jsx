@@ -262,6 +262,8 @@ export default function App() {
   const [activeCraftResult, setActiveCraftResult] = useState(null);
   const [activeSacrificeEntity, setActiveSacrificeEntity] = useState(null);
   const [activeUberSacrificeEntity, setActiveUberSacrificeEntity] = useState(null);
+  const [activeStickerInspectEntity, setActiveStickerInspectEntity] = useState(null);
+  const [activeAchievementInspect, setActiveAchievementInspect] = useState(null);
   const [uberSacrificeStep, setUberSacrificeStep] = useState(1);
   const [activeSacrificeEffect, setActiveSacrificeEffect] = useState(null);
   const [duplicateStreak, setDuplicateStreak] = useState(0);
@@ -439,7 +441,20 @@ export default function App() {
     showResetConfirm ||
     showExistentialPopup ||
     activeSacrificeEffect ||
+    activeStickerInspectEntity ||
+    activeAchievementInspect ||
     achievementQueue.length > 0,
+  );
+  const isInspectModalBlocked = Boolean(
+    activeAchievement ||
+    activeGoodFindModal ||
+    activeCraftResult ||
+    activeSacrificeEntity ||
+    activeUberSacrificeEntity ||
+    showFirstStickerPopup ||
+    pendingFirstStickerPopup ||
+    showResetConfirm ||
+    showGrinderReadyPrompt,
   );
   const stickerBookNavItems = [
     ["all", "ALL TRASH", "ALL"],
@@ -696,6 +711,34 @@ export default function App() {
     }
   }, [latestDiscoveryId]);
 
+  const closeInspectModals = useCallback(() => {
+    setActiveStickerInspectEntity(null);
+    setActiveAchievementInspect(null);
+    window.clearTimeout(achievementDelayTimerRef.current);
+    achievementDelayTimerRef.current = window.setTimeout(() => {
+      if (
+        activeCraftResultRef.current ||
+        activeGoodFindModalRef.current ||
+        activeAchievementRef.current ||
+        showGrinderReadyPromptRef.current ||
+        achievementQueueRef.current.length === 0
+      ) {
+        return;
+      }
+
+      const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
+      achievementQueueRef.current = remainingAchievements;
+      setAchievementQueue(remainingAchievements);
+      activeAchievementRef.current = nextAchievement;
+      window.clearTimeout(importantModalActionTimerRef.current);
+      setIsImportantModalActionReady(false);
+      importantModalActionTimerRef.current = window.setTimeout(() => {
+        setIsImportantModalActionReady(true);
+      }, IMPORTANT_MODAL_ACTION_DELAY);
+      setActiveAchievement(nextAchievement);
+    }, 450);
+  }, []);
+
   useEffect(() => {
     if (
       duplicateStreak < 3 ||
@@ -738,6 +781,22 @@ export default function App() {
   }, [highlightedStickerId, isStickerBookOpen]);
 
   useEffect(() => {
+    if (!activeStickerInspectEntity && !activeAchievementInspect) {
+      return undefined;
+    }
+
+    function handleInspectEscape(event) {
+      if (event.key === "Escape") {
+        closeInspectModals();
+      }
+    }
+
+    window.addEventListener("keydown", handleInspectEscape);
+
+    return () => window.removeEventListener("keydown", handleInspectEscape);
+  }, [activeAchievementInspect, activeStickerInspectEntity, closeInspectModals]);
+
+  useEffect(() => {
     const resetTimer = window.setTimeout(() => {
       setNextBadgeIndex(0);
     }, 0);
@@ -757,7 +816,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || showGrinderReadyPrompt || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || showGrinderReadyPrompt || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -768,7 +827,7 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, achievementQueue.length, pendingFirstStickerPopup, showGrinderReadyPrompt]);
+  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, achievementQueue.length, pendingFirstStickerPopup, showGrinderReadyPrompt]);
 
   useEffect(() => {
     if (showIntro) {
@@ -991,6 +1050,8 @@ export default function App() {
         activeGoodFindModalRef.current ||
         activeAchievementRef.current ||
         showGrinderReadyPromptRef.current ||
+        activeStickerInspectEntity ||
+        activeAchievementInspect ||
         achievementQueueRef.current.length === 0
       ) {
         return;
@@ -2202,6 +2263,38 @@ ${shareUrl}`;
     }
   }
 
+  function openStickerInspect(entity) {
+    if (isInspectModalBlocked) {
+      return;
+    }
+
+    setActiveAchievementInspect(null);
+    setActiveStickerInspectEntity(entity);
+  }
+
+  function openAchievementInspect(achievement) {
+    if (isInspectModalBlocked) {
+      return;
+    }
+
+    setActiveStickerInspectEntity(null);
+    setActiveAchievementInspect(achievement);
+  }
+
+  function handleInspectCardKeyDown(event, openInspect) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    openInspect();
+  }
+
+  function handleCardActionClick(event, action) {
+    event.stopPropagation();
+    action();
+  }
+
   function getAchievementDisplayTier(achievementId) {
     const cursedAchievementIds = new Set([
       "absolute-degenerate",
@@ -2261,6 +2354,10 @@ ${shareUrl}`;
       <article
         className={`achievement-card ${displayTier.className} ${isUnlocked ? "achievement-unlocked" : "achievement-locked"}`}
         key={achievement.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => openAchievementInspect(achievement)}
+        onKeyDown={(event) => handleInspectCardKeyDown(event, () => openAchievementInspect(achievement))}
         style={{ "--achievement-tilt": `${((index % 5) - 2) * 0.45}deg` }}
       >
         <div className="achievement-card-badges">
@@ -2278,13 +2375,13 @@ ${shareUrl}`;
         </em>
         {isUnlocked ? (
           <div className="sticker-share-row achievement-share-row" aria-label={`Share ${achievement.name}`}>
-            <button type="button" onClick={() => openAchievementShareWindow(achievement, "x")}>
+            <button type="button" onClick={(event) => handleCardActionClick(event, () => openAchievementShareWindow(achievement, "x"))}>
               X
             </button>
-            <button type="button" onClick={() => openAchievementShareWindow(achievement, "telegram")}>
+            <button type="button" onClick={(event) => handleCardActionClick(event, () => openAchievementShareWindow(achievement, "telegram"))}>
               TG
             </button>
-            <button type="button" onClick={() => copyAchievementShareText(achievement)}>
+            <button type="button" onClick={(event) => handleCardActionClick(event, () => copyAchievementShareText(achievement))}>
               {copiedShareId === `achievement:${achievement.id}` ? "COPIED" : "COPY"}
             </button>
           </div>
@@ -2331,7 +2428,14 @@ ${shareUrl}`;
 
   function renderSacrificedCard(entity) {
     return (
-      <article className={`burn-pile-card rarity-${entity.rarity}`} key={entity.id}>
+      <article
+        className={`burn-pile-card rarity-${entity.rarity}`}
+        key={entity.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => openStickerInspect(entity)}
+        onKeyDown={(event) => handleInspectCardKeyDown(event, () => openStickerInspect(entity))}
+      >
         <div className="burn-pile-media">
           <img
             src={entity.image}
@@ -2364,6 +2468,10 @@ ${shareUrl}`;
         className={`sticker-card ${isCollected ? "collected" : "locked"} ${hasDuplicates ? "has-duplicates" : ""} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} rarity-${entity.rarity} ${highlightedStickerId === entity.id ? isUber ? "uber-card-highlight" : "first-sticker-highlight" : ""}`}
         data-sticker-id={entity.id}
         key={entity.id}
+        role="button"
+        tabIndex={0}
+        onClick={() => openStickerInspect(entity)}
+        onKeyDown={(event) => handleInspectCardKeyDown(event, () => openStickerInspect(entity))}
         style={{ "--sticker-tilt": `${((index % 5) - 2) * 1.25}deg` }}
       >
         {isCollected ? (
@@ -2384,23 +2492,23 @@ ${shareUrl}`;
             <em>drop: {formatDropChance(entity.dropChance)}</em>
             <em>value: zero</em>
             <div className="sticker-share-row" aria-label={`Share ${entity.name}`}>
-              <button type="button" onClick={() => openShareWindow(entity, "x")}>
+              <button type="button" onClick={(event) => handleCardActionClick(event, () => openShareWindow(entity, "x"))}>
                 X
               </button>
-              <button type="button" onClick={() => openShareWindow(entity, "telegram")}>
+              <button type="button" onClick={(event) => handleCardActionClick(event, () => openShareWindow(entity, "telegram"))}>
                 TG
               </button>
-              <button type="button" onClick={() => copyShareText(entity)}>
+              <button type="button" onClick={(event) => handleCardActionClick(event, () => copyShareText(entity))}>
                 {copiedShareId === entity.id ? "COPIED" : "COPY"}
               </button>
             </div>
             {canSacrifice && (
-              <button className="sticker-sacrifice-button" type="button" onClick={() => requestSacrifice(entity)}>
+              <button className="sticker-sacrifice-button" type="button" onClick={(event) => handleCardActionClick(event, () => requestSacrifice(entity))}>
                 BURN FOR FUEL
               </button>
             )}
             {isUber && !sacrificedIds.includes(entity.id) && (
-              <button className="sticker-sacrifice-button uber-sacrifice-button" type="button" onClick={() => requestUberSacrifice(entity)}>
+              <button className="sticker-sacrifice-button uber-sacrifice-button" type="button" onClick={(event) => handleCardActionClick(event, () => requestUberSacrifice(entity))}>
                 SACRIFICE UBER
               </button>
             )}
@@ -2415,6 +2523,125 @@ ${shareUrl}`;
           </>
         )}
       </article>
+    );
+  }
+
+  function renderStickerInspectModal() {
+    if (!activeStickerInspectEntity) {
+      return null;
+    }
+
+    const entity = activeStickerInspectEntity;
+    const isCollected = collectedIds.includes(entity.id);
+    const isSacrificed = sacrificedIds.includes(entity.id);
+    const duplicateCount = isCollected && !isSacrificed ? duplicateCopies[entity.id] ?? 0 : 0;
+    const totalCopies = duplicateCount + 1;
+    const canShare = isCollected && !isSacrificed;
+    const statusText = isSacrificed ? "sacrificed" : isCollected ? "collected" : "not found";
+    const valueText = entity.type === "gif" ? "value: animated zero." : entity.type === "uber" ? "value: probability insulted." : "value: emotionally zero.";
+
+    return (
+      <section
+        className={`inspect-modal-overlay sticker-inspect-overlay rarity-${entity.rarity} ${entity.type === "uber" ? "uber-inspect-overlay" : ""}`}
+        aria-modal="true"
+        role="dialog"
+        onClick={(event) => handleModalBackdropClick(event, closeInspectModals)}
+      >
+        <div className={`inspect-modal-card sticker-inspect-card rarity-${entity.rarity} ${isSacrificed ? "sacrificed" : ""} ${entity.type === "gif" ? "gif-inspect-card" : ""} ${entity.type === "mythic" ? "mythic-inspect-card" : ""} ${entity.type === "uber" ? "uber-inspect-card" : ""}`}>
+          <button className="inspect-close-button" type="button" onClick={closeInspectModals} aria-label="Close sticker preview">
+            X
+          </button>
+          <div className="inspect-media">
+            {isCollected || isSacrificed ? (
+              <img
+                src={entity.image}
+                alt={entity.name}
+                onError={(event) => {
+                  event.currentTarget.classList.add("image-missing");
+                }}
+              />
+            ) : (
+              <div className="inspect-missing-mark">???</div>
+            )}
+          </div>
+          <div className="inspect-detail-panel">
+            <p>{isCollected || isSacrificed ? entity.name : "MISSING NOPE"}</p>
+            <strong>{entity.rarityLabel}</strong>
+            <span>odds: {formatDropChance(entity.dropChance)}</span>
+            {entity.caption && <em>{isCollected || isSacrificed ? entity.caption : "hint: press NOPE harder."}</em>}
+            <b>{valueText}</b>
+            <small>status: {statusText}</small>
+            {isCollected && !isSacrificed && <small>copies: x{totalCopies}</small>}
+            {isSacrificed && <small>fed to the grinder. find it again, idiot.</small>}
+            {!isCollected && !isSacrificed && <small>hint: press NOPE harder.</small>}
+            {entity.type === "uber" && <small>probability has been insulted.</small>}
+            {canShare && (
+              <div className="inspect-action-row" aria-label={`Share ${entity.name}`}>
+                <button type="button" onClick={() => openShareWindow(entity, "x")}>
+                  X
+                </button>
+                <button type="button" onClick={() => openShareWindow(entity, "telegram")}>
+                  TG
+                </button>
+                <button type="button" onClick={() => copyShareText(entity)}>
+                  {copiedShareId === entity.id ? "COPIED" : "COPY"}
+                </button>
+              </div>
+            )}
+            <button className="inspect-dismiss-button" type="button" onClick={closeInspectModals}>
+              close
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function renderAchievementInspectModal() {
+    if (!activeAchievementInspect) {
+      return null;
+    }
+
+    const achievement = activeAchievementInspect;
+    const isUnlocked = unlockedAchievements.includes(achievement.id);
+    const displayTier = getAchievementDisplayTier(achievement.id);
+
+    return (
+      <section
+        className={`inspect-modal-overlay achievement-inspect-overlay ${displayTier.className} ${isUnlocked ? "unlocked" : "locked"}`}
+        aria-modal="true"
+        role="dialog"
+        onClick={(event) => handleModalBackdropClick(event, closeInspectModals)}
+      >
+        <div className={`inspect-modal-card achievement-inspect-card ${displayTier.className} ${isUnlocked ? "unlocked" : "locked"}`}>
+          <button className="inspect-close-button" type="button" onClick={closeInspectModals} aria-label="Close achievement preview">
+            X
+          </button>
+          <p>{isUnlocked ? "ACHIEVEMENT UNLOCKED" : "ACHIEVEMENT LOCKED"}</p>
+          <strong>{achievement.name}</strong>
+          <span>{displayTier.label}</span>
+          <em>{achievement.description}</em>
+          <b>reward: {achievement.reward}</b>
+          <small>status: {isUnlocked ? "unlocked" : "thankfully not achieved yet."}</small>
+          <small>value gained: zero.</small>
+          {isUnlocked && (
+            <div className="inspect-action-row" aria-label={`Share ${achievement.name}`}>
+              <button type="button" onClick={() => openAchievementShareWindow(achievement, "x")}>
+                X
+              </button>
+              <button type="button" onClick={() => openAchievementShareWindow(achievement, "telegram")}>
+                TG
+              </button>
+              <button type="button" onClick={() => copyAchievementShareText(achievement)}>
+                {copiedShareId === `achievement:${achievement.id}` ? "COPIED" : "COPY"}
+              </button>
+            </div>
+          )}
+          <button className="inspect-dismiss-button" type="button" onClick={closeInspectModals}>
+            close
+          </button>
+        </div>
+      </section>
     );
   }
 
@@ -2751,6 +2978,9 @@ ${shareUrl}`;
           </div>
         </section>
       )}
+
+      {renderStickerInspectModal()}
+      {renderAchievementInspectModal()}
 
       {activeSacrificeEntity && (
         <section

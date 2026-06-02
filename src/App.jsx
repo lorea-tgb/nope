@@ -33,12 +33,36 @@ const STORAGE_KEYS = {
   firstStickerPopupSeen: "nope_first_sticker_popup_seen",
   introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
+  duplicateMaterials: "nope_duplicate_materials",
   nopeCount: "nopeMachine.nopeCount",
+  sacrificedIds: "nope_sacrificed_ids",
   unlockedAchievements: "nopeMachine.unlockedAchievements",
 };
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
 const IMPORTANT_MODAL_ACTION_DELAY = 1000;
+const SACRIFICE_MATERIAL_GAIN = 3;
+const DEFAULT_DUPLICATE_MATERIALS = {
+  common: 0,
+  uncommon: 0,
+  rare: 0,
+  epic: 0,
+  mythic: 0,
+};
+const DUPLICATE_MATERIAL_LABELS = {
+  common: "COMMON NOPE",
+  uncommon: "UNCOMMON NOPE",
+  rare: "RARE NOPE",
+  epic: "EPIC NOPE",
+  mythic: "MYTHIC NOPE",
+};
+const DUPLICATE_GRINDER_RECIPES = [
+  { cost: 10, source: "common", target: "uncommon", button: "GRIND COMMONS" },
+  { cost: 8, source: "uncommon", target: "rare", button: "GRIND UNCOMMONS" },
+  { cost: 6, source: "rare", target: "epic", button: "GRIND RARES" },
+  { cost: 4, source: "epic", target: "mythic", button: "GRIND EPICS" },
+  { cost: 5, source: "mythic", target: "uber", button: "GRIND MYTHICS" },
+];
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -218,6 +242,9 @@ export default function App() {
   const [achievementStats, setAchievementStats] = useState(() =>
     readStoredObject(STORAGE_KEYS.achievementStats, defaultAchievementStats),
   );
+  const [duplicateMaterials, setDuplicateMaterials] = useState(() =>
+    readStoredObject(STORAGE_KEYS.duplicateMaterials, DEFAULT_DUPLICATE_MATERIALS),
+  );
   const [unlockedAchievements, setUnlockedAchievements] = useState(() =>
     readStoredArray(STORAGE_KEYS.unlockedAchievements),
   );
@@ -225,6 +252,9 @@ export default function App() {
   const [activeAchievement, setActiveAchievement] = useState(null);
   const [activeDiscoveryPopup, setActiveDiscoveryPopup] = useState(null);
   const [activeGoodFindModal, setActiveGoodFindModal] = useState(null);
+  const [activeCraftResult, setActiveCraftResult] = useState(null);
+  const [activeSacrificeEntity, setActiveSacrificeEntity] = useState(null);
+  const [activeSacrificeEffect, setActiveSacrificeEffect] = useState(null);
   const [pendingFirstStickerPopup, setPendingFirstStickerPopup] = useState(false);
   const [showFirstStickerPopup, setShowFirstStickerPopup] = useState(false);
   const [activeBreachOverlay, setActiveBreachOverlay] = useState(null);
@@ -232,6 +262,9 @@ export default function App() {
   const [showExistentialPopup, setShowExistentialPopup] = useState(false);
   const [collectedIds, setCollectedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.collectedIds),
+  );
+  const [sacrificedIds, setSacrificedIds] = useState(() =>
+    readStoredArray(STORAGE_KEYS.sacrificedIds),
   );
   const [latestDiscoveryId, setLatestDiscoveryId] = useState(() =>
     readStoredString(STORAGE_KEYS.latestDiscoveryId),
@@ -260,6 +293,7 @@ export default function App() {
   const shareCopyTimerRef = useRef(null);
   const importantModalActionTimerRef = useRef(null);
   const firstStickerHighlightTimerRef = useRef(null);
+  const sacrificeEffectTimerRef = useRef(null);
   const stickerBookTearTimerRef = useRef(null);
   const stickerBookScrollGlitchTimerRef = useRef(null);
   const lastStickerBookScrollGlitchRef = useRef(0);
@@ -273,11 +307,14 @@ export default function App() {
   const lineIdRef = useRef(0);
   const nopeCountRef = useRef(nopeCount);
   const collectedIdsRef = useRef(collectedIds);
+  const sacrificedIdsRef = useRef(sacrificedIds);
   const achievementStatsRef = useRef(achievementStats);
+  const duplicateMaterialsRef = useRef(duplicateMaterials);
   const unlockedAchievementsRef = useRef(unlockedAchievements);
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
   const activeGoodFindModalRef = useRef(activeGoodFindModal);
+  const activeCraftResultRef = useRef(activeCraftResult);
   const bootRunRef = useRef(0);
   const globalNopeCountRef = useRef(globalNopeCount);
   const globalSyncMessageRef = useRef(false);
@@ -424,6 +461,7 @@ export default function App() {
       window.clearTimeout(shareCopyTimerRef.current);
       window.clearTimeout(importantModalActionTimerRef.current);
       window.clearTimeout(firstStickerHighlightTimerRef.current);
+      window.clearTimeout(sacrificeEffectTimerRef.current);
       window.clearTimeout(stickerBookTearTimerRef.current);
       window.clearTimeout(stickerBookScrollGlitchTimerRef.current);
       isStickerBookAutoScrollingRef.current = false;
@@ -565,9 +603,19 @@ export default function App() {
   }, [collectedIds]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.sacrificedIds, JSON.stringify(sacrificedIds));
+    sacrificedIdsRef.current = sacrificedIds;
+  }, [sacrificedIds]);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.achievementStats, JSON.stringify(achievementStats));
     achievementStatsRef.current = achievementStats;
   }, [achievementStats]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.duplicateMaterials, JSON.stringify(duplicateMaterials));
+    duplicateMaterialsRef.current = duplicateMaterials;
+  }, [duplicateMaterials]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.unlockedAchievements, JSON.stringify(unlockedAchievements));
@@ -783,6 +831,18 @@ export default function App() {
     setAchievementQueue(queue);
   }
 
+  function setDuplicateMaterialsSynced(nextMaterials) {
+    const materials = typeof nextMaterials === "function" ? nextMaterials(duplicateMaterialsRef.current) : nextMaterials;
+    duplicateMaterialsRef.current = materials;
+    setDuplicateMaterials(materials);
+  }
+
+  function setSacrificedIdsSynced(nextIds) {
+    const ids = typeof nextIds === "function" ? nextIds(sacrificedIdsRef.current) : nextIds;
+    sacrificedIdsRef.current = ids;
+    setSacrificedIds(ids);
+  }
+
   function armImportantModalActionDelay() {
     window.clearTimeout(importantModalActionTimerRef.current);
     setIsImportantModalActionReady(false);
@@ -811,11 +871,16 @@ export default function App() {
     setActiveGoodFindModal(nextEntity);
   }
 
+  function setActiveCraftResultSynced(nextResult) {
+    activeCraftResultRef.current = nextResult;
+    setActiveCraftResult(nextResult);
+  }
+
   function startNextAchievement(delay = 0) {
     window.clearTimeout(achievementDelayTimerRef.current);
 
     achievementDelayTimerRef.current = window.setTimeout(() => {
-      if (activeGoodFindModalRef.current || activeAchievementRef.current || achievementQueueRef.current.length === 0) {
+      if (activeCraftResultRef.current || activeGoodFindModalRef.current || activeAchievementRef.current || achievementQueueRef.current.length === 0) {
         return;
       }
 
@@ -1026,6 +1091,40 @@ export default function App() {
     return entity.type === "gif" ? "probability briefly failed." : "This is statistically embarrassing.";
   }
 
+  function getDuplicateMaterialTier(entity) {
+    if (entity.type === "gif" || entity.type === "uber") {
+      return null;
+    }
+
+    return Object.hasOwn(DEFAULT_DUPLICATE_MATERIALS, entity.rarity) ? entity.rarity : null;
+  }
+
+  function getNopeEntity(entityId) {
+    return allNopeEntities.find((entity) => entity.id === entityId) || null;
+  }
+
+  function isSacrificeEligible(entity) {
+    return Boolean(entity) &&
+      collectedIds.includes(entity.id) &&
+      !sacrificedIds.includes(entity.id) &&
+      getDuplicateMaterialTier(entity) !== null;
+  }
+
+  function addDuplicateMaterial(entity) {
+    const materialTier = getDuplicateMaterialTier(entity);
+
+    if (!materialTier) {
+      return;
+    }
+
+    setDuplicateMaterialsSynced((currentMaterials) => ({
+      ...DEFAULT_DUPLICATE_MATERIALS,
+      ...currentMaterials,
+      [materialTier]: (currentMaterials[materialTier] ?? 0) + 1,
+    }));
+    addInstantNopeLine(`duplicate ${DUPLICATE_MATERIAL_LABELS[materialTier]} converted into grinder material.`);
+  }
+
   async function copyContract(event) {
     event?.preventDefault();
 
@@ -1195,6 +1294,9 @@ export default function App() {
       isStickerBookAutoScrollingRef.current ||
       activeGoodFindModal ||
       activeAchievement ||
+      activeCraftResult ||
+      activeSacrificeEntity ||
+      activeSacrificeEffect ||
       activeBreachOverlay ||
       activeDiscoveryPopup ||
       highlightedStickerId
@@ -1254,6 +1356,61 @@ export default function App() {
     setActiveGoodFindModalSynced(null);
     focusStickerInBook(entityId, "all");
     startNextAchievement(700);
+  }
+
+  function dismissCraftResult() {
+    const craftResult = activeCraftResultRef.current;
+
+    setActiveCraftResultSynced(null);
+
+    if (craftResult?.shouldOpenGoodFind) {
+      setActiveGoodFindModalSynced(craftResult.entity);
+      return;
+    }
+
+    startNextAchievement(700);
+  }
+
+  function requestSacrifice(entity) {
+    if (!isSacrificeEligible(entity)) {
+      return;
+    }
+
+    setActiveSacrificeEntity(entity);
+  }
+
+  function cancelSacrifice() {
+    setActiveSacrificeEntity(null);
+  }
+
+  function confirmSacrifice() {
+    const entity = activeSacrificeEntity;
+    const materialTier = getDuplicateMaterialTier(entity);
+
+    if (!entity || !materialTier || !collectedIdsRef.current.includes(entity.id) || sacrificedIdsRef.current.includes(entity.id)) {
+      setActiveSacrificeEntity(null);
+      return;
+    }
+
+    setCollectedIds((currentIds) => {
+      const nextIds = currentIds.filter((id) => id !== entity.id);
+      collectedIdsRef.current = nextIds;
+      return nextIds;
+    });
+    setSacrificedIdsSynced((currentIds) => [...new Set([...currentIds, entity.id])]);
+    setDuplicateMaterialsSynced((currentMaterials) => ({
+      ...DEFAULT_DUPLICATE_MATERIALS,
+      ...currentMaterials,
+      [materialTier]: (currentMaterials[materialTier] ?? 0) + SACRIFICE_MATERIAL_GAIN,
+    }));
+    setActiveSacrificeEntity(null);
+    setActiveSacrificeEffect(entity);
+    window.clearTimeout(sacrificeEffectTimerRef.current);
+    sacrificeEffectTimerRef.current = window.setTimeout(() => {
+      setActiveSacrificeEffect(null);
+    }, 900);
+    addInstantNopeLine(`${entity.name} fed to the grinder.`);
+    addInstantNopeLine("active collection decreased. brilliant work.");
   }
 
   function resetNopeProgress() {
@@ -1326,7 +1483,7 @@ export default function App() {
     return pickDiscoveryEntity();
   }
 
-  function processDiscoveryEntity(discoveredEntity, nextCount) {
+  function processDiscoveryEntity(discoveredEntity, nextCount, options = {}) {
     const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
     const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
     const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
@@ -1338,7 +1495,7 @@ export default function App() {
     showBreachOverlay(breachEvent);
     setLatestDiscoveryId(discoveredEntity.id);
 
-    if (isForcedStickerBookFind(discoveredEntity, alreadyCollected)) {
+    if (!options.suppressGoodFindModal && isForcedStickerBookFind(discoveredEntity, alreadyCollected)) {
       setActiveGoodFindModalSynced(discoveredEntity);
     }
 
@@ -1346,8 +1503,14 @@ export default function App() {
       nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
       collectedIdsRef.current = nextCollectedIds;
       setCollectedIds(nextCollectedIds);
+      if (sacrificedIdsRef.current.includes(discoveredEntity.id)) {
+        setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== discoveredEntity.id));
+      }
     } else {
       nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
+      if (options.awardDuplicateMaterial !== false) {
+        addDuplicateMaterial(discoveredEntity);
+      }
     }
 
     addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
@@ -1384,6 +1547,87 @@ export default function App() {
     const forcedRare = uncollectedRare || pickRandom(forcedRarePool);
 
     processDiscoveryEntity(forcedRare, nopeCountRef.current);
+  }
+
+  function getGrinderTargetPool(targetTier) {
+    if (targetTier === "uber") {
+      return uberNopeRelics;
+    }
+
+    if (targetTier === "mythic") {
+      return mythicNopeRelics;
+    }
+
+    return standardNopeEntities.filter((entity) => entity.rarity === targetTier);
+  }
+
+  function grindDuplicateMaterial(recipe) {
+    const currentAmount = duplicateMaterialsRef.current[recipe.source] ?? 0;
+
+    if (currentAmount < recipe.cost) {
+      return;
+    }
+
+    const targetPool = getGrinderTargetPool(recipe.target);
+
+    if (targetPool.length === 0) {
+      addInstantNopeLine("grinder failed. somehow there was not enough trash.");
+      return;
+    }
+
+    const activeUnfoundPool = targetPool.filter((entity) => !collectedIdsRef.current.includes(entity.id));
+    const resultEntity = pickRandom(activeUnfoundPool.length > 0 ? activeUnfoundPool : targetPool);
+    const wasNew = !collectedIdsRef.current.includes(resultEntity.id);
+    const nextMaterials = {
+      ...DEFAULT_DUPLICATE_MATERIALS,
+      ...duplicateMaterialsRef.current,
+      [recipe.source]: currentAmount - recipe.cost,
+    };
+
+    setDuplicateMaterialsSynced(nextMaterials);
+    addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]}s.`);
+    addInstantNopeLine(`recycled output generated: ${resultEntity.name}.`);
+    setActiveCraftResultSynced({
+      entity: resultEntity,
+      shouldOpenGoodFind: isForcedStickerBookFind(resultEntity, !wasNew),
+      wasNew,
+    });
+    processDiscoveryEntity(resultEntity, nopeCountRef.current, {
+      awardDuplicateMaterial: false,
+      suppressGoodFindModal: true,
+    });
+  }
+
+  function addDevGrinderMaterials() {
+    setDuplicateMaterialsSynced((currentMaterials) => ({
+      ...DEFAULT_DUPLICATE_MATERIALS,
+      ...currentMaterials,
+      common: (currentMaterials.common ?? 0) + 10,
+      uncommon: (currentMaterials.uncommon ?? 0) + 8,
+      rare: (currentMaterials.rare ?? 0) + 6,
+      epic: (currentMaterials.epic ?? 0) + 4,
+      mythic: (currentMaterials.mythic ?? 0) + 5,
+    }));
+    addInstantNopeLine("dev material injected. shamefully useful.");
+  }
+
+  function forceCommonDuplicate() {
+    const collectedCommon = standardNopeEntities.find((entity) => entity.rarity === "common" && collectedIdsRef.current.includes(entity.id));
+
+    if (collectedCommon) {
+      processDiscoveryEntity(collectedCommon, nopeCountRef.current);
+      return;
+    }
+
+    const commonEntity = standardNopeEntities.find((entity) => entity.rarity === "common");
+
+    if (!commonEntity) {
+      addInstantNopeLine("common duplicate failed. somehow common trash was missing.");
+      return;
+    }
+
+    processDiscoveryEntity(commonEntity, nopeCountRef.current);
+    processDiscoveryEntity(commonEntity, nopeCountRef.current);
   }
 
   function pressNope() {
@@ -1437,7 +1681,7 @@ export default function App() {
   }
 
   function getStickerEntities() {
-    if (stickerTab === "achievements") {
+    if (stickerTab === "achievements" || stickerTab === "grinder") {
       return [];
     }
 
@@ -1494,6 +1738,10 @@ export default function App() {
 
   function getVisibleUberEntities() {
     return uberNopeRelics.filter((entity) => collectedIds.includes(entity.id));
+  }
+
+  function getSacrificedEntities() {
+    return sacrificedIds.map(getNopeEntity).filter(Boolean);
   }
 
   function getStickerShareUrl(entity) {
@@ -1687,11 +1935,49 @@ ${shareUrl}`;
     });
   }
 
+  function renderGrinderRecipe(recipe) {
+    const currentAmount = duplicateMaterials[recipe.source] ?? 0;
+    const neededAmount = Math.max(recipe.cost - currentAmount, 0);
+    const canGrind = neededAmount === 0;
+
+    return (
+      <article className="grinder-recipe-card" key={recipe.source}>
+        <strong>{DUPLICATE_MATERIAL_LABELS[recipe.source]} MATERIAL: {currentAmount}</strong>
+        <span>GRIND {recipe.cost} -&gt; {recipe.target === "uber" ? "UBER NOPE" : DUPLICATE_MATERIAL_LABELS[recipe.target]}</span>
+        <button type="button" onClick={() => grindDuplicateMaterial(recipe)} disabled={!canGrind}>
+          [ {recipe.button} ]
+        </button>
+        <em>{canGrind ? "ready to recycle regret" : `need ${neededAmount} more duplicate trash`}</em>
+      </article>
+    );
+  }
+
+  function renderSacrificedCard(entity) {
+    return (
+      <article className={`burn-pile-card rarity-${entity.rarity}`} key={entity.id}>
+        <div className="burn-pile-media">
+          <img
+            src={entity.image}
+            alt={entity.name}
+            onError={(event) => {
+              event.currentTarget.classList.add("image-missing");
+            }}
+          />
+        </div>
+        <strong>{entity.name}</strong>
+        <span>SACRIFICED</span>
+        <p>fed to the grinder.</p>
+        <em>find it again, idiot.</em>
+      </article>
+    );
+  }
+
   function renderStickerCard(entity, index) {
     const isCollected = collectedIds.includes(entity.id);
     const isGif = entity.type === "gif";
     const isMythic = entity.type === "mythic";
     const isUber = entity.type === "uber";
+    const canSacrifice = isSacrificeEligible(entity);
 
     return (
       <article
@@ -1727,6 +2013,11 @@ ${shareUrl}`;
                 {copiedShareId === entity.id ? "COPIED" : "COPY"}
               </button>
             </div>
+            {canSacrifice && (
+              <button className="sticker-sacrifice-button" type="button" onClick={() => requestSacrifice(entity)}>
+                BURN FOR FUEL
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -2034,6 +2325,12 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={forceRareDiscovery}>
           [ force rare ]
         </button>
+        <button className="dev-reset-button" type="button" onClick={addDevGrinderMaterials}>
+          [ add grinder mats ]
+        </button>
+        <button className="dev-reset-button" type="button" onClick={forceCommonDuplicate}>
+          [ force common duplicate ]
+        </button>
       </footer>
 
       {activeBreachOverlay && (
@@ -2049,6 +2346,80 @@ ${shareUrl}`;
             />
             <strong>{activeBreachOverlay.entity.name}</strong>
             <span>{activeBreachOverlay.entity.rarityLabel} // value: animated zero</span>
+          </div>
+        </section>
+      )}
+
+      {activeSacrificeEffect && (
+        <section className="sacrifice-effect-overlay" aria-label="NOPE sacrifice effect">
+          <div className="sacrifice-effect-card">
+            <img
+              src={activeSacrificeEffect.image}
+              alt={activeSacrificeEffect.name}
+              onError={(event) => {
+                event.currentTarget.classList.add("image-missing");
+              }}
+            />
+            <strong>{activeSacrificeEffect.name}</strong>
+            <span>FED TO THE GRINDER</span>
+          </div>
+        </section>
+      )}
+
+      {activeSacrificeEntity && (
+        <section className="achievement-modal-overlay sacrifice-modal-overlay" aria-modal="true" role="dialog">
+          <div className="achievement-modal-card first-sticker-modal-card sacrifice-modal-card">
+            <p>SACRIFICE NOPE?</p>
+            <div className="first-sticker-modal-media">
+              <img
+                src={activeSacrificeEntity.image}
+                alt={activeSacrificeEntity.name}
+                onError={(event) => {
+                  event.currentTarget.classList.add("image-missing");
+                }}
+              />
+            </div>
+            <strong>{activeSacrificeEntity.name}</strong>
+            <span>{activeSacrificeEntity.rarityLabel}</span>
+            <em>This NOPE will leave your active NOPEDEX.</em>
+            <em>It can be found again.</em>
+            <b>The grinder will receive +{SACRIFICE_MATERIAL_GAIN} {activeSacrificeEntity.rarityLabel} fuel.</b>
+            <span>This is probably a terrible idea.</span>
+            <div className="sacrifice-modal-actions">
+              <button type="button" onClick={cancelSacrifice}>
+                [ cancel ]
+              </button>
+              <button type="button" onClick={confirmSacrifice}>
+                [ burn it. obviously. ]
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeCraftResult && (
+        <section className="achievement-modal-overlay grinder-modal-overlay" aria-modal="true" role="dialog">
+          <div className="achievement-modal-card first-sticker-modal-card grinder-modal-card">
+            <p>DUPLICATE GRINDER ONLINE</p>
+            <small>DUPLICATES ENTERED THE GRINDER.</small>
+            <span>NOPE OS IS MAKING A TERRIBLE DECISION.</span>
+            <div className="first-sticker-modal-media">
+              <img
+                src={activeCraftResult.entity.image}
+                alt={activeCraftResult.entity.name}
+                onError={(event) => {
+                  event.currentTarget.classList.add("image-missing");
+                }}
+              />
+            </div>
+            <strong>CRAFTED NOPE GENERATED</strong>
+            <span>{activeCraftResult.entity.name}</span>
+            <em>{activeCraftResult.entity.rarityLabel} // odds: {formatDropChance(activeCraftResult.entity.dropChance)}</em>
+            <em>value: still zero</em>
+            <b>{activeCraftResult.wasNew ? "NEW NOPE ADDED TO NOPEDEX" : "DUPLICATE GENERATED - you upgraded disappointment."}</b>
+            <button type="button" onClick={dismissCraftResult}>
+              [ accept recycled trash ]
+            </button>
           </div>
         </section>
       )}
@@ -2079,7 +2450,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeGoodFindModal && (
+      {activeAchievement && !activeSacrificeEntity && !activeCraftResult && !activeGoodFindModal && (
         <section className="achievement-modal-overlay" aria-modal="true" role="dialog">
           <div className="achievement-modal-card">
             <p>NOPE OS REWARD SYSTEM</p>
@@ -2196,6 +2567,7 @@ ${shareUrl}`;
                   ["all", "ALL TRASH"],
                   ["normal", "WORTHLESS NOPES"],
                   ["gif", "FORBIDDEN LOOPS"],
+                  ["grinder", "DUPLICATE GRINDER"],
                   ["achievements", "ACHIEVEMENTS"],
                 ].map(([value, label]) => (
                   <button
@@ -2209,6 +2581,7 @@ ${shareUrl}`;
                 ))}
               </div>
 
+              {stickerTab !== "grinder" && (
               <div className="stickerbook-controls filter-controls" aria-label="NOPEDEX filters">
                 {[
                   ["all", "ALL"],
@@ -2225,8 +2598,33 @@ ${shareUrl}`;
                   </button>
                 ))}
               </div>
+              )}
 
-              {stickerTab === "achievements" ? (
+              {stickerTab === "grinder" ? (
+                <section className="duplicate-grinder-section" aria-label="Duplicate Grinder">
+                  <div className="achievement-section-title grinder-section-title">
+                    <strong>DUPLICATE GRINDER</strong>
+                    <span>turn repeated trash into rarer trash.</span>
+                    <span>loops and Uber duplicates are currently too cursed to recycle.</span>
+                  </div>
+                  <div className="grinder-recipe-grid">{DUPLICATE_GRINDER_RECIPES.map(renderGrinderRecipe)}</div>
+                  <section className="burn-pile-section" aria-label="Sacrificed NOPEs">
+                    <div className="achievement-section-title burn-pile-title">
+                      <strong>THE BURN PILE</strong>
+                      <span>sacrificed NOPEs waiting to be found again.</span>
+                    </div>
+                    {getSacrificedEntities().length > 0 ? (
+                      <div className="burn-pile-grid">{getSacrificedEntities().map(renderSacrificedCard)}</div>
+                    ) : (
+                      <div className="burn-pile-empty">
+                        <strong>THE BURN PILE IS EMPTY.</strong>
+                        <span>nothing has been burned yet.</span>
+                        <em>coward.</em>
+                      </div>
+                    )}
+                  </section>
+                </section>
+              ) : stickerTab === "achievements" ? (
                 <section className="achievement-section" aria-label="NOPE OS achievements">
                   <div className="achievement-section-title">
                     <strong>ACHIEVEMENTS.dat</strong>

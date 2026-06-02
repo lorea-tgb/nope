@@ -1202,6 +1202,33 @@ button {
   animation: achievementOverlayFade 0.42s ease-out;
 }
 
+.good-find-modal-overlay {
+  z-index: 9000;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.12) 0,
+      rgba(57, 255, 20, 0.12) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    rgba(0, 0, 0, 0.82);
+}
+
+.good-find-modal-overlay.uber-modal-overlay,
+.good-find-modal-overlay.rarity-mythic,
+.good-find-modal-overlay.rarity-illegal {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 228, 92, 0.14) 0,
+      rgba(255, 228, 92, 0.14) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    rgba(0, 0, 0, 0.84);
+}
+
 .achievement-modal-card {
   width: min(520px, 100%);
   display: grid;
@@ -1295,8 +1322,54 @@ button {
     4px 4px 0 #000;
 }
 
+.achievement-modal-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  filter: saturate(0.75);
+}
+
 .first-sticker-modal-card {
   width: min(440px, 100%);
+}
+
+.good-find-modal-card {
+  border-color: var(--pepe-green);
+  box-shadow:
+    0 0 0 4px #000,
+    -6px 0 0 var(--ton-blue),
+    6px 0 0 var(--glitch-pink),
+    0 0 36px rgba(57, 255, 20, 0.48);
+}
+
+.good-find-modal-card.rarity-mythic,
+.good-find-modal-card.rarity-illegal,
+.uber-modal-card {
+  border-color: #ffe45c;
+  box-shadow:
+    0 0 0 4px #000,
+    -6px 0 0 var(--ton-blue),
+    6px 0 0 var(--pepe-green),
+    0 0 42px rgba(255, 228, 92, 0.58);
+}
+
+.good-find-modal-card.rarity-epic,
+.good-find-modal-card.rarity-cursed {
+  border-color: var(--glitch-pink);
+  box-shadow:
+    0 0 0 4px #000,
+    -6px 0 0 var(--ton-blue),
+    6px 0 0 var(--glitch-pink),
+    0 0 42px rgba(255, 43, 214, 0.52);
+}
+
+.good-find-modal-card p {
+  background: var(--pepe-green);
+}
+
+.good-find-modal-card.rarity-mythic p,
+.good-find-modal-card.rarity-illegal p,
+.uber-modal-card p {
+  background: #ffe45c;
 }
 
 .first-sticker-modal-media {
@@ -2126,7 +2199,72 @@ button {
     rgba(0, 0, 0, 0.78);
 }
 
+.stickerbook-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.stickerbook-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.stickerbook-overlay.stickerbook-tearing::before {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.1) 0,
+      rgba(255, 255, 255, 0.1) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(57, 255, 20, 0.18) 44%,
+      rgba(0, 152, 234, 0.24) 48%,
+      rgba(255, 43, 214, 0.2) 51%,
+      transparent 58%
+    );
+  animation: stickerbookTear 700ms ease-out;
+}
+
+.stickerbook-overlay.stickerbook-scroll-glitching::after {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.055) 0,
+      rgba(255, 255, 255, 0.055) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      transparent 38%,
+      rgba(57, 255, 20, 0.07) 42%,
+      rgba(0, 152, 234, 0.09) 44%,
+      rgba(255, 43, 214, 0.07) 46%,
+      transparent 51%,
+      transparent 100%
+    );
+  animation: stickerbookSubtleScrollTear 420ms ease-out;
+}
+
+.stickerbook-overlay.stickerbook-tearing .stickerbook-window {
+  animation: stickerbookJolt 650ms steps(2, end);
+}
+
 .stickerbook-window {
+  position: relative;
   width: min(1120px, 100%);
   height: min(92vh, 820px);
   display: grid;
@@ -2233,12 +2371,42 @@ button {
 .stickerbook-scroll {
   min-height: 0;
   overflow-y: auto;
+  padding-bottom: 42px;
   background:
     linear-gradient(90deg, rgba(0, 152, 234, 0.045) 1px, transparent 1px),
     linear-gradient(0deg, rgba(57, 255, 20, 0.04) 1px, transparent 1px),
     rgba(0, 12, 8, 0.82);
   background-size: 22px 22px;
   scrollbar-color: var(--pepe-green) #03100b;
+}
+
+.stickerbook-top-button {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 4;
+  padding: 7px 9px;
+  border: 2px solid #000;
+  color: #00120a;
+  background:
+    linear-gradient(90deg, var(--pepe-green), #89dcff),
+    var(--pepe-green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.45),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.34),
+    3px 3px 0 #000,
+    0 0 16px rgba(0, 152, 234, 0.36);
+}
+
+.stickerbook-top-button:hover,
+.stickerbook-top-button:focus-visible {
+  background:
+    linear-gradient(90deg, #ffe45c, var(--pepe-green)),
+    #ffe45c;
+  outline: 2px solid var(--ton-blue);
+  outline-offset: 2px;
 }
 
 .stickerbook-summary {
@@ -2795,6 +2963,10 @@ button {
     ),
     linear-gradient(135deg, rgba(0, 152, 234, 0.24), rgba(57, 255, 20, 0.16)),
     #f7f7ea;
+}
+
+.sticker-card.uber-card.uber-card-highlight {
+  animation: uberCardHighlight 4.2s steps(2, end);
 }
 
 .sticker-media {
@@ -3377,6 +3549,70 @@ button {
       0 0 34px rgba(255, 228, 92, 0.7),
       inset 2px 2px 0 #fff,
       inset -2px -2px 0 #8d9187;
+  }
+}
+
+@keyframes stickerbookTear {
+  0% {
+    opacity: 0;
+    transform: translateY(-18%) skewX(-8deg);
+  }
+
+  18% {
+    opacity: 1;
+  }
+
+  48% {
+    opacity: 0.78;
+    transform: translateY(20%) skewX(8deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(65%) skewX(-3deg);
+  }
+}
+
+@keyframes stickerbookSubtleScrollTear {
+  0% {
+    opacity: 0;
+    transform: translateY(-8%) skewX(-4deg);
+  }
+
+  20% {
+    opacity: 0.58;
+  }
+
+  70% {
+    opacity: 0.28;
+    transform: translateY(18%) skewX(3deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(30%) skewX(0deg);
+  }
+}
+
+@keyframes stickerbookJolt {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    filter: none;
+  }
+
+  22% {
+    transform: translate(-3px, 2px);
+    filter: hue-rotate(16deg) saturate(1.18);
+  }
+
+  46% {
+    transform: translate(3px, -1px);
+  }
+
+  70% {
+    transform: translate(-1px, 0);
+    filter: brightness(1.12);
   }
 }
 

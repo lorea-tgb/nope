@@ -37,6 +37,9 @@ const STORAGE_KEYS = {
   unlockedAchievements: "nopeMachine.unlockedAchievements",
 };
 
+const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
+const IMPORTANT_MODAL_ACTION_DELAY = 1000;
+
 function sleep(ms) {
   return new Promise((resolve) => {
     window.setTimeout(resolve, ms);
@@ -57,6 +60,35 @@ function pickRandom(items) {
 
 function formatDropChance(chance) {
   return `${Number(chance).toFixed(chance < 1 ? 2 : 1).replace(/\.?0+$/, "")}%`;
+}
+
+function easeInOutCubic(progress) {
+  return progress < 0.5
+    ? 4 * progress * progress * progress
+    : 1 - ((-2 * progress + 2) ** 3) / 2;
+}
+
+function animateScrollToTop(element, duration = 700) {
+  if (!element) {
+    return;
+  }
+
+  const start = element.scrollTop;
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = easeInOutCubic(progress);
+
+    element.scrollTop = start * (1 - eased);
+
+    if (progress < 1) {
+      window.requestAnimationFrame(step);
+    }
+  }
+
+  window.requestAnimationFrame(step);
 }
 
 function getLoopLeakTitle(entity) {
@@ -192,6 +224,7 @@ export default function App() {
   const [achievementQueue, setAchievementQueue] = useState([]);
   const [activeAchievement, setActiveAchievement] = useState(null);
   const [activeDiscoveryPopup, setActiveDiscoveryPopup] = useState(null);
+  const [activeGoodFindModal, setActiveGoodFindModal] = useState(null);
   const [pendingFirstStickerPopup, setPendingFirstStickerPopup] = useState(false);
   const [showFirstStickerPopup, setShowFirstStickerPopup] = useState(false);
   const [activeBreachOverlay, setActiveBreachOverlay] = useState(null);
@@ -213,6 +246,8 @@ export default function App() {
   const [stickerFilter, setStickerFilter] = useState("all");
   const [copiedShareId, setCopiedShareId] = useState(null);
   const [highlightedStickerId, setHighlightedStickerId] = useState(null);
+  const [isStickerBookTearing, setIsStickerBookTearing] = useState(false);
+  const [isImportantModalActionReady, setIsImportantModalActionReady] = useState(true);
   const [nextBadgeIndex, setNextBadgeIndex] = useState(0);
   const [buttonText, setButtonText] = useState("NOPE");
   const [globalNopeCount, setGlobalNopeCount] = useState(null);
@@ -223,10 +258,17 @@ export default function App() {
   const breachTimerRef = useRef(null);
   const achievementDelayTimerRef = useRef(null);
   const shareCopyTimerRef = useRef(null);
+  const importantModalActionTimerRef = useRef(null);
   const firstStickerHighlightTimerRef = useRef(null);
+  const stickerBookTearTimerRef = useRef(null);
+  const stickerBookScrollGlitchTimerRef = useRef(null);
+  const lastStickerBookScrollGlitchRef = useRef(0);
+  const isStickerBookAutoScrollingRef = useRef(false);
   const ambientTimerRef = useRef(null);
   const ambientClearTimerRef = useRef(null);
   const nopeIdleTimerRef = useRef(null);
+  const stickerBookOverlayRef = useRef(null);
+  const stickerBookScrollRef = useRef(null);
   const terminalLogRef = useRef(null);
   const lineIdRef = useRef(0);
   const nopeCountRef = useRef(nopeCount);
@@ -235,6 +277,7 @@ export default function App() {
   const unlockedAchievementsRef = useRef(unlockedAchievements);
   const achievementQueueRef = useRef(achievementQueue);
   const activeAchievementRef = useRef(activeAchievement);
+  const activeGoodFindModalRef = useRef(activeGoodFindModal);
   const bootRunRef = useRef(0);
   const globalNopeCountRef = useRef(globalNopeCount);
   const globalSyncMessageRef = useRef(false);
@@ -379,7 +422,11 @@ export default function App() {
       window.clearTimeout(breachTimerRef.current);
       window.clearTimeout(achievementDelayTimerRef.current);
       window.clearTimeout(shareCopyTimerRef.current);
+      window.clearTimeout(importantModalActionTimerRef.current);
       window.clearTimeout(firstStickerHighlightTimerRef.current);
+      window.clearTimeout(stickerBookTearTimerRef.current);
+      window.clearTimeout(stickerBookScrollGlitchTimerRef.current);
+      isStickerBookAutoScrollingRef.current = false;
       window.clearTimeout(ambientTimerRef.current);
       window.clearTimeout(ambientClearTimerRef.current);
       window.clearTimeout(nopeIdleTimerRef.current);
@@ -573,6 +620,7 @@ export default function App() {
 
     const popupTimer = window.setTimeout(() => {
       setPendingFirstStickerPopup(false);
+      armImportantModalActionDelay();
       setShowFirstStickerPopup(true);
     }, 0);
 
@@ -735,16 +783,39 @@ export default function App() {
     setAchievementQueue(queue);
   }
 
+  function armImportantModalActionDelay() {
+    window.clearTimeout(importantModalActionTimerRef.current);
+    setIsImportantModalActionReady(false);
+    importantModalActionTimerRef.current = window.setTimeout(() => {
+      setIsImportantModalActionReady(true);
+    }, IMPORTANT_MODAL_ACTION_DELAY);
+  }
+
   function setActiveAchievementSynced(nextAchievement) {
     activeAchievementRef.current = nextAchievement;
+    if (nextAchievement) {
+      armImportantModalActionDelay();
+    } else {
+      setIsImportantModalActionReady(true);
+    }
     setActiveAchievement(nextAchievement);
+  }
+
+  function setActiveGoodFindModalSynced(nextEntity) {
+    activeGoodFindModalRef.current = nextEntity;
+    if (nextEntity) {
+      armImportantModalActionDelay();
+    } else {
+      setIsImportantModalActionReady(true);
+    }
+    setActiveGoodFindModal(nextEntity);
   }
 
   function startNextAchievement(delay = 0) {
     window.clearTimeout(achievementDelayTimerRef.current);
 
     achievementDelayTimerRef.current = window.setTimeout(() => {
-      if (activeAchievementRef.current || achievementQueueRef.current.length === 0) {
+      if (activeGoodFindModalRef.current || activeAchievementRef.current || achievementQueueRef.current.length === 0) {
         return;
       }
 
@@ -833,9 +904,8 @@ export default function App() {
   function getDiscoveryVisualEvent(entity, alreadyCollected) {
     if (!alreadyCollected && entity.type === "uber") {
       return {
-        duration: randomBetween(4200, 4800),
+        duration: randomBetween(1800, 2500),
         entity,
-        requiresAction: true,
         signalType: "uber",
         type: "transmission",
       };
@@ -922,6 +992,38 @@ export default function App() {
     }
 
     return `new trash discovered: ${entity.name}. value gained: zero.`;
+  }
+
+  function isForcedStickerBookFind(entity, alreadyCollected) {
+    return !alreadyCollected && allNopeEntities.some((nopeEntity) => nopeEntity.id === entity.id) && entity.dropChance < FORCED_STICKERBOOK_DROP_THRESHOLD;
+  }
+
+  function getGoodFindTitle(entity) {
+    if (entity.type === "uber") {
+      return "UBER NOPE DETECTED";
+    }
+
+    if (entity.type === "mythic") {
+      return "MYTHIC NOPE DETECTED";
+    }
+
+    if (entity.type === "gif") {
+      return getLoopFoundTitle(entity);
+    }
+
+    if (entity.rarity === "epic") {
+      return "RARE NOPE DETECTED";
+    }
+
+    return "GOOD TRASH DETECTED";
+  }
+
+  function getGoodFindProbabilityLine(entity) {
+    if (entity.type === "uber") {
+      return "probability: insulted";
+    }
+
+    return entity.type === "gif" ? "probability briefly failed." : "This is statistically embarrassing.";
   }
 
   async function copyContract(event) {
@@ -1055,6 +1157,10 @@ export default function App() {
   }
 
   function dismissAchievement() {
+    if (!isImportantModalActionReady) {
+      return;
+    }
+
     if (achievementQueueRef.current.length > 0) {
       const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
       setActiveAchievementSynced(nextAchievement);
@@ -1067,6 +1173,47 @@ export default function App() {
 
   function openStickerBook() {
     setIsStickerBookOpen(true);
+  }
+
+  function scrollStickerBookToTop() {
+    setIsStickerBookTearing(true);
+    isStickerBookAutoScrollingRef.current = true;
+    stickerBookOverlayRef.current?.classList.remove("stickerbook-scroll-glitching");
+    window.clearTimeout(stickerBookTearTimerRef.current);
+    window.clearTimeout(stickerBookScrollGlitchTimerRef.current);
+    stickerBookTearTimerRef.current = window.setTimeout(() => {
+      setIsStickerBookTearing(false);
+      isStickerBookAutoScrollingRef.current = false;
+    }, 750);
+
+    animateScrollToTop(stickerBookScrollRef.current);
+  }
+
+  function handleStickerBookScroll() {
+    if (
+      isStickerBookTearing ||
+      isStickerBookAutoScrollingRef.current ||
+      activeGoodFindModal ||
+      activeAchievement ||
+      activeBreachOverlay ||
+      activeDiscoveryPopup ||
+      highlightedStickerId
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+
+    if (now - lastStickerBookScrollGlitchRef.current < 2000 || stickerBookOverlayRef.current?.classList.contains("stickerbook-scroll-glitching")) {
+      return;
+    }
+
+    lastStickerBookScrollGlitchRef.current = now;
+    stickerBookOverlayRef.current?.classList.add("stickerbook-scroll-glitching");
+    window.clearTimeout(stickerBookScrollGlitchTimerRef.current);
+    stickerBookScrollGlitchTimerRef.current = window.setTimeout(() => {
+      stickerBookOverlayRef.current?.classList.remove("stickerbook-scroll-glitching");
+    }, 420);
   }
 
   function openAchievementsTab() {
@@ -1088,15 +1235,25 @@ export default function App() {
   }
 
   function openFirstStickerInBook() {
+    if (!isImportantModalActionReady) {
+      return;
+    }
+
     window.localStorage.setItem(STORAGE_KEYS.firstStickerPopupSeen, "true");
     setShowFirstStickerPopup(false);
     focusStickerInBook("poornope", "normal");
   }
 
-  function openUberDiscoveryInBook(entityId) {
+  function openGoodFindInBook(entityId) {
+    if (!isImportantModalActionReady) {
+      return;
+    }
+
     window.clearTimeout(discoveryTimerRef.current);
     setActiveDiscoveryPopup(null);
+    setActiveGoodFindModalSynced(null);
     focusStickerInBook(entityId, "all");
+    startNextAchievement(700);
   }
 
   function resetNopeProgress() {
@@ -1169,6 +1326,66 @@ export default function App() {
     return pickDiscoveryEntity();
   }
 
+  function processDiscoveryEntity(discoveredEntity, nextCount) {
+    const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
+    const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
+    const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
+    let nextAchievementStats = achievementStatsRef.current;
+    let nextCollectedIds = collectedIdsRef.current;
+
+    triggerDiscoveryHaptic(discoveredEntity, alreadyCollected);
+    showDiscoveryVisualEvent(visualEvent);
+    showBreachOverlay(breachEvent);
+    setLatestDiscoveryId(discoveredEntity.id);
+
+    if (isForcedStickerBookFind(discoveredEntity, alreadyCollected)) {
+      setActiveGoodFindModalSynced(discoveredEntity);
+    }
+
+    if (!alreadyCollected) {
+      nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
+      collectedIdsRef.current = nextCollectedIds;
+      setCollectedIds(nextCollectedIds);
+    } else {
+      nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
+    }
+
+    addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
+
+    if (
+      !alreadyCollected &&
+      discoveredEntity.id === "poornope" &&
+      nextCollectedIds.length === 1 &&
+      readStoredString(STORAGE_KEYS.firstStickerPopupSeen) !== "true"
+    ) {
+      setPendingFirstStickerPopup(true);
+    }
+
+    queueAchievementUnlocks(
+      buildAchievementSnapshot({
+        achievementStats: nextAchievementStats,
+        collectedIds: nextCollectedIds,
+        nopeCount: nextCount,
+      }),
+      !alreadyCollected ? randomBetween(700, 1000) : 0,
+    );
+  }
+
+  function forceUberDiscovery() {
+    const uncollectedUber = uberNopeRelics.find((entity) => !collectedIdsRef.current.includes(entity.id));
+    const forcedUber = uncollectedUber || pickRandom(uberNopeRelics);
+
+    processDiscoveryEntity(forcedUber, nopeCountRef.current);
+  }
+
+  function forceRareDiscovery() {
+    const forcedRarePool = allNopeEntities.filter((entity) => entity.type !== "uber" && entity.dropChance < FORCED_STICKERBOOK_DROP_THRESHOLD);
+    const uncollectedRare = forcedRarePool.find((entity) => !collectedIdsRef.current.includes(entity.id));
+    const forcedRare = uncollectedRare || pickRandom(forcedRarePool);
+
+    processDiscoveryEntity(forcedRare, nopeCountRef.current);
+  }
+
   function pressNope() {
     triggerTelegramHaptic("light");
     resetNopeIdleTimer();
@@ -1178,8 +1395,6 @@ export default function App() {
     const nextCount = nopeCountRef.current + 1;
     const nextRank = getRank(nextCount);
     const rankChanged = nextRank !== getRank(nopeCountRef.current);
-    let nextAchievementStats = achievementStatsRef.current;
-    let nextCollectedIds = collectedIdsRef.current;
 
     nopeCountRef.current = nextCount;
     setNopeCount(nextCount);
@@ -1193,50 +1408,15 @@ export default function App() {
     }
 
     if (discoveredEntity) {
-      const alreadyCollected = collectedIdsRef.current.includes(discoveredEntity.id);
-      const visualEvent = getDiscoveryVisualEvent(discoveredEntity, alreadyCollected);
-      const breachEvent = visualEvent?.type === "breach" ? null : getBreachVisualEvent(discoveredEntity, alreadyCollected);
-
-      triggerDiscoveryHaptic(discoveredEntity, alreadyCollected);
-      showDiscoveryVisualEvent(visualEvent);
-      showBreachOverlay(breachEvent);
-      setLatestDiscoveryId(discoveredEntity.id);
-
-      if (!alreadyCollected) {
-        nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
-        collectedIdsRef.current = nextCollectedIds;
-        setCollectedIds(nextCollectedIds);
-      } else {
-        nextAchievementStats = updateAchievementStats({ duplicateCount: 1 });
-      }
-
-      addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
-
-      if (
-        !alreadyCollected &&
-        discoveredEntity.id === "poornope" &&
-        nextCollectedIds.length === 1 &&
-        readStoredString(STORAGE_KEYS.firstStickerPopupSeen) !== "true"
-      ) {
-        setPendingFirstStickerPopup(true);
-      }
-
-      queueAchievementUnlocks(
-        buildAchievementSnapshot({
-          achievementStats: nextAchievementStats,
-          collectedIds: nextCollectedIds,
-          nopeCount: nextCount,
-        }),
-        !alreadyCollected ? randomBetween(700, 1000) : 0,
-      );
+      processDiscoveryEntity(discoveredEntity, nextCount);
     } else {
       showBreachOverlay(getCollectedGifChaosEvent());
       addInstantNopeLine(pickRandom(noHitMessages));
 
       queueAchievementUnlocks(
         buildAchievementSnapshot({
-          achievementStats: nextAchievementStats,
-          collectedIds: nextCollectedIds,
+          achievementStats: achievementStatsRef.current,
+          collectedIds: collectedIdsRef.current,
           nopeCount: nextCount,
         }),
       );
@@ -1750,11 +1930,6 @@ ${shareUrl}`;
                     ? `added to NOPEDEX // odds: ${formatDropChance(activeDiscoveryPopup.entity.dropChance)} // value: animated zero`
                     : "value: zero"}
               </b>
-              {activeDiscoveryPopup.requiresAction && activeDiscoveryPopup.entity.type === "uber" && (
-                <button type="button" onClick={() => openUberDiscoveryInBook(activeDiscoveryPopup.entity.id)}>
-                  [ open sticker book. flex nothing. ]
-                </button>
-              )}
             </aside>
           )}
         </section>
@@ -1853,6 +2028,12 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={() => setShowResetConfirm(true)}>
           [ regret everything ]
         </button>
+        <button className="dev-reset-button" type="button" onClick={forceUberDiscovery}>
+          [ force uber ]
+        </button>
+        <button className="dev-reset-button" type="button" onClick={forceRareDiscovery}>
+          [ force rare ]
+        </button>
       </footer>
 
       {activeBreachOverlay && (
@@ -1872,7 +2053,33 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && (
+      {activeGoodFindModal && (
+        <section className={`first-sticker-modal-overlay good-find-modal-overlay rarity-${activeGoodFindModal.rarity} ${activeGoodFindModal.type === "uber" ? "uber-modal-overlay" : ""}`} aria-modal="true" role="dialog">
+          <div className={`achievement-modal-card first-sticker-modal-card good-find-modal-card rarity-${activeGoodFindModal.rarity} ${activeGoodFindModal.type === "uber" ? "uber-modal-card" : ""}`}>
+            <p>{getGoodFindTitle(activeGoodFindModal)}</p>
+            <div className="first-sticker-modal-media">
+              <img
+                src={activeGoodFindModal.image}
+                alt={activeGoodFindModal.name}
+                onError={(event) => {
+                  event.currentTarget.classList.add("image-missing");
+                }}
+              />
+            </div>
+            <strong>{activeGoodFindModal.name}</strong>
+            <span>{activeGoodFindModal.rarityLabel}</span>
+            <em>odds: {formatDropChance(activeGoodFindModal.dropChance)}</em>
+            {activeGoodFindModal.caption && <span>{activeGoodFindModal.caption}</span>}
+            <em>{getGoodFindProbabilityLine(activeGoodFindModal)}</em>
+            <b>value: still zero</b>
+            <button type="button" onClick={() => openGoodFindInBook(activeGoodFindModal.id)} disabled={!isImportantModalActionReady}>
+              OPEN STICKER BOOK. FLEX NOTHING.
+            </button>
+          </div>
+        </section>
+      )}
+
+      {activeAchievement && !activeGoodFindModal && (
         <section className="achievement-modal-overlay" aria-modal="true" role="dialog">
           <div className="achievement-modal-card">
             <p>NOPE OS REWARD SYSTEM</p>
@@ -1881,7 +2088,7 @@ ${shareUrl}`;
             <span>{activeAchievement.description}</span>
             <em>reward: {activeAchievement.reward}</em>
             <b>value gained: zero</b>
-            <button type="button" onClick={dismissAchievement}>
+            <button type="button" onClick={dismissAchievement} disabled={!isImportantModalActionReady}>
               [ erm... yea... nope ]
             </button>
           </div>
@@ -1911,7 +2118,7 @@ ${shareUrl}`;
               You may still feel something. That is a bug.
             </span>
             <b>value gained: zero</b>
-            <button type="button" onClick={openFirstStickerInBook}>
+            <button type="button" onClick={openFirstStickerInBook} disabled={!isImportantModalActionReady}>
               [ open sticker book. accept shame. ]
             </button>
           </div>
@@ -1949,7 +2156,7 @@ ${shareUrl}`;
       )}
 
       {isStickerBookOpen && (
-        <section className="stickerbook-overlay" aria-label="NOPEDEX sticker book">
+        <section className={`stickerbook-overlay ${isStickerBookTearing ? "stickerbook-tearing" : ""}`} aria-label="NOPEDEX sticker book" ref={stickerBookOverlayRef}>
           <div className="stickerbook-window">
             <div className="stickerbook-titlebar">
               <div>
@@ -1961,7 +2168,7 @@ ${shareUrl}`;
               </button>
             </div>
 
-            <div className="stickerbook-scroll">
+            <div className="stickerbook-scroll" ref={stickerBookScrollRef} onScroll={handleStickerBookScroll}>
               <div className="stickerbook-summary">
                 <div className="stickerbook-counter-strip">
                   <span>GARBAGE {normalCollectedCount}/{NORMAL_TOTAL}</span>
@@ -2072,6 +2279,9 @@ ${shareUrl}`;
                 </>
               )}
             </div>
+            <button className="stickerbook-top-button" type="button" onClick={scrollStickerBookToTop}>
+              Back to Top? Fine...
+            </button>
           </div>
         </section>
       )}

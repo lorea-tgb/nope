@@ -92,6 +92,7 @@ function createCard(req, entity) {
   const accent = getRarityAccent(entity);
   const title = getDiscoveryTitle(entity);
   const valueLines = getStickerValueLines(entity);
+  const isZCard = entity?.type === "z";
 
   return React.createElement(
     "div",
@@ -103,9 +104,10 @@ function createCard(req, entity) {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "#020806",
-        backgroundImage:
-          "linear-gradient(90deg, rgba(0,152,234,0.13) 1px, transparent 1px), linear-gradient(0deg, rgba(57,255,20,0.09) 1px, transparent 1px)",
-        backgroundSize: "42px 42px, 42px 42px",
+        backgroundImage: isZCard
+          ? "radial-gradient(circle at 50% 42%, rgba(255,228,92,0.22), transparent 34%), linear-gradient(135deg, rgba(255,43,214,0.16), rgba(0,152,234,0.18), rgba(57,255,20,0.12)), linear-gradient(90deg, rgba(255,228,92,0.13) 1px, transparent 1px), linear-gradient(0deg, rgba(216,255,226,0.11) 1px, transparent 1px)"
+          : "linear-gradient(90deg, rgba(0,152,234,0.13) 1px, transparent 1px), linear-gradient(0deg, rgba(57,255,20,0.09) 1px, transparent 1px)",
+        backgroundSize: isZCard ? "100% 100%, 100% 100%, 38px 38px, 38px 38px" : "42px 42px, 42px 42px",
         fontFamily: "Arial Black, Arial, sans-serif",
         color: "#d8ffe2",
         padding: 36,
@@ -119,8 +121,10 @@ function createCard(req, entity) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          border: "8px solid #0098ea",
-          boxShadow: `0 0 0 6px #001a12, 0 0 48px ${accent}`,
+          border: isZCard ? "8px solid #ffe45c" : "8px solid #0098ea",
+          boxShadow: isZCard
+            ? "0 0 0 6px #001a12, -12px 0 0 #0098ea, 12px 0 0 #ff2bd6, 0 0 58px #ffe45c"
+            : `0 0 0 6px #001a12, 0 0 48px ${accent}`,
           backgroundColor: "#07120d",
           position: "relative",
           overflow: "hidden",
@@ -144,7 +148,7 @@ function createCard(req, entity) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            backgroundColor: "#0098ea",
+            backgroundColor: isZCard ? "#ffe45c" : "#0098ea",
             color: "#00110a",
             borderBottom: "6px solid #00110a",
             padding: "0 28px",
@@ -152,8 +156,8 @@ function createCard(req, entity) {
             letterSpacing: 0,
           },
         },
-        React.createElement("span", null, "NOPEDEX // GARBAGE INDEX"),
-        React.createElement("span", { style: { color: "#39ff14" } }, "VALUE: ZERO")
+        React.createElement("span", null, isZCard ? "NOPEDEX // Z CHAMBER" : "NOPEDEX // GARBAGE INDEX"),
+        React.createElement("span", { style: { color: isZCard ? "#0098ea" : "#39ff14" } }, "VALUE: ZERO")
       ),
       React.createElement(
         "div",
@@ -177,7 +181,9 @@ function createCard(req, entity) {
               justifyContent: "center",
               backgroundColor: "#020806",
               border: `8px solid ${accent}`,
-              boxShadow: "inset 0 0 0 5px #00110a",
+              boxShadow: isZCard
+                ? "inset 0 0 0 5px #00110a, -7px 0 0 #0098ea, 7px 0 0 #ff2bd6, 0 0 34px #ffe45c"
+                : "inset 0 0 0 5px #00110a",
               padding: 16,
             },
           },
@@ -208,14 +214,15 @@ function createCard(req, entity) {
               style: {
                 alignSelf: "flex-start",
                 backgroundColor: "#00110a",
-                color: accent,
+                color: isZCard ? "#ffe45c" : accent,
                 border: `4px solid ${accent}`,
                 padding: "8px 14px",
                 fontSize: 27,
                 marginBottom: 18,
+                boxShadow: isZCard ? "5px 5px 0 #ff2bd6" : "none",
               },
             },
-            title
+            isZCard ? "THE FINAL NO" : title
           ),
           React.createElement(
             "div",
@@ -224,7 +231,7 @@ function createCard(req, entity) {
                 color: "#ffffff",
                 fontSize: entity && entity.name.length > 18 ? 58 : 70,
                 lineHeight: 0.94,
-                textShadow: "5px 5px 0 #00110a, -3px 0 0 #ff2bd6",
+                textShadow: isZCard ? "5px 5px 0 #00110a, -4px 0 0 #ff2bd6, 4px 0 0 #0098ea" : "5px 5px 0 #00110a, -3px 0 0 #ff2bd6",
                 marginBottom: 20,
               },
             },
@@ -275,7 +282,7 @@ function createCard(req, entity) {
                 margin: "0 0 18px",
               },
             },
-            entity ? entity.caption : "probably your fault."
+              isZCard ? "odds: 1% // source: Z CHAMBER // value: still zero" : entity ? entity.caption : "probably your fault."
           ),
           React.createElement(
             "div",

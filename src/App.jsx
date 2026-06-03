@@ -2636,6 +2636,13 @@ ${shareUrl}`;
   }
 
   function getAchievementDisplayTier(achievementId) {
+    const zAchievementIds = new Set([
+      "five-z-rolls-still-nope",
+      "first-try-disgusting",
+      "ten-z-rolls-zero-z",
+      "the-final-no",
+      "z-nope-failed-once",
+    ]);
     const cursedAchievementIds = new Set([
       "absolute-degenerate",
       "ascended-into-nope",
@@ -2649,13 +2656,8 @@ ${shareUrl}`;
       "nope-or-no-achievement",
       "nope-or-nothing-achievement",
       "probability-launderer",
-      "five-z-rolls-still-nope",
-      "first-try-disgusting",
       "total-nopeification",
-      "ten-z-rolls-zero-z",
-      "the-final-no",
       "uberly-pointless",
-      "z-nope-failed-once",
     ]);
     const specialAchievementIds = new Set([
       "again-really",
@@ -2679,6 +2681,10 @@ ${shareUrl}`;
       "trash-alchemist",
       "upgraded-nothing",
     ]);
+
+    if (zAchievementIds.has(achievementId)) {
+      return { className: "achievement-tier-z", label: "FINAL BOSS" };
+    }
 
     if (cursedAchievementIds.has(achievementId)) {
       return { className: "achievement-tier-cursed", label: "CURSED" };
@@ -2805,6 +2811,7 @@ ${shareUrl}`;
     const isGif = entity.type === "gif";
     const isMythic = entity.type === "mythic";
     const isUber = entity.type === "uber";
+    const isZ = entity.type === "z";
     const canSacrifice = isSacrificeEligible(entity);
     const duplicateCount = isCollected && !sacrificedIds.includes(entity.id) ? duplicateCopies[entity.id] ?? 0 : 0;
     const totalCopies = duplicateCount + 1;
@@ -2812,7 +2819,7 @@ ${shareUrl}`;
 
     return (
       <article
-        className={`sticker-card ${isCollected ? "collected" : "locked"} ${hasDuplicates ? "has-duplicates" : ""} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} rarity-${entity.rarity} ${highlightedStickerId === entity.id ? isUber ? "uber-card-highlight" : "first-sticker-highlight" : ""}`}
+        className={`sticker-card ${isCollected ? "collected" : "locked"} ${hasDuplicates ? "has-duplicates" : ""} ${isGif ? "gif-card" : ""} ${isMythic ? "mythic-card" : ""} ${isUber ? "uber-card" : ""} ${isZ ? "z-card" : ""} rarity-${entity.rarity} ${highlightedStickerId === entity.id ? isZ ? "z-card-highlight" : isUber ? "uber-card-highlight" : "first-sticker-highlight" : ""}`}
         data-sticker-id={entity.id}
         key={entity.id}
         role="button"
@@ -2837,7 +2844,7 @@ ${shareUrl}`;
             <span>{entity.rarityLabel}</span>
             <p>{entity.caption}</p>
             <em>drop: {formatDropChance(entity.dropChance)}</em>
-            <em>value: zero</em>
+            <em>{isZ ? "value: still zero" : "value: zero"}</em>
             <div className="sticker-share-row" aria-label={`Share ${entity.name}`}>
               <button type="button" onClick={(event) => handleCardActionClick(event, () => openShareWindow(entity, "x"))}>
                 X
@@ -2895,7 +2902,7 @@ ${shareUrl}`;
 
     return (
       <section
-        className={`inspect-modal-overlay sticker-inspect-overlay rarity-${entity.rarity} ${entity.type === "uber" ? "uber-inspect-overlay" : ""}`}
+        className={`inspect-modal-overlay sticker-inspect-overlay rarity-${entity.rarity} ${entity.type === "uber" ? "uber-inspect-overlay" : ""} ${entity.type === "z" ? "z-inspect-overlay" : ""}`}
         aria-modal="true"
         role="dialog"
         onClick={(event) => handleModalBackdropClick(event, closeInspectModals)}
@@ -2918,15 +2925,16 @@ ${shareUrl}`;
             )}
           </div>
           <div className="inspect-detail-panel">
-            <p>{isCollected || isSacrificed ? entity.name : "MISSING NOPE"}</p>
+            <p>{entity.type === "z" && !isCollected && !isSacrificed ? "Z SIGNAL UNRESOLVED" : isCollected || isSacrificed ? entity.name : "MISSING NOPE"}</p>
             <strong>{entity.rarityLabel}</strong>
-            <span>odds: {formatDropChance(entity.dropChance)}</span>
-            {entity.caption && <em>{isCollected || isSacrificed ? entity.caption : "hint: press NOPE harder."}</em>}
+            <span>odds: {entity.type === "z" ? "1%" : formatDropChance(entity.dropChance)}</span>
+            {entity.type === "z" && <span>source: Z CHAMBER</span>}
+            {entity.caption && <em>{entity.type === "z" && isCollected ? "The final NO has been documented. Flex responsibly. Or don't." : isCollected || isSacrificed ? entity.caption : entity.type === "z" ? "source: Z Chamber only." : "hint: press NOPE harder."}</em>}
             <b>{valueText}</b>
             <small>status: {statusText}</small>
             {isCollected && !isSacrificed && <small>copies: x{totalCopies}</small>}
             {isSacrificed && <small>fed to the grinder. find it again, idiot.</small>}
-            {!isCollected && !isSacrificed && <small>hint: press NOPE harder.</small>}
+            {!isCollected && !isSacrificed && <small>{entity.type === "z" ? "Earn a Z Roll. Roll 1. Probably don't." : "hint: press NOPE harder."}</small>}
             {entity.type === "uber" && <small>probability has been insulted.</small>}
             {canShare && (
               <div className="inspect-action-row" aria-label={`Share ${entity.name}`}>
@@ -3005,15 +3013,16 @@ ${shareUrl}`;
 
     return (
       <section className={`z-chamber-panel ${isAcquired ? "acquired" : zRollTokens > 0 ? "ready" : "locked"}`} aria-label="Z Chamber">
-        <strong>{isAcquired ? "Z NOPE ACQUIRED" : zRollTokens > 0 ? "Z CHAMBER READY" : "Z CHAMBER LOCKED"}</strong>
+        <strong>{isAcquired ? "Z SIGNAL DETECTED" : "Z SIGNAL"}</strong>
         <span>
           {isAcquired
-            ? "the final no has been documented."
+            ? "Z NOPE ACQUIRED"
             : zRollTokens > 0
               ? `rolls available: ${zRollTokens}`
-              : "unlock cursed achievements to roll for Z NOPE."}
+              : "status: unresolved"}
         </span>
-        {!isAcquired && zRollTokens === 0 && <em>hard achievements become chamber ammo.</em>}
+        {isAcquired && <em>the rarest refusal has entered the NOPEDEX.</em>}
+        {!isAcquired && <em>source: Z CHAMBER only // odds: 1%</em>}
         {isAcquired && zNopeEntity ? (
           <div className="z-chamber-card-wrap">{renderStickerCard(zNopeEntity, 0)}</div>
         ) : (
@@ -3021,6 +3030,11 @@ ${shareUrl}`;
             <b>Z SIGNAL</b>
             <small>status: unresolved</small>
             <small>source: Z CHAMBER only</small>
+            <small>odds: 1%</small>
+            <span>The final NOPE is not in the normal machine.</span>
+            <span>Earn a Z Roll.</span>
+            <span>Roll 1.</span>
+            <span>Probably don't.</span>
           </div>
         )}
         {zRollTokens > 0 && !isAcquired && (
@@ -3075,6 +3089,13 @@ ${shareUrl}`;
               <span>You needed 1.</span>
               <span>You got {activeZRollResult.result}.</span>
               <b>That is not 1.</b>
+              {zRollTokens <= 0 && (
+                <>
+                  <small>The chamber is empty.</small>
+                  <small>The machine suggests regret everything.</small>
+                  <small>This is not financial advice. It is worse.</small>
+                </>
+              )}
               <div className="z-chamber-actions">
                 {zRollTokens > 0 ? (
                   <button type="button" onClick={rollZChamber}>
@@ -3098,6 +3119,7 @@ ${shareUrl}`;
               {!isAlready && <span>Roll 1 and receive Z NOPE.</span>}
               {!isAlready && <span>Roll anything else and receive emotional damage.</span>}
               {isEmpty && <b>NO Z ROLLS REMAIN.</b>}
+              {isEmpty && <small>unlock cursed achievements or regret everything.</small>}
               <div className="z-chamber-actions">
                 <button type="button" onClick={rollZChamber} disabled={zRollTokens <= 0 || znopeAcquired}>
                   {zRollTokens <= 0 ? "NO Z ROLLS REMAIN." : "ROLL THE Z"}

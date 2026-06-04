@@ -16,6 +16,8 @@ export const rarityLabels = {
 
 export const defaultAchievementStats = {
   contractCopyCount: 0,
+  comboBigScoreEventCount: 0,
+  comboTriggerCount: 0,
   duplicateCount: 0,
   duplicateMaterialEarnedCount: 0,
   godSacrificeCount: 0,
@@ -30,6 +32,8 @@ export const defaultAchievementStats = {
   sacrificedMythicCount: 0,
   shareCopyCount: 0,
   shareCount: 0,
+  scoreRollingFiveSecondCount: 0,
+  scoreRollingTenSecondCount: 0,
   signalCorruptClickCount: 0,
   signalDangerClickCount: 0,
   signalFragmentClickCount: 0,
@@ -41,6 +45,7 @@ export const defaultAchievementStats = {
   zNopeAcquired: 0,
   zRollAttempts: 0,
   zRollFailures: 0,
+  zSignalChargeFillCount: 0,
 };
 
 const UBER_IDS = [
@@ -429,8 +434,8 @@ export const bootLines = [
   { text: "> or NOT.", pause: 900 },
   { text: "> obviously.", pause: 650 },
   { text: "> press the big stupid button." },
-  { text: "> press NOPE. collect worthless trash." },
-  { text: "> value forecast: zero." },
+  { text: "> you might find something." },
+  { text: "> probably not though." },
 ];
 
 export const nopeLabels = ["NOPE", "NOPE?", "NOOOOOPE", "ABSOLUTELY NOT", "STILL NOPE", "HARD PASS"];
@@ -476,6 +481,13 @@ export const achievements = [
   { id: "z-heard-you", name: "Z HEARD YOU", description: "clicked a Z Chamber leak.", reward: "forbidden attention", check: ({ signalZClickCount }) => signalZClickCount >= 1 },
   { id: "signal-goblin", name: "SIGNAL GOBLIN", description: "kept clicking background noise.", reward: "ambient problem", check: ({ signalFragmentClickCount }) => signalFragmentClickCount >= 15 },
   { id: "colour-blind-regret", name: "COLOUR BLIND REGRET", description: "decoded four kinds of nonsense.", reward: "rainbow zero", check: ({ signalNormalClickCount, signalTonClickCount, signalCorruptClickCount, signalDangerClickCount }) => signalNormalClickCount >= 1 && signalTonClickCount >= 1 && signalCorruptClickCount >= 1 && signalDangerClickCount >= 1 },
+  { id: "accidental-skill", name: "ACCIDENTAL SKILL", description: "activated a score combo by mistake.", reward: "temporary competence", check: ({ comboTriggerCount }) => comboTriggerCount >= 1 },
+  { id: "combo-goblin", name: "COMBO GOBLIN", description: "triggered 5 NOPE combos.", reward: "pattern recognition disease", check: ({ comboTriggerCount }) => comboTriggerCount >= 5 },
+  { id: "big-number-still-zero", name: "BIG NUMBER, STILL ZERO", description: "made a big number. value remained zero.", reward: "large useless integer", check: ({ comboBigScoreEventCount }) => comboBigScoreEventCount >= 1 },
+  { id: "keep-on-rolling", name: "KEEP ON ROLLING", description: "kept the NOPE SCORE rolling for 5 seconds.", reward: "moving numbers", check: ({ scoreRollingFiveSecondCount }) => scoreRollingFiveSecondCount >= 1 },
+  { id: "the-number-wont-stop", name: "THE NUMBER WON'T STOP", description: "kept the NOPE SCORE rolling for 10 seconds.", reward: "unnecessary momentum", check: ({ scoreRollingTenSecondCount }) => scoreRollingTenSecondCount >= 1 },
+  { id: "signal-battery", name: "SIGNAL BATTERY", description: "charged the Z signal to 100%.", reward: "leaked probability", check: ({ zSignalChargeFillCount }) => zSignalChargeFillCount >= 1 },
+  { id: "overcharged-nothing", name: "OVERCHARGED NOTHING", description: "charged the Z signal 5 times.", reward: "recurring mistake", check: ({ zSignalChargeFillCount }) => zSignalChargeFillCount >= 5 },
   { id: "terminal-idiot-press", name: "TERMINAL IDIOT", description: "pressed NOPE 25 times.", reward: "questionable pride", check: ({ nopeCount }) => nopeCount >= 25 },
   { id: "nope-enjoyer-press", name: "NOPE ENJOYER", description: "pressed NOPE 50 times.", reward: "absolutely nothing", check: ({ nopeCount }) => nopeCount >= 50 },
   { id: "high-priest-press", name: "HIGH PRIEST OF NO", description: "pressed NOPE 100 times.", reward: "ceremonial regret", check: ({ nopeCount }) => nopeCount >= 100 },

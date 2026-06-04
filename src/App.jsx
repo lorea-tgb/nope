@@ -32,6 +32,7 @@ const STORAGE_KEYS = {
   collectedIds: "nopeMachine.collectedIds",
   firstStickerForced: "nope_first_sticker_forced",
   firstStickerPopupSeen: "nope_first_sticker_popup_seen",
+  foundOrder: "nope_found_order",
   forcedStickerBookPopupCount: "nope_forced_stickerbook_popup_count",
   introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
@@ -46,11 +47,14 @@ const STORAGE_KEYS = {
   zRollFailures: "nope_z_roll_failures",
   zTokenClaimedAchievementIds: "nope_z_token_claimed_achievement_ids",
   zRollTokens: "nope_z_roll_tokens",
+  zSignalRollsLeaked: "nope_signal_z_rolls_leaked",
   zChamberTeaserSeen: "nope_z_chamber_teaser_seen",
   nopeScore: "nope_score",
   signalFragmentsFound: "nope_signal_fragments_found",
   signalFragmentsClicked: "nope_signal_fragments_clicked",
   signalTypeClicks: "nope_signal_type_clicks",
+  scoreCombo: "nope_score_combo",
+  zSignalCharge: "nope_z_signal_charge",
 };
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
@@ -78,6 +82,66 @@ const DUPLICATE_GRINDER_RECIPES = [
   { cost: 4, source: "epic", target: "mythic", button: "GRIND EPICS" },
   { cost: 5, source: "mythic", target: "uber", button: "GRIND MYTHICS" },
 ];
+const NOPE_SCORE_VALUES = {
+  achievementBasic: 50,
+  achievementCursed: 300,
+  achievementSpecial: 125,
+  achievementZ: 500,
+  burnCommon: 25,
+  burnEpic: 150,
+  burnMythic: 400,
+  burnRare: 75,
+  burnUber: 1500,
+  burnUncommon: 40,
+  craftEpic: 250,
+  craftMythic: 500,
+  craftRare: 150,
+  craftUber: 1200,
+  duplicateGif: 3,
+  duplicateSticker: 2,
+  grinderCraft: 100,
+  loopCursed: 100,
+  loopForbidden: 50,
+  loopGlitch: 25,
+  loopIllegal: 250,
+  newCommon: 8,
+  newEpic: 35,
+  newMythic: 75,
+  newRare: 20,
+  newUber: 250,
+  newUncommon: 12,
+  press: 1,
+  signalCorrupt: 35,
+  signalDanger: 75,
+  signalNormal: 10,
+  signalTon: 20,
+  signalZ: 150,
+  zNope: 5000,
+  zRollFailure: 250,
+};
+const NOPE_SCORE_REASON_LABELS = {
+  "achievement:basic": "ACHIEVEMENT",
+  "achievement:cursed": "CURSED ACHIEVEMENT",
+  "achievement:special": "BAD IDEA BONUS",
+  "achievement:z": "Z ACHIEVEMENT",
+  burn: "BURN BONUS",
+  discovery: "NEW FIND",
+  duplicate: "DUPLICATE",
+  grinder: "GRINDER BONUS",
+  press: "NOPE PRESS",
+  "signal:corrupt": "CORRUPT SIGNAL",
+  "signal:danger": "RED SIGNAL",
+  "signal:normal": "STATIC SIGNAL",
+  "signal:ton": "TON SIGNAL",
+  "signal:z": "Z SIGNAL",
+  "z-nope": "Z NOPE BONUS",
+  "z-roll-failure": "Z FAILURE BONUS",
+};
+const NOPE_COMBO_MULTIPLIER = 1.5;
+const NOPE_COMBO_TRIGGER_SCORE = 300;
+const NOPE_COMBO_WINDOW_EVENTS = 10;
+const NOPE_COMBO_ACTIVE_EVENTS = 10;
+const Z_SIGNAL_CHARGE_TARGET = 3000;
 const Z_ROLL_ACHIEVEMENT_IDS = new Set([
   "absolute-degenerate",
   "again-really",
@@ -150,6 +214,50 @@ const SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES = [
   { x: [6, 22], y: [72, 84] },
   { x: [54, 68], y: [72, 84] },
 ];
+const STICKERBOOK_SIGNAL_FRAGMENT_SAFE_ZONES = [
+  { x: [3, 10], y: [18, 40] },
+  { x: [90, 96], y: [18, 42] },
+  { x: [3, 11], y: [56, 80] },
+  { x: [89, 96], y: [58, 78] },
+  { x: [78, 91], y: [11, 15] },
+  { x: [76, 92], y: [84, 88] },
+];
+const STICKERBOOK_SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES = [
+  { x: [3, 13], y: [23, 34] },
+  { x: [84, 94], y: [26, 38] },
+  { x: [4, 16], y: [73, 82] },
+  { x: [82, 94], y: [68, 78] },
+];
+const SIGNAL_FRAGMENT_CONTEXTS = {
+  home: {
+    desktopMax: 3,
+    desktopSafeZones: SIGNAL_FRAGMENT_SAFE_ZONES,
+    mobileMax: 1,
+    mobileSafeZones: SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES,
+    spawnCount: (isCompact) => (isCompact ? 1 : randomChance(0.08) ? 3 : randomChance(0.28) ? 2 : 1),
+  },
+  stickerbook: {
+    desktopMax: 2,
+    desktopSafeZones: STICKERBOOK_SIGNAL_FRAGMENT_SAFE_ZONES,
+    mobileMax: 1,
+    mobileSafeZones: STICKERBOOK_SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES,
+    spawnCount: (isCompact) => (isCompact ? 1 : randomChance(0.26) ? 2 : 1),
+  },
+};
+const SIGNAL_FRAGMENT_SCORE_REWARDS = {
+  normal: NOPE_SCORE_VALUES.signalNormal,
+  ton: NOPE_SCORE_VALUES.signalTon,
+  corrupt: NOPE_SCORE_VALUES.signalCorrupt,
+  danger: NOPE_SCORE_VALUES.signalDanger,
+  z: NOPE_SCORE_VALUES.signalZ,
+};
+const SIGNAL_FRAGMENT_SCORE_LINES = {
+  normal: "signal fragment decoded. value remained zero.",
+  ton: "chain static decoded. score reluctantly increased.",
+  corrupt: "corrupted signal clicked. machine became slightly worse.",
+  danger: "red signal clicked. warning ignored successfully.",
+  z: "Z signal noticed you. unfortunately.",
+};
 const SIGNAL_FRAGMENT_MESSAGES = {
   normal: [
     {
@@ -250,10 +358,74 @@ function formatDropChance(chance) {
   return `${Number(chance).toFixed(chance < 1 ? 2 : 1).replace(/\.?0+$/, "")}%`;
 }
 
+function formatScoreReason(reason) {
+  if (!reason) {
+    return "NOPE SCORE";
+  }
+
+  if (NOPE_SCORE_REASON_LABELS[reason]) {
+    return NOPE_SCORE_REASON_LABELS[reason];
+  }
+
+  if (reason.startsWith("achievement:")) {
+    return "ACHIEVEMENT";
+  }
+
+  if (reason.startsWith("burn:") || reason.startsWith("sacrifice:")) {
+    return "BURN BONUS";
+  }
+
+  if (reason.startsWith("discovery:")) {
+    return "NEW FIND";
+  }
+
+  if (reason.startsWith("duplicate:")) {
+    return "DUPLICATE";
+  }
+
+  if (reason.startsWith("grinder:")) {
+    return "GRINDER BONUS";
+  }
+
+  if (reason.startsWith("signal:")) {
+    return "SIGNAL";
+  }
+
+  return reason.replace(/[-:]/g, " ").toUpperCase();
+}
+
 function easeInOutCubic(progress) {
   return progress < 0.5
     ? 4 * progress * progress * progress
     : 1 - ((-2 * progress + 2) ** 3) / 2;
+}
+
+function easeOutCubic(progress) {
+  return 1 - ((1 - progress) ** 3);
+}
+
+function getScoreRollDuration(scoreGap) {
+  if (scoreGap <= 1) {
+    return 600;
+  }
+
+  if (scoreGap < 25) {
+    return 850;
+  }
+
+  if (scoreGap < 250) {
+    return 1500;
+  }
+
+  if (scoreGap < 1000) {
+    return 2600;
+  }
+
+  if (scoreGap < 5000) {
+    return 3900;
+  }
+
+  return 6000;
 }
 
 function animateScrollToTop(element, duration = 700) {
@@ -388,6 +560,21 @@ function readStoredString(key) {
   return window.localStorage.getItem(key);
 }
 
+function readStoredComboState() {
+  const fallback = {
+    activeHitsLeft: 0,
+    bank: 0,
+    events: 0,
+  };
+  const storedCombo = readStoredObject(STORAGE_KEYS.scoreCombo, fallback);
+
+  return {
+    activeHitsLeft: Math.max(0, Math.floor(Number(storedCombo.activeHitsLeft) || 0)),
+    bank: Math.max(0, Math.floor(Number(storedCombo.bank) || 0)),
+    events: Math.max(0, Math.floor(Number(storedCombo.events) || 0)),
+  };
+}
+
 function getTelegramWebApp() {
   if (typeof window === "undefined") {
     return null;
@@ -404,7 +591,12 @@ export default function App() {
   const [lines, setLines] = useState([]);
   const [nopeCount, setNopeCount] = useState(() => readStoredNumber(STORAGE_KEYS.nopeCount));
   const [nopeScore, setNopeScore] = useState(() => readStoredNumber(STORAGE_KEYS.nopeScore));
-  const [scoreDelta, setScoreDelta] = useState(null);
+  const [displayedNopeScore, setDisplayedNopeScore] = useState(() => readStoredNumber(STORAGE_KEYS.nopeScore));
+  const [isScoreSettled, setIsScoreSettled] = useState(false);
+  const [scoreBursts, setScoreBursts] = useState([]);
+  const [scoreHeat, setScoreHeat] = useState(0);
+  const [scoreCombo, setScoreCombo] = useState(() => readStoredComboState());
+  const [comboNotice, setComboNotice] = useState(null);
   const [achievementStats, setAchievementStats] = useState(() =>
     readStoredObject(STORAGE_KEYS.achievementStats, defaultAchievementStats),
   );
@@ -417,6 +609,8 @@ export default function App() {
   const [zRollTokens, setZRollTokens] = useState(() => readStoredNumber(STORAGE_KEYS.zRollTokens));
   const [zRollAttempts, setZRollAttempts] = useState(() => readStoredNumber(STORAGE_KEYS.zRollAttempts));
   const [zRollFailures, setZRollFailures] = useState(() => readStoredNumber(STORAGE_KEYS.zRollFailures));
+  const [zSignalCharge, setZSignalCharge] = useState(() => readStoredNumber(STORAGE_KEYS.zSignalCharge));
+  const [activeZSignalChargePopup, setActiveZSignalChargePopup] = useState(false);
   const [znopeAcquired, setZnopeAcquired] = useState(() =>
     readStoredString(STORAGE_KEYS.zNopeAcquired) === "true" || readStoredArray(STORAGE_KEYS.collectedIds).includes("znope"),
   );
@@ -468,6 +662,15 @@ export default function App() {
   const [collectedIds, setCollectedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.collectedIds),
   );
+  const [foundOrderIds, setFoundOrderIds] = useState(() => {
+    const storedOrder = readStoredArray(STORAGE_KEYS.foundOrder);
+    const storedCollectedIds = readStoredArray(STORAGE_KEYS.collectedIds);
+
+    return [
+      ...storedOrder.filter((id) => storedCollectedIds.includes(id)),
+      ...storedCollectedIds.filter((id) => !storedOrder.includes(id)),
+    ];
+  });
   const [sacrificedIds, setSacrificedIds] = useState(() =>
     readStoredArray(STORAGE_KEYS.sacrificedIds),
   );
@@ -497,7 +700,13 @@ export default function App() {
   const achievementDelayTimerRef = useRef(null);
   const shareCopyTimerRef = useRef(null);
   const importantModalActionTimerRef = useRef(null);
-  const scoreDeltaTimerRef = useRef(null);
+  const scoreBurstTimersRef = useRef([]);
+  const comboNoticeTimerRef = useRef(null);
+  const scoreAnimationFrameRef = useRef(null);
+  const scoreSettledTimerRef = useRef(null);
+  const scoreRollingStartedAtRef = useRef(null);
+  const displayedNopeScoreRef = useRef(displayedNopeScore);
+  const scoreHeatRef = useRef(scoreHeat);
   const signalFragmentSpawnTimerRef = useRef(null);
   const signalFragmentRemoveTimersRef = useRef([]);
   const firstStickerHighlightTimerRef = useRef(null);
@@ -516,7 +725,10 @@ export default function App() {
   const lineIdRef = useRef(0);
   const nopeCountRef = useRef(nopeCount);
   const nopeScoreRef = useRef(nopeScore);
+  const scoreComboRef = useRef(scoreCombo);
+  const zSignalChargeRef = useRef(zSignalCharge);
   const collectedIdsRef = useRef(collectedIds);
+  const foundOrderIdsRef = useRef(foundOrderIds);
   const sacrificedIdsRef = useRef(sacrificedIds);
   const achievementStatsRef = useRef(achievementStats);
   const duplicateMaterialsRef = useRef(duplicateMaterials);
@@ -547,28 +759,32 @@ export default function App() {
   const globalPulseTimerRef = useRef(null);
   const grinderPromptPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
-  const shouldPauseSignalFragments = showIntro ||
-    isBooting ||
-    isStickerBookOpen ||
-    Boolean(activeSignalFragment) ||
-    Boolean(activeAchievement) ||
-    Boolean(activeGoodFindModal) ||
-    Boolean(activeCraftResult) ||
-    Boolean(activeSacrificeEntity) ||
-    Boolean(activeUberSacrificeEntity) ||
-    Boolean(activeStickerInspectEntity) ||
-    Boolean(activeAchievementInspect) ||
+  const signalFragmentContext = isStickerBookOpen ? "stickerbook" : "home";
+  const hasSignalBlockingModal = Boolean(
+    activeSignalFragment ||
+    activeAchievement ||
+    activeGoodFindModal ||
+    activeCraftResult ||
+    activeSacrificeEntity ||
+    activeUberSacrificeEntity ||
+    activeStickerInspectEntity ||
+    activeAchievementInspect ||
     showTelegramLoginModal ||
     showLeaderboardModal ||
     isZChamberOpen ||
-    Boolean(activeZTokenPopup) ||
+    activeZTokenPopup ||
+    activeZSignalChargePopup ||
     showZChamberTeaserPopup ||
-    Boolean(activeZRollResult) ||
+    activeZRollResult ||
     showGrinderReadyPrompt ||
     showFirstStickerPopup ||
-    Boolean(activeBreachOverlay) ||
+    activeBreachOverlay ||
     showResetConfirm ||
-    showExistentialPopup;
+    showExistentialPopup
+  );
+  const shouldPauseSignalFragments = showIntro ||
+    isBooting ||
+    hasSignalBlockingModal;
   const telegramDiscoveryHapticCooldownRef = useRef(false);
   const telegramDiscoveryHapticTimerRef = useRef(null);
   const telegramSignalLineRef = useRef(false);
@@ -580,9 +796,10 @@ export default function App() {
     [nopeCount],
   );
   const formattedNopeScore = useMemo(
-    () => nopeScore.toString().padStart(9, "0"),
-    [nopeScore],
+    () => displayedNopeScore.toString().padStart(9, "0"),
+    [displayedNopeScore],
   );
+  const zSignalChargePercent = Math.min(100, Math.floor((zSignalCharge / Z_SIGNAL_CHARGE_TARGET) * 100));
   const formattedGlobalCount = useMemo(() => {
     if (!isGlobalCounterAvailable || globalNopeCount === null) {
       return "offline";
@@ -674,6 +891,7 @@ export default function App() {
     isZChamberOpen ||
     activeZRollResult ||
     activeZTokenPopup ||
+    activeZSignalChargePopup ||
     showZChamberTeaserPopup ||
     achievementQueue.length > 0,
   );
@@ -690,6 +908,7 @@ export default function App() {
     isZChamberOpen ||
     activeZRollResult ||
     activeZTokenPopup ||
+    activeZSignalChargePopup ||
     showZChamberTeaserPopup,
   );
   const stickerBookNavItems = [
@@ -904,9 +1123,120 @@ export default function App() {
   }, [nopeScore]);
 
   useEffect(() => {
+    if (displayedNopeScoreRef.current >= nopeScore) {
+      displayedNopeScoreRef.current = nopeScore;
+      return undefined;
+    }
+
+    const startValue = displayedNopeScoreRef.current;
+    const targetValue = nopeScore;
+    const scoreGap = targetValue - startValue;
+    const duration = getScoreRollDuration(scoreGap);
+    const animationStartedAt = performance.now();
+
+    if (!scoreRollingStartedAtRef.current) {
+      scoreRollingStartedAtRef.current = animationStartedAt;
+    }
+
+    window.cancelAnimationFrame(scoreAnimationFrameRef.current);
+
+    function unlockRollingAchievement(elapsedMs) {
+      const currentStats = achievementStatsRef.current;
+      const updates = {};
+
+      if (elapsedMs >= 5000 && !currentStats.scoreRollingFiveSecondCount) {
+        updates.scoreRollingFiveSecondCount = 1;
+      }
+
+      if (elapsedMs >= 10000 && !currentStats.scoreRollingTenSecondCount) {
+        updates.scoreRollingTenSecondCount = 1;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        const nextStats = updateAchievementStats(updates);
+        queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }), 0, { skipCombo: true });
+      }
+    }
+
+    function animateScore(now) {
+      const progress = Math.min((now - animationStartedAt) / duration, 1);
+      const eased = easeOutCubic(progress);
+      const nextDisplayedScore = Math.min(targetValue, Math.floor(startValue + scoreGap * eased));
+
+      displayedNopeScoreRef.current = nextDisplayedScore;
+      setDisplayedNopeScore(nextDisplayedScore);
+      unlockRollingAchievement(now - scoreRollingStartedAtRef.current);
+
+      if (progress < 1) {
+        scoreAnimationFrameRef.current = window.requestAnimationFrame(animateScore);
+        return;
+      }
+
+      displayedNopeScoreRef.current = targetValue;
+      setDisplayedNopeScore(targetValue);
+      scoreRollingStartedAtRef.current = null;
+      setIsScoreSettled(true);
+      window.clearTimeout(scoreSettledTimerRef.current);
+      scoreSettledTimerRef.current = window.setTimeout(() => {
+        setIsScoreSettled(false);
+      }, 650);
+    }
+
+    scoreAnimationFrameRef.current = window.requestAnimationFrame(animateScore);
+
+    return () => {
+      window.cancelAnimationFrame(scoreAnimationFrameRef.current);
+    };
+  // The score roller intentionally reads latest refs while animating toward the score target.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nopeScore]);
+
+  useEffect(() => () => {
+    scoreBurstTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scoreBurstTimersRef.current = [];
+    window.clearTimeout(comboNoticeTimerRef.current);
+    window.clearTimeout(scoreSettledTimerRef.current);
+    window.cancelAnimationFrame(scoreAnimationFrameRef.current);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.scoreCombo, JSON.stringify(scoreCombo));
+    scoreComboRef.current = scoreCombo;
+  }, [scoreCombo]);
+
+  useEffect(() => {
+    scoreHeatRef.current = scoreHeat;
+  }, [scoreHeat]);
+
+  useEffect(() => {
+    const heatDecayTimer = window.setInterval(() => {
+      setScoreHeat((currentHeat) => {
+        const nextHeat = Math.max(0, currentHeat - 1);
+        scoreHeatRef.current = nextHeat;
+
+        return nextHeat;
+      });
+    }, 2600);
+
+    return () => {
+      window.clearInterval(heatDecayTimer);
+    };
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.zSignalCharge, String(zSignalCharge));
+    zSignalChargeRef.current = zSignalCharge;
+  }, [zSignalCharge]);
+
+  useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.collectedIds, JSON.stringify(collectedIds));
     collectedIdsRef.current = collectedIds;
   }, [collectedIds]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.foundOrder, JSON.stringify(foundOrderIds));
+    foundOrderIdsRef.current = foundOrderIds;
+  }, [foundOrderIds]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.sacrificedIds, JSON.stringify(sacrificedIds));
@@ -990,14 +1320,13 @@ export default function App() {
     window.clearTimeout(signalFragmentSpawnTimerRef.current);
     signalFragmentRemoveTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
     signalFragmentRemoveTimersRef.current = [];
+    const contextClearTimer = window.setTimeout(() => {
+      setVisibleSignalFragments([]);
+    }, 0);
 
     if (shouldPauseSignalFragments) {
-      const pauseClearTimer = window.setTimeout(() => {
-        setVisibleSignalFragments([]);
-      }, 0);
-
       return () => {
-        window.clearTimeout(pauseClearTimer);
+        window.clearTimeout(contextClearTimer);
       };
     }
 
@@ -1018,9 +1347,10 @@ export default function App() {
 
     function spawnFragments() {
       const isCompactSignalLayout = window.innerWidth <= 700;
-      const maxFragments = isCompactSignalLayout ? 1 : 3;
-      const safeZones = isCompactSignalLayout ? SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES : SIGNAL_FRAGMENT_SAFE_ZONES;
-      const spawnCount = isCompactSignalLayout ? 1 : randomChance(0.08) ? 3 : randomChance(0.28) ? 2 : 1;
+      const contextConfig = SIGNAL_FRAGMENT_CONTEXTS[signalFragmentContext] ?? SIGNAL_FRAGMENT_CONTEXTS.home;
+      const maxFragments = isCompactSignalLayout ? contextConfig.mobileMax : contextConfig.desktopMax;
+      const safeZones = isCompactSignalLayout ? contextConfig.mobileSafeZones : contextConfig.desktopSafeZones;
+      const spawnCount = contextConfig.spawnCount(isCompactSignalLayout);
 
       setVisibleSignalFragments((currentFragments) => {
         const availableSlots = Math.max(0, maxFragments - currentFragments.length);
@@ -1040,6 +1370,7 @@ export default function App() {
           const fragment = {
             ...source,
             instanceId,
+            context: signalFragmentContext,
             isLeaving: false,
             signalType,
             left: randomBetween(zone.x[0], zone.x[1]),
@@ -1063,11 +1394,12 @@ export default function App() {
     signalFragmentSpawnTimerRef.current = window.setTimeout(spawnFragments, randomBetween(3500, 8500));
 
     return () => {
+      window.clearTimeout(contextClearTimer);
       window.clearTimeout(signalFragmentSpawnTimerRef.current);
       signalFragmentRemoveTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
       signalFragmentRemoveTimersRef.current = [];
     };
-  }, [shouldPauseSignalFragments]);
+  }, [shouldPauseSignalFragments, signalFragmentContext, stickerTab]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.unlockedAchievements, JSON.stringify(unlockedAchievements));
@@ -1185,7 +1517,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || activeZTokenPopup || showZChamberTeaserPopup || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || activeZTokenPopup || activeZSignalChargePopup || showZChamberTeaserPopup || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -1196,7 +1528,7 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, activeZTokenPopup, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt, showZChamberTeaserPopup]);
+  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, activeZSignalChargePopup, activeZTokenPopup, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt, showZChamberTeaserPopup]);
 
   useEffect(() => {
     if (showIntro) {
@@ -1372,10 +1704,24 @@ export default function App() {
     setZTokenPopupQueue(queue);
   }
 
+  function setFoundOrderIdsSynced(nextIds) {
+    const ids = typeof nextIds === "function" ? nextIds(foundOrderIdsRef.current) : nextIds;
+    foundOrderIdsRef.current = ids;
+    setFoundOrderIds(ids);
+  }
+
   function setSacrificedIdsSynced(nextIds) {
     const ids = typeof nextIds === "function" ? nextIds(sacrificedIdsRef.current) : nextIds;
     sacrificedIdsRef.current = ids;
     setSacrificedIds(ids);
+  }
+
+  function recordFoundOrder(entityId) {
+    if (!entityId) {
+      return;
+    }
+
+    setFoundOrderIdsSynced((currentIds) => [...currentIds.filter((id) => id !== entityId), entityId]);
   }
 
   function armImportantModalActionDelay() {
@@ -1756,6 +2102,7 @@ export default function App() {
   function getAchievementProgress(achievement, snapshot) {
     const progressMap = {
       "again-really": [snapshot.duplicateCount, 100, "duplicates"],
+      "accidental-skill": [snapshot.comboTriggerCount, 1, "combos"],
       "animated-regret": [snapshot.gifCollectedCount, 10, "loops"],
       "ashes-to-nopedex": [snapshot.restoredFromBurnCount, 10, "restored NOPEs"],
       "ascended-into-nope": [snapshot.uberCollectedCount, UBER_TOTAL, "Uber NOPEs"],
@@ -1763,7 +2110,9 @@ export default function App() {
       "absolute-degenerate": [snapshot.uberSacrificeCount, 1, "Uber sacrifices"],
       "burn-notice": [snapshot.sacrificeCount, 1, "sacrifices"],
       "burn-pile-curator": [snapshot.burnPileCount, 10, "burn pile NOPEs"],
+      "big-number-still-zero": [snapshot.comboBigScoreEventCount, 1, "big score events"],
       "common-sense-lost": [snapshot.commonCollectedCount, 25, "common trash stickers"],
+      "combo-goblin": [snapshot.comboTriggerCount, 5, "combos"],
       "contract-said-non": [snapshot.contractCopyCount, 1, "contract copies"],
       "colour-blind-regret": [
         Number(snapshot.signalNormalClickCount >= 1) +
@@ -1802,6 +2151,8 @@ export default function App() {
       "peeked-at-the-z": [snapshot.zChamberTeaserSeen, 1, "forbidden previews"],
       "phoenix-nopedex": [snapshot.restoredFromBurnCount, 5, "restored NOPEs"],
       "public-embarrassment": [snapshot.shareCount, 5, "shares"],
+      "keep-on-rolling": [snapshot.scoreRollingFiveSecondCount, 1, "rolling streaks"],
+      "overcharged-nothing": [snapshot.zSignalChargeFillCount, 5, "Z charges"],
       "rubbish-with-range": [snapshot.uncommonCollectedCount, 10, "uncommon trash stickers"],
       "red-flag-clicker": [snapshot.signalDangerClickCount, 1, "red signals"],
       "scorched-earth": [snapshot.sacrificeCount, 25, "sacrifices"],
@@ -1811,6 +2162,7 @@ export default function App() {
       "sticker-gremlin": [snapshot.normalCollectedCount, 50, "stickers"],
       "ten-z-rolls-zero-z": [snapshot.zRollFailures, 10, "failed Z rolls"],
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
+      "the-number-wont-stop": [snapshot.scoreRollingTenSecondCount, 1, "rolling streaks"],
       "the-final-no": [snapshot.zNopeAcquired, 1, "Z NOPE"],
       "trash-alchemist": [snapshot.grinderUseCount, 1, "grinder uses"],
       "total-nopeification": [
@@ -1821,6 +2173,7 @@ export default function App() {
       "trash-collector": [snapshot.normalCollectedCount, 10, "stickers"],
       "uberly-pointless": [snapshot.uberCollectedCount, 1, "Uber NOPEs"],
       "why-are-you-like-this": [snapshot.normalCollectedCount, NORMAL_TOTAL, "stickers"],
+      "signal-battery": [snapshot.zSignalChargeFillCount, 1, "Z charges"],
       "z-heard-you": [snapshot.signalZClickCount, 1, "Z leaks"],
       "z-nope-failed-once": [snapshot.zRollFailures, 1, "failed Z rolls"],
     };
@@ -1857,116 +2210,292 @@ export default function App() {
     };
   }
 
-  function awardNopeScore(amount, reason = "NOPE") {
+  function getScoreVisualTier(amount) {
+    if (amount >= NOPE_SCORE_VALUES.zNope) {
+      return "z";
+    }
+
+    if (amount >= 1000) {
+      return "huge";
+    }
+
+    if (amount >= 250) {
+      return "large";
+    }
+
+    if (amount >= 50) {
+      return "medium";
+    }
+
+    return "small";
+  }
+
+  function setScoreComboSynced(nextCombo) {
+    const combo = typeof nextCombo === "function" ? nextCombo(scoreComboRef.current) : nextCombo;
+    const normalizedCombo = {
+      activeHitsLeft: Math.max(0, Math.floor(Number(combo.activeHitsLeft) || 0)),
+      bank: Math.max(0, Math.floor(Number(combo.bank) || 0)),
+      events: Math.max(0, Math.floor(Number(combo.events) || 0)),
+    };
+
+    scoreComboRef.current = normalizedCombo;
+    setScoreCombo(normalizedCombo);
+
+    return normalizedCombo;
+  }
+
+  function setZSignalChargeSynced(nextCharge) {
+    const charge = typeof nextCharge === "function" ? nextCharge(zSignalChargeRef.current) : nextCharge;
+    const normalizedCharge = Math.max(0, Math.floor(Number(charge) || 0));
+
+    zSignalChargeRef.current = normalizedCharge;
+    setZSignalCharge(normalizedCharge);
+
+    return normalizedCharge;
+  }
+
+  function chargeZSignal(amount) {
     if (!Number.isFinite(amount) || amount <= 0) {
       return;
     }
 
-    const scoreGain = Math.floor(amount);
-    if (scoreGain <= 0) {
+    const nextChargeTotal = zSignalChargeRef.current + Math.floor(amount);
+
+    if (nextChargeTotal < Z_SIGNAL_CHARGE_TARGET) {
+      setZSignalChargeSynced(nextChargeTotal);
       return;
     }
 
+    const overflowCharge = nextChargeTotal - Z_SIGNAL_CHARGE_TARGET;
+    const nextTokens = zRollTokensRef.current + 1;
+    zRollTokensRef.current = nextTokens;
+    setZRollTokens(nextTokens);
+    setZSignalChargeSynced(overflowCharge);
+    setActiveZSignalChargePopup(true);
+    addInstantNopeLine("Z Signal charged. +1 roll leaked.");
+    const nextStats = updateAchievementStats({ zSignalChargeFillCount: 1 });
+    queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }), 0, { skipCombo: true });
+  }
+
+  function showComboNotice(type) {
+    setComboNotice({
+      id: Date.now(),
+      type,
+    });
+    window.clearTimeout(comboNoticeTimerRef.current);
+    comboNoticeTimerRef.current = window.setTimeout(() => {
+      setComboNotice(null);
+    }, type === "online" ? 1800 : 1300);
+  }
+
+  function addScoreBurst(amount, reason, tier, { baseAmount = amount, comboApplied = false, context = "score", position = null } = {}) {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const burst = {
+      amount,
+      baseAmount,
+      comboApplied,
+      context,
+      id,
+      position,
+      reason: formatScoreReason(reason),
+      tier,
+    };
+
+    setScoreBursts((currentBursts) => [...currentBursts.slice(-3), burst]);
+
+    const removeTimer = window.setTimeout(() => {
+      setScoreBursts((currentBursts) => currentBursts.filter((currentBurst) => currentBurst.id !== id));
+    }, tier === "z" ? 1500 : tier === "huge" ? 1400 : tier === "large" ? 1250 : 1050);
+    scoreBurstTimersRef.current.push(removeTimer);
+  }
+
+  function awardNopeScore(amount, reason = "NOPE", options = {}) {
+    if (options.isDev || options.skipScore) {
+      return 0;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return 0;
+    }
+
+    const baseScoreGain = Math.floor(amount);
+    if (baseScoreGain <= 0) {
+      return 0;
+    }
+
+    const qualifiesForCombo = options.qualifiesForCombo ?? (reason !== "press" && !options.skipCombo);
+    const currentCombo = scoreComboRef.current;
+    const comboApplied = qualifiesForCombo && currentCombo.activeHitsLeft > 0;
+    const scoreGain = comboApplied ? Math.ceil(baseScoreGain * NOPE_COMBO_MULTIPLIER) : baseScoreGain;
+    const nextComboHitsLeft = comboApplied ? Math.max(0, currentCombo.activeHitsLeft - 1) : currentCombo.activeHitsLeft;
     const nextScore = nopeScoreRef.current + scoreGain;
+    const heatGain = scoreGain >= 100000000 ? 10 : scoreGain >= 1000000 ? 6 : scoreGain >= 100000 ? 3 : comboApplied ? 2 : 1;
+    const nextHeat = Math.min(10, scoreHeatRef.current + heatGain);
+    scoreHeatRef.current = nextHeat;
+    setScoreHeat(nextHeat);
+    let comboForState = {
+      activeHitsLeft: nextComboHitsLeft,
+      bank: currentCombo.bank,
+      events: currentCombo.events,
+    };
+
+    if (comboApplied) {
+      if (nextComboHitsLeft <= 0) {
+        comboForState = { activeHitsLeft: 0, bank: 0, events: 0 };
+        showComboNotice("expired");
+        addInstantNopeLine("combo expired. skill issue restored.");
+      }
+    } else if (qualifiesForCombo && currentCombo.activeHitsLeft <= 0) {
+      const nextBank = currentCombo.bank + baseScoreGain;
+      const nextEvents = currentCombo.events + 1;
+
+      if (nextBank >= NOPE_COMBO_TRIGGER_SCORE) {
+        comboForState = {
+          activeHitsLeft: NOPE_COMBO_ACTIVE_EVENTS,
+          bank: 0,
+          events: 0,
+        };
+        showComboNotice("online");
+        addInstantNopeLine("NOPE COMBO ONLINE. You accidentally played the game properly.");
+        const nextStats = updateAchievementStats({ comboTriggerCount: 1 });
+        queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+      } else if (nextEvents >= NOPE_COMBO_WINDOW_EVENTS) {
+        comboForState = { activeHitsLeft: 0, bank: 0, events: 0 };
+      } else {
+        comboForState = {
+          activeHitsLeft: 0,
+          bank: nextBank,
+          events: nextEvents,
+        };
+      }
+    }
+
+    setScoreComboSynced(comboForState);
     nopeScoreRef.current = nextScore;
     window.localStorage.setItem(STORAGE_KEYS.nopeScore, String(nextScore));
     setNopeScore(nextScore);
-    setScoreDelta({
-      amount: scoreGain,
-      id: Date.now(),
-      reason,
-      tier: scoreGain >= 10000 ? "z" : scoreGain >= 1000 ? "big" : "normal",
+    const visualTier = options.visualTier ?? getScoreVisualTier(scoreGain);
+    const burstContext = options.burstContext ?? (
+      activeGoodFindModalRef.current ||
+      activeCraftResultRef.current ||
+      isZChamberOpenRef.current ||
+      activeZRollResultRef.current
+        ? "modal"
+        : "score"
+    );
+    addScoreBurst(scoreGain, options.displayLabel ?? reason, visualTier, {
+      baseAmount: baseScoreGain,
+      context: burstContext,
+      comboApplied,
+      position: options.burstPosition ?? null,
     });
-    window.clearTimeout(scoreDeltaTimerRef.current);
-    scoreDeltaTimerRef.current = window.setTimeout(() => {
-      setScoreDelta(null);
-    }, scoreGain >= 10000 ? 1600 : 1300);
+    const qualifiesForZCharge = options.qualifiesForZCharge ?? (
+      qualifiesForCombo &&
+      reason !== "press" &&
+      reason !== "z-roll-failure" &&
+      reason !== "z-nope" &&
+      !options.skipZCharge
+    );
+
+    if (qualifiesForZCharge) {
+      chargeZSignal(scoreGain);
+    }
+
+    if (scoreGain >= 1000) {
+      const nextStats = updateAchievementStats({ comboBigScoreEventCount: 1 });
+      queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+    }
+
+    return scoreGain;
   }
 
-  function getDiscoveryScore(entity, alreadyCollected, isRestoringSacrificed = false) {
+  function getDiscoveryScore(entity, alreadyCollected) {
     if (!entity) {
       return 0;
     }
 
-    if (isRestoringSacrificed) {
-      return 300;
-    }
-
     if (alreadyCollected) {
-      return entity.type === "gif" ? 5 : 3;
+      return entity.type === "gif" ? NOPE_SCORE_VALUES.duplicateGif : NOPE_SCORE_VALUES.duplicateSticker;
     }
 
     if (entity.type === "uber") {
-      return 2500;
+      return NOPE_SCORE_VALUES.newUber;
     }
 
     if (entity.type === "mythic" || entity.rarity === "mythic") {
-      return 750;
+      return NOPE_SCORE_VALUES.newMythic;
     }
 
     if (entity.type === "gif") {
       const loopScores = {
-        cursed: 500,
-        forbidden: 150,
-        glitch: 150,
-        illegal: 1500,
+        cursed: NOPE_SCORE_VALUES.loopCursed,
+        forbidden: NOPE_SCORE_VALUES.loopForbidden,
+        glitch: NOPE_SCORE_VALUES.loopGlitch,
+        illegal: NOPE_SCORE_VALUES.loopIllegal,
       };
 
-      return loopScores[entity.rarity] ?? 150;
+      return loopScores[entity.rarity] ?? NOPE_SCORE_VALUES.loopGlitch;
     }
 
     const rarityScores = {
-      common: 25,
-      epic: 250,
-      rare: 100,
-      uncommon: 25,
+      common: NOPE_SCORE_VALUES.newCommon,
+      epic: NOPE_SCORE_VALUES.newEpic,
+      rare: NOPE_SCORE_VALUES.newRare,
+      uncommon: NOPE_SCORE_VALUES.newUncommon,
     };
 
-    return rarityScores[entity.rarity] ?? 25;
+    return rarityScores[entity.rarity] ?? NOPE_SCORE_VALUES.newCommon;
   }
 
   function getAchievementScore(achievement) {
     const displayTier = getAchievementDisplayTier(achievement.id);
 
     if (displayTier.className === "achievement-tier-z") {
-      return 1500;
+      return NOPE_SCORE_VALUES.achievementZ;
     }
 
     if (displayTier.className === "achievement-tier-cursed") {
-      return 1000;
+      return NOPE_SCORE_VALUES.achievementCursed;
     }
 
     if (displayTier.className === "achievement-tier-special") {
-      return 300;
+      return NOPE_SCORE_VALUES.achievementSpecial;
     }
 
-    return 100;
+    return NOPE_SCORE_VALUES.achievementBasic;
   }
 
   function getGrinderScore(targetTier) {
     const craftScores = {
-      epic: 150,
-      mythic: 500,
-      rare: 150,
-      uber: 2000,
+      epic: NOPE_SCORE_VALUES.craftEpic,
+      mythic: NOPE_SCORE_VALUES.craftMythic,
+      rare: NOPE_SCORE_VALUES.craftRare,
+      uber: NOPE_SCORE_VALUES.craftUber,
     };
 
-    return 75 + (craftScores[targetTier] ?? 0);
+    return NOPE_SCORE_VALUES.grinderCraft + (craftScores[targetTier] ?? 0);
   }
 
   function getSacrificeScore(entity, isUber = false) {
     if (isUber || entity?.type === "uber") {
-      return 5000;
+      return NOPE_SCORE_VALUES.burnUber;
     }
 
     if (entity?.type === "mythic" || entity?.rarity === "mythic") {
-      return 1000;
+      return NOPE_SCORE_VALUES.burnMythic;
     }
 
-    return 150;
+    const burnScores = {
+      common: NOPE_SCORE_VALUES.burnCommon,
+      epic: NOPE_SCORE_VALUES.burnEpic,
+      rare: NOPE_SCORE_VALUES.burnRare,
+      uncommon: NOPE_SCORE_VALUES.burnUncommon,
+    };
+
+    return burnScores[entity?.rarity] ?? NOPE_SCORE_VALUES.burnCommon;
   }
 
-  function queueAchievementUnlocks(snapshot, delay = 0) {
+  function queueAchievementUnlocks(snapshot, delay = 0, { skipCombo = false, skipScore = false } = {}) {
     const unlockedSet = new Set(unlockedAchievementsRef.current);
     const newAchievements = achievements.filter(
       (achievement) => !unlockedSet.has(achievement.id) && achievement.check(snapshot),
@@ -1980,9 +2509,19 @@ export default function App() {
     unlockedAchievementsRef.current = nextUnlockedIds;
     setUnlockedAchievements(nextUnlockedIds);
     setAchievementQueueSynced((currentQueue) => [...currentQueue, ...newAchievements]);
-    newAchievements.forEach((achievement) => {
-      awardNopeScore(getAchievementScore(achievement), `achievement:${achievement.id}`);
-    });
+    if (!skipScore) {
+      newAchievements.forEach((achievement) => {
+        const displayTier = getAchievementDisplayTier(achievement.id);
+        const reasonByTier = {
+          "achievement-tier-basic": "achievement:basic",
+          "achievement-tier-cursed": "achievement:cursed",
+          "achievement-tier-special": "achievement:special",
+          "achievement-tier-z": "achievement:z",
+        };
+
+        awardNopeScore(getAchievementScore(achievement), reasonByTier[displayTier.className] ?? "achievement:basic", { skipCombo });
+      });
+    }
     awardZRollTokensForAchievements(newAchievements);
 
     if (!activeAchievementRef.current) {
@@ -2067,10 +2606,17 @@ export default function App() {
         [signalType]: (typeClickCounts[signalType] ?? 0) + 1,
       }),
     );
+    const signalScore = awardNopeScore(SIGNAL_FRAGMENT_SCORE_REWARDS[signalType] ?? SIGNAL_FRAGMENT_SCORE_REWARDS.normal, `signal:${signalType}`, {
+      burstContext: "fragment",
+      burstPosition: { left: fragment.left, top: fragment.top },
+    });
     setActiveSignalFragment({
       ...message,
       fragment,
+      scoreBonus: signalScore,
     });
+    addInstantNopeLine(SIGNAL_FRAGMENT_SCORE_LINES[signalType] ?? SIGNAL_FRAGMENT_SCORE_LINES.normal);
+    addInstantNopeLine(`SIGNAL DECODED: +${signalScore} NOPE SCORE.`);
 
     const statKeyByType = {
       normal: "signalNormalClickCount",
@@ -2085,8 +2631,14 @@ export default function App() {
     });
     queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
 
-    if (signalType === "z") {
-      addInstantNopeLine("Z signal noticed you. unfortunately.");
+    if (signalType === "z" && randomChance(0.01)) {
+      const nextTokens = zRollTokensRef.current + 1;
+      const nextLeakCount = readStoredNumber(STORAGE_KEYS.zSignalRollsLeaked) + 1;
+
+      zRollTokensRef.current = nextTokens;
+      setZRollTokens(nextTokens);
+      window.localStorage.setItem(STORAGE_KEYS.zSignalRollsLeaked, String(nextLeakCount));
+      addInstantNopeLine("Z signal leaked a roll. probability is annoyed.");
     }
   }
 
@@ -2382,7 +2934,8 @@ export default function App() {
       addInstantNopeLine(`${entity.name} fed to the grinder.`);
     }
 
-    awardNopeScore(getSacrificeScore(entity, isUber), `sacrifice:${entity.id}`);
+    const sacrificeScore = awardNopeScore(getSacrificeScore(entity, isUber), "burn");
+    addInstantNopeLine(`${isUber ? "UBER BURN" : "BURN"} BONUS: +${sacrificeScore} NOPE SCORE.`);
     addInstantNopeLine("active collection decreased. brilliant work.");
     queueAchievementUnlocks(buildAchievementSnapshot({
       achievementStats: nextStats,
@@ -2503,6 +3056,7 @@ export default function App() {
       nextCollectedIds = [...collectedIdsRef.current, discoveredEntity.id];
       collectedIdsRef.current = nextCollectedIds;
       setCollectedIds(nextCollectedIds);
+      recordFoundOrder(discoveredEntity.id);
       if (isRestoringSacrificed) {
         setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== discoveredEntity.id));
         nextAchievementStats = updateAchievementStats({ restoredFromBurnCount: 1 });
@@ -2521,10 +3075,12 @@ export default function App() {
       }
     }
 
-    awardNopeScore(
-      getDiscoveryScore(discoveredEntity, alreadyCollected, isRestoringSacrificed),
-      `discovery:${discoveredEntity.id}`,
-    );
+    if (!options.skipScore && !options.skipDiscoveryScore) {
+      awardNopeScore(
+        getDiscoveryScore(discoveredEntity, alreadyCollected),
+        alreadyCollected ? `duplicate:${discoveredEntity.id}` : `discovery:${discoveredEntity.id}`,
+      );
+    }
     addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
 
     if (
@@ -2546,6 +3102,7 @@ export default function App() {
           : sacrificedIdsRef.current,
       }),
       !alreadyCollected ? randomBetween(700, 1000) : 0,
+      { skipScore: options.skipScore },
     );
   }
 
@@ -2553,7 +3110,7 @@ export default function App() {
     const uncollectedUber = uberNopeRelics.find((entity) => !collectedIdsRef.current.includes(entity.id));
     const forcedUber = uncollectedUber || pickRandom(uberNopeRelics);
 
-    processDiscoveryEntity(forcedUber, nopeCountRef.current);
+    processDiscoveryEntity(forcedUber, nopeCountRef.current, { skipScore: true });
   }
 
   function forceRareDiscovery() {
@@ -2561,7 +3118,7 @@ export default function App() {
     const uncollectedRare = forcedRarePool.find((entity) => !collectedIdsRef.current.includes(entity.id));
     const forcedRare = uncollectedRare || pickRandom(forcedRarePool);
 
-    processDiscoveryEntity(forcedRare, nopeCountRef.current);
+    processDiscoveryEntity(forcedRare, nopeCountRef.current, { skipScore: true });
   }
 
   function getGrinderTargetPool(targetTier) {
@@ -2621,17 +3178,20 @@ export default function App() {
 
     setDuplicateMaterialsSynced(nextMaterials);
     const nextStats = updateAchievementStats(getGrinderAchievementUpdates(recipe.target));
-    awardNopeScore(getGrinderScore(recipe.target), `grinder:${recipe.target}`);
+    const grinderScore = awardNopeScore(getGrinderScore(recipe.target), "grinder");
     addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]} fuel.`);
     addInstantNopeLine(`recycled output generated: ${resultEntity.name}.`);
+    addInstantNopeLine(`GRINDER BONUS: +${grinderScore} NOPE SCORE.`);
     setActiveCraftResultSynced({
       entity: resultEntity,
+      scoreBonus: grinderScore,
       shouldOpenGoodFind: isForcedStickerBookFind(resultEntity, !wasNew),
       wasNew,
     });
     processDiscoveryEntity(resultEntity, nopeCountRef.current, {
       achievementStats: nextStats,
       awardDuplicateMaterial: false,
+      skipDiscoveryScore: true,
       suppressGoodFindModal: true,
       trackDuplicateStreak: false,
     });
@@ -2758,7 +3318,7 @@ export default function App() {
     startNextAchievement(450);
   }
 
-  function awardZNopeSuccess(result = 1, { countAttempt = true } = {}) {
+  function awardZNopeSuccess(result = 1, { countAttempt = true, skipScore = false } = {}) {
     if (!zNopeEntity) {
       return;
     }
@@ -2781,23 +3341,27 @@ export default function App() {
       : [...collectedIdsRef.current, zNopeEntity.id];
     collectedIdsRef.current = nextCollectedIds;
     setCollectedIds(nextCollectedIds);
+    recordFoundOrder(zNopeEntity.id);
     setSacrificedIdsSynced((currentIds) => currentIds.filter((id) => id !== zNopeEntity.id));
     const nextStats = updateAchievementStats({ zNopeAcquired: 1, ...(countAttempt ? { zRollAttempts: 1 } : {}) });
     setLatestDiscoveryId(zNopeEntity.id);
     addInstantNopeLine("Z NOPE acquired. probability has stopped taking calls.");
-    awardNopeScore(50000, "z-nope");
-    activeZRollResultRef.current = { result, type: "success" };
-    setActiveZRollResult({ result, type: "success" });
+    const scoreBonus = skipScore ? 0 : awardNopeScore(NOPE_SCORE_VALUES.zNope, "z-nope");
+    if (scoreBonus > 0) {
+      addInstantNopeLine(`Z NOPE BONUS: +${scoreBonus} NOPE SCORE.`);
+    }
+    activeZRollResultRef.current = { result, scoreBonus, type: "success" };
+    setActiveZRollResult({ result, scoreBonus, type: "success" });
     queueAchievementUnlocks(buildAchievementSnapshot({
       achievementStats: nextStats,
       collectedIds: nextCollectedIds,
       zNopeAcquired: 1,
       zRollAttempts: nextAttempts,
-    }), 650);
+    }), 650, { skipScore });
   }
 
   function forceZSuccess() {
-    awardZNopeSuccess(1, { countAttempt: true });
+    awardZNopeSuccess(1, { countAttempt: true, skipScore: true });
   }
 
   function rollZChamber() {
@@ -2835,9 +3399,10 @@ export default function App() {
     setZRollFailures(nextFailures);
     const nextStats = updateAchievementStats({ zRollAttempts: 1, zRollFailures: 1 });
     addInstantNopeLine(`Z Chamber rolled ${result}. that is not 1.`);
-    awardNopeScore(250, "z-roll-failure");
-    activeZRollResultRef.current = { result, type: "failure" };
-    setActiveZRollResult({ result, type: "failure" });
+    const scoreBonus = awardNopeScore(NOPE_SCORE_VALUES.zRollFailure, "z-roll-failure");
+    addInstantNopeLine(`Z FAILURE BONUS: +${scoreBonus} NOPE SCORE. you lost correctly.`);
+    activeZRollResultRef.current = { result, scoreBonus, type: "failure" };
+    setActiveZRollResult({ result, scoreBonus, type: "failure" });
     queueAchievementUnlocks(buildAchievementSnapshot({
       achievementStats: nextStats,
       zRollAttempts: nextAttempts,
@@ -2849,7 +3414,7 @@ export default function App() {
     const collectedCommon = standardNopeEntities.find((entity) => entity.rarity === "common" && collectedIdsRef.current.includes(entity.id));
 
     if (collectedCommon) {
-      processDiscoveryEntity(collectedCommon, nopeCountRef.current);
+      processDiscoveryEntity(collectedCommon, nopeCountRef.current, { skipScore: true });
       return;
     }
 
@@ -2860,8 +3425,8 @@ export default function App() {
       return;
     }
 
-    processDiscoveryEntity(commonEntity, nopeCountRef.current);
-    processDiscoveryEntity(commonEntity, nopeCountRef.current);
+    processDiscoveryEntity(commonEntity, nopeCountRef.current, { skipScore: true });
+    processDiscoveryEntity(commonEntity, nopeCountRef.current, { skipScore: true });
   }
 
   function pressNope() {
@@ -2877,7 +3442,7 @@ export default function App() {
     nopeCountRef.current = nextCount;
     setNopeCount(nextCount);
     pendingGlobalNopesRef.current += 1;
-    awardNopeScore(1, "press");
+    awardNopeScore(NOPE_SCORE_VALUES.press, "press");
 
     if (globalNopeCountRef.current !== null) {
       const optimisticGlobalCount = globalNopeCountRef.current + 1;
@@ -2892,7 +3457,6 @@ export default function App() {
       setDuplicateStreak(0);
       showBreachOverlay(getCollectedGifChaosEvent());
       addInstantNopeLine(pickRandom(noHitMessages));
-      awardNopeScore(1, "no-hit");
 
       queueAchievementUnlocks(
         buildAchievementSnapshot({
@@ -2900,6 +3464,8 @@ export default function App() {
           collectedIds: collectedIdsRef.current,
           nopeCount: nextCount,
         }),
+        0,
+        { skipCombo: true },
       );
     }
 
@@ -2949,14 +3515,6 @@ export default function App() {
     });
   }
 
-  function getVisibleFoundLoopEntities() {
-    return getVisibleStickerEntities().filter((entity) => entity.type === "gif");
-  }
-
-  function getVisibleFoundNormalEntities() {
-    return getVisibleStickerEntities().filter((entity) => entity.type !== "gif");
-  }
-
   function getVisibleMythicEntities() {
     return mythicNopeRelics.filter((entity) => {
       const isCollected = collectedIds.includes(entity.id);
@@ -2975,6 +3533,102 @@ export default function App() {
 
   function getVisibleUberEntities() {
     return uberNopeRelics.filter((entity) => collectedIds.includes(entity.id));
+  }
+
+  function getFoundScopeEntities() {
+    if (stickerTab === "all") {
+      const seenIds = new Set();
+
+      return allNopeEntities.filter((entity) => {
+        if (!entity || seenIds.has(entity.id)) {
+          return false;
+        }
+
+        seenIds.add(entity.id);
+        return true;
+      });
+    }
+
+    return getStickerEntities();
+  }
+
+  function getFoundAlbumSections() {
+    const activeFoundIds = new Set(collectedIds.filter((id) => !sacrificedIds.includes(id)));
+    const scopeIds = new Set(getFoundScopeEntities().map((entity) => entity.id));
+    const foundEntities = getFoundScopeEntities().filter((entity) => activeFoundIds.has(entity.id));
+    const recentSeenIds = new Set();
+    const recentEntities = [...foundOrderIds]
+      .reverse()
+      .map(getNopeEntity)
+      .filter((entity) => {
+        if (!entity || recentSeenIds.has(entity.id) || !activeFoundIds.has(entity.id) || !scopeIds.has(entity.id)) {
+          return false;
+        }
+
+        recentSeenIds.add(entity.id);
+        return true;
+      })
+      .slice(0, 10);
+    const sections = [
+      {
+        emptyBody: "press NOPE and lower your standards.",
+        emptyTitle: "NO RECENT TRASH.",
+        entities: recentEntities,
+        key: "recent",
+        subtitle: recentEntities.length > 0 ? "freshly recovered trash. also filed below." : "freshly recovered trash.",
+        title: "RECENTLY FOUND",
+      },
+    ];
+
+    if (stickerTab === "all" || stickerTab === "gif") {
+      sections.push({
+        entities: foundEntities.filter((entity) => entity.type === "gif"),
+        key: "loops",
+        subtitle: "animated mistakes, kept near the top.",
+        title: "FORBIDDEN LOOPS",
+      });
+    }
+
+    if (stickerTab === "all" && zNopeEntity && activeFoundIds.has(zNopeEntity.id)) {
+      sections.push({
+        entities: [zNopeEntity],
+        key: "z",
+        subtitle: "the final NO has been filed.",
+        title: "Z NOPE / Z SIGNAL",
+      });
+    }
+
+    [
+      ["uber", "UBER NOPE", "classified trash. somehow recovered."],
+      ["mythic", "MYTHIC NOPE", "rare nonsense with a louder shelf."],
+      ["epic", "EPIC NOPE", "premium disappointment."],
+      ["rare", "RARE NOPE", "less common, equally useless."],
+      ["uncommon", "UNCOMMON NOPE", "minor scarcity event."],
+      ["common", "COMMON NOPE", "baseline trash archive."],
+    ].forEach(([rarity, title, subtitle]) => {
+      if (stickerTab === "gif") {
+        return;
+      }
+
+      sections.push({
+        entities: foundEntities.filter((entity) => {
+          if (rarity === "uber") {
+            return entity.type === "uber";
+          }
+
+          if (rarity === "mythic") {
+            return entity.type === "mythic" || entity.rarity === "mythic";
+          }
+
+          return entity.rarity === rarity && entity.type !== "gif";
+        }),
+        key: rarity,
+        subtitle,
+        title,
+      });
+    });
+
+    return sections.filter((section) => section.key === "recent" || section.entities.length > 0);
   }
 
   function getSacrificedEntities() {
@@ -3199,11 +3853,14 @@ ${shareUrl}`;
     ]);
     const specialAchievementIds = new Set([
       "again-really",
+      "accidental-skill",
       "ash-collector",
       "ashes-to-nopedex",
+      "big-number-still-zero",
       "burn-notice",
       "burn-pile-curator",
       "colour-blind-regret",
+      "combo-goblin",
       "common-mistake",
       "duplicate-damage",
       "emotional-recycling",
@@ -3214,13 +3871,17 @@ ${shareUrl}`;
       "fuel-goblin",
       "fuel-hoarder",
       "industrial-regret",
+      "keep-on-rolling",
       "machine-is-hungry",
+      "overcharged-nothing",
       "phoenix-nopedex",
       "rarely-worth-it",
       "red-flag-clicker",
       "scorched-earth",
       "signal-goblin",
+      "signal-battery",
       "static-addict",
+      "the-number-wont-stop",
       "trash-alchemist",
       "upgraded-nothing",
     ]);
@@ -3347,6 +4008,29 @@ ${shareUrl}`;
         <em>find it again, idiot.</em>
       </article>
     );
+  }
+
+  function renderFoundAlbumSection(section) {
+    return (
+      <section className={`found-album-section found-album-section-${section.key}`} key={section.key} aria-label={section.title}>
+        <div className="found-album-section-title">
+          <strong>{section.title}</strong>
+          <span>{section.subtitle}</span>
+        </div>
+        {section.entities.length > 0 ? (
+          <div className="sticker-grid found-album-grid">{section.entities.map(renderStickerCard)}</div>
+        ) : (
+          <div className="found-album-empty">
+            <strong>{section.emptyTitle}</strong>
+            <span>{section.emptyBody}</span>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  function renderFoundAlbumSections() {
+    return <div className="found-album">{getFoundAlbumSections().map(renderFoundAlbumSection)}</div>;
   }
 
   function renderStickerCard(entity, index) {
@@ -3620,6 +4304,7 @@ ${shareUrl}`;
               <span>rarity: Z NOPE</span>
               <em>odds: 1%</em>
               <em>source: Z CHAMBER</em>
+              {activeZRollResult.scoreBonus > 0 && <b>Z NOPE BONUS: +{activeZRollResult.scoreBonus} NOPE SCORE</b>}
               <b>value: still zero</b>
               <small>The rarest refusal has entered your NOPEDEX.</small>
               <small>Probability has stopped taking calls.</small>
@@ -3650,6 +4335,7 @@ ${shareUrl}`;
               <strong>ROLL RESULT: {activeZRollResult.result} / 100</strong>
               <span>You needed 1.</span>
               <span>You got {activeZRollResult.result}.</span>
+              {activeZRollResult.scoreBonus > 0 && <b>Z FAILURE BONUS: +{activeZRollResult.scoreBonus} NOPE SCORE</b>}
               <b>That is not 1.</b>
               {zRollTokens <= 0 && (
                 <>
@@ -3759,7 +4445,7 @@ ${shareUrl}`;
       <aside className="telegram-leaderboard-shell" aria-label="Leaderboard preview">
         <button className="leaderboard-preview" type="button" onClick={() => setShowLeaderboardModal(true)}>
           <strong>LIVE LEADERBOARD</strong>
-          <span>faint signal detected</span>
+          <span>ranked by NOPE SCORE</span>
           <span className="leaderboard-preview-rows" aria-hidden="true">
             <span>
               <b>1.</b>
@@ -3819,12 +4505,12 @@ ${shareUrl}`;
         <div className="leaderboard-modal-card">
           <p>LIVE LEADERBOARD</p>
           <span>global rankings by NOPE SCORE.</span>
-          <span>real scores arrive when Telegram login stops refusing reality.</span>
+          <span>button spam helps. playing the game helps more.</span>
           <div className="leaderboard-modal-table" aria-label="Placeholder leaderboard">
             <div>
               <b>RANK</b>
               <b>USER</b>
-              <b>NOPES</b>
+              <b>SCORE</b>
             </div>
             <div>
               <span>01</span>
@@ -3947,12 +4633,30 @@ ${shareUrl}`;
           <span key={index}>NOPE NON TON 404 REJECT NOTPEPE NOPE 0X00 NON</span>
         ))}
       </div>
+      {scoreBursts.some((burst) => burst.context !== "score") && (
+        <div className="contextual-score-bursts" aria-live="polite">
+          {scoreBursts.filter((burst) => burst.context !== "score").map((burst) => (
+            <b
+              className={`contextual-score-burst score-delta-${burst.tier} ${burst.comboApplied ? "score-delta-combo" : ""} context-${burst.context}`}
+              key={`context-${burst.id}`}
+              style={{
+                "--context-score-x": burst.position ? `${burst.position.left}%` : "50%",
+                "--context-score-y": burst.position ? `${burst.position.top}%` : "44%",
+              }}
+            >
+              <span>+{burst.amount}</span>
+              <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
+            </b>
+          ))}
+        </div>
+      )}
       {!shouldPauseSignalFragments && (
-        <div className="background-signal-fragments" aria-label="Hidden background signal fragments">
+        <div className="background-signal-fragments" data-signal-context={signalFragmentContext} aria-label="Hidden background signal fragments">
           {visibleSignalFragments.map((fragment) => (
           <button
             className={`background-signal-fragment ${fragment.isLeaving ? "is-leaving" : ""}`}
             data-signal-type={fragment.signalType}
+            data-signal-context={fragment.context ?? signalFragmentContext}
             type="button"
             onClick={() => openSignalFragment(fragment)}
             aria-label="Decode hidden signal fragment"
@@ -4070,16 +4774,42 @@ ${shareUrl}`;
           </button>
         </div>
         {renderTelegramLeaderboardShell()}
-        <aside className={`nope-score ${scoreDelta ? "is-updating" : ""} ${scoreDelta?.tier === "big" ? "score-big" : ""} ${scoreDelta?.tier === "z" ? "score-z" : ""}`} aria-label="NOPE score">
+        <aside className={`nope-score heat-${scoreHeat >= 9 ? "overload" : scoreHeat >= 6 ? "hot" : scoreHeat >= 3 ? "warm" : "idle"} ${scoreBursts.length > 0 ? "is-updating" : ""} ${isScoreSettled ? "score-settled" : ""} ${scoreBursts.some((burst) => burst.tier === "large" || burst.tier === "huge") ? "score-big" : ""} ${scoreBursts.some((burst) => burst.tier === "z") ? "score-z" : ""}`} aria-label="NOPE score">
           <span>NOPE SCORE</span>
           <strong>{formattedNopeScore}</strong>
           <em>value: still zero</em>
-          {scoreDelta && (
-            <b className={`nope-score-delta ${scoreDelta.tier === "big" ? "score-delta-big" : ""} ${scoreDelta.tier === "z" ? "score-delta-z" : ""}`} key={scoreDelta.id}>
-              +{scoreDelta.amount}
-            </b>
+          <div className={`z-signal-charge-meter ${zSignalChargePercent >= 100 ? "is-full" : ""}`} style={{ "--z-charge": `${zSignalChargePercent}%` }}>
+            <span>Z SIGNAL CHARGE</span>
+            <b>{zSignalChargePercent}%</b>
+          </div>
+          {scoreCombo.activeHitsLeft > 0 && (
+            <div className={`nope-combo-indicator ${scoreBursts.some((burst) => burst.comboApplied) ? "combo-pulsing" : ""}`}>
+              <b>NOPE COMBO x{NOPE_COMBO_MULTIPLIER}</b>
+              <small>{scoreCombo.activeHitsLeft} hits left</small>
+            </div>
+          )}
+          {scoreBursts.length > 0 && (
+            <div className="nope-score-bursts" aria-live="polite">
+              {scoreBursts.map((burst, index) => (
+                <b
+                  className={`nope-score-delta score-delta-${burst.tier} ${burst.comboApplied ? "score-delta-combo" : ""}`}
+                  key={burst.id}
+                  style={{ "--burst-index": scoreBursts.length - index - 1 }}
+                >
+                  <span>+{burst.amount}</span>
+                  <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
+                </b>
+              ))}
+            </div>
           )}
         </aside>
+        {comboNotice && (
+          <div className={`nope-combo-notice combo-${comboNotice.type}`} key={comboNotice.id}>
+            <strong>{comboNotice.type === "online" ? "NOPE COMBO ONLINE" : "NOPE COMBO EXPIRED"}</strong>
+            <span>{comboNotice.type === "online" ? "You accidentally played the game properly." : "normal disappointment resumed."}</span>
+            {comboNotice.type === "online" && <b>x{NOPE_COMBO_MULTIPLIER} NOPE SCORE</b>}
+          </div>
+        )}
         <button
           className="mega-nope image-nope-button"
           type="button"
@@ -4211,6 +4941,7 @@ ${shareUrl}`;
             {activeSignalFragment.body.map((line) => (
               <p key={line}>{line}</p>
             ))}
+            {activeSignalFragment.scoreBonus > 0 && <b>SIGNAL DECODED: +{activeSignalFragment.scoreBonus} NOPE SCORE</b>}
             <small>fragments decoded: {signalFragmentsFound.toString().padStart(3, "0")}</small>
             <button type="button" onClick={() => setActiveSignalFragment(null)}>
               [ {activeSignalFragment.button} ]
@@ -4256,6 +4987,35 @@ ${shareUrl}`;
       {renderAchievementInspectModal()}
       {renderZTokenPopup()}
       {renderZChamberTeaserPopup()}
+      {activeZSignalChargePopup && (
+        <section
+          className="achievement-modal-overlay z-signal-charge-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, () => setActiveZSignalChargePopup(false))}
+        >
+          <div className="achievement-modal-card z-signal-charge-modal-card">
+            <p>Z SIGNAL CHARGED</p>
+            <strong>The machine coughed up one Z Roll.</strong>
+            <span>This was probably not intended.</span>
+            <b>Z ROLLS AVAILABLE: {zRollTokens}</b>
+            <div className="z-chamber-actions">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveZSignalChargePopup(false);
+                  openZChamber();
+                }}
+              >
+                ENTER Z CHAMBER
+              </button>
+              <button type="button" onClick={() => setActiveZSignalChargePopup(false)}>
+                NOT YET. LET IT GET WORSE.
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
       {renderZChamberModal()}
       {renderTelegramLoginModal()}
       {renderLeaderboardModal()}
@@ -4387,6 +5147,7 @@ ${shareUrl}`;
             <span>{activeCraftResult.entity.name}</span>
             <em>{activeCraftResult.entity.rarityLabel} // odds: {formatDropChance(activeCraftResult.entity.dropChance)}</em>
             <em>value: still zero</em>
+            {activeCraftResult.scoreBonus > 0 && <b>GRINDER BONUS: +{activeCraftResult.scoreBonus} NOPE SCORE</b>}
             <b>{activeCraftResult.wasNew ? "NEW NOPE ADDED TO NOPEDEX" : "DUPLICATE GENERATED - you upgraded disappointment."}</b>
             <button type="button" onClick={dismissCraftResult}>
               [ accept recycled disappointment ]
@@ -4464,7 +5225,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && (
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !activeZSignalChargePopup && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && (
         <section
           className="achievement-modal-overlay"
           aria-modal="true"
@@ -4477,6 +5238,7 @@ ${shareUrl}`;
             <strong>{activeAchievement.name}</strong>
             <span>{activeAchievement.description}</span>
             <em>reward: {activeAchievement.reward}</em>
+            <b>ACHIEVEMENT BONUS: +{getAchievementScore(activeAchievement)} NOPE SCORE</b>
             <b>value gained: zero</b>
             <button type="button" onClick={dismissAchievement} disabled={!isImportantModalActionReady}>
               [ erm... yea... nope ]
@@ -4524,7 +5286,7 @@ ${shareUrl}`;
         >
           <div className="existential-modal-card">
             <p>WHY ARE YOU PRESSING THIS?</p>
-            <strong>for no good reason. obviously.</strong>
+            <strong>for no fucking reason at all</strong>
             <span>-NOPE</span>
             <button type="button" onClick={() => setShowExistentialPopup(false)}>
               [ erm... yea... nope ]
@@ -4662,12 +5424,10 @@ ${shareUrl}`;
                   </div>
                   <div className="achievement-grid">{getVisibleAchievements().map(renderAchievementCard)}</div>
                 </section>
+              ) : stickerFilter === "found" ? (
+                renderFoundAlbumSections()
               ) : (
                 <>
-                  {stickerTab === "all" && stickerFilter === "found" && getVisibleFoundLoopEntities().length > 0 && (
-                    <div className="sticker-grid">{getVisibleFoundLoopEntities().map(renderStickerCard)}</div>
-                  )}
-
                   {stickerTab === "all" && (
                     <section className="uber-section" aria-label="UBER NOPE SIGNALS">
                       <div className="uber-section-title">
@@ -4698,10 +5458,7 @@ ${shareUrl}`;
                   )}
 
                   <div className="sticker-grid">
-                    {(stickerTab === "all" && stickerFilter === "found"
-                      ? getVisibleFoundNormalEntities()
-                      : getVisibleStickerEntities()
-                    ).map(renderStickerCard)}
+                    {getVisibleStickerEntities().map(renderStickerCard)}
                   </div>
                 </>
               )}

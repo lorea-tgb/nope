@@ -525,26 +525,32 @@ button {
   justify-content: space-between;
   gap: 8px;
   padding: 4px 7px;
-  border: 2px solid #000;
-  color: #fff;
+  border: 1px solid rgba(57, 255, 20, 0.28);
+  color: rgba(216, 255, 226, 0.9);
   background:
-    linear-gradient(90deg, #061b10, #0ba83a 48%, #39ff14 52%, #061b10),
-    #0b2f16;
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.08) 0,
+      rgba(0, 152, 234, 0.08) 1px,
+      transparent 1px,
+      transparent 8px
+    ),
+    rgba(0, 12, 8, 0.5);
   box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.45),
-    4px 4px 0 #000,
-    0 0 0 1px rgba(0, 152, 234, 0.42);
+    0 0 16px rgba(57, 255, 20, 0.08),
+    inset 0 0 12px rgba(0, 152, 234, 0.06);
 }
 
 .os-header strong {
-  color: #fff;
+  color: rgba(216, 255, 226, 0.96);
   font-size: 0.96rem;
-  text-shadow: 1px 1px 0 #003c59;
+  text-shadow:
+    1px 0 rgba(0, 152, 234, 0.46),
+    0 0 10px rgba(57, 255, 20, 0.22);
 }
 
 .os-header span {
-  color: #eaffee;
+  color: rgba(137, 220, 255, 0.68);
   font-size: 0.75rem;
   text-align: right;
 }
@@ -733,6 +739,138 @@ button {
   filter: brightness(1.8) saturate(1.7);
 }
 
+.background-signal-fragments {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.background-signal-fragment {
+  position: absolute;
+  top: var(--signal-y);
+  left: var(--signal-x);
+  max-width: 14ch;
+  padding: 0;
+  border: 0;
+  color: rgba(57, 255, 20, 0.3);
+  background: transparent;
+  font-size: clamp(0.48rem, 0.68vw, 0.62rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-shadow:
+    0 0 5px rgba(57, 255, 20, 0.18),
+    1px 0 rgba(0, 152, 234, 0.14);
+  opacity: 0.18;
+  filter: blur(0.35px);
+  pointer-events: auto;
+  overflow: hidden;
+  white-space: nowrap;
+  animation:
+    signalFragmentAppear 520ms steps(3, end),
+    signalFragmentGlitch 2.9s steps(2, end) 520ms infinite;
+  transition:
+    opacity 420ms ease,
+    color 420ms ease,
+    filter 420ms ease,
+    text-shadow 420ms ease;
+}
+
+.background-signal-fragment:hover,
+.background-signal-fragment:focus-visible {
+  color: rgba(216, 255, 226, 0.72);
+  cursor: pointer;
+  opacity: 0.68;
+  filter: blur(0);
+  outline: 0;
+  text-shadow:
+    1px 0 rgba(0, 152, 234, 0.52),
+    -1px 0 rgba(57, 255, 20, 0.34),
+    0 0 14px rgba(57, 255, 20, 0.42);
+}
+
+.background-signal-fragment[data-signal-type="ton"] {
+  color: rgba(137, 220, 255, 0.32);
+  text-shadow:
+    0 0 6px rgba(0, 152, 234, 0.22),
+    1px 0 rgba(57, 255, 20, 0.1);
+  animation:
+    signalFragmentAppear 520ms steps(3, end),
+    signalFragmentTonDecode 3.1s steps(2, end) 520ms infinite;
+}
+
+.background-signal-fragment[data-signal-type="corrupt"] {
+  color: rgba(255, 0, 170, 0.28);
+  text-shadow:
+    1px 0 rgba(57, 255, 20, 0.24),
+    -1px 0 rgba(255, 0, 170, 0.2);
+  animation:
+    signalFragmentAppear 520ms steps(3, end),
+    signalFragmentCorruptJitter 2.2s steps(2, end) 520ms infinite;
+}
+
+.background-signal-fragment[data-signal-type="danger"] {
+  color: rgba(255, 82, 46, 0.26);
+  text-shadow:
+    1px 0 rgba(255, 126, 54, 0.2),
+    0 0 6px rgba(255, 0, 68, 0.16);
+  animation:
+    signalFragmentAppear 420ms steps(3, end),
+    signalFragmentDangerFlicker 1.8s steps(2, end) 420ms infinite;
+}
+
+.background-signal-fragment[data-signal-type="z"] {
+  color: rgba(255, 228, 92, 0.34);
+  text-shadow:
+    1px 0 rgba(57, 255, 20, 0.32),
+    -1px 0 rgba(255, 0, 170, 0.24),
+    0 0 8px rgba(255, 228, 92, 0.22);
+  animation:
+    signalFragmentAppear 620ms steps(3, end),
+    signalFragmentZShimmer 2.4s steps(2, end) 620ms infinite;
+}
+
+.background-signal-fragment[data-signal-type="ton"]:hover,
+.background-signal-fragment[data-signal-type="ton"]:focus-visible {
+  color: rgba(137, 220, 255, 0.78);
+  text-shadow:
+    1px 0 rgba(57, 255, 20, 0.22),
+    0 0 12px rgba(0, 152, 234, 0.42);
+}
+
+.background-signal-fragment[data-signal-type="corrupt"]:hover,
+.background-signal-fragment[data-signal-type="corrupt"]:focus-visible {
+  color: rgba(255, 154, 224, 0.72);
+  text-shadow:
+    1px 0 rgba(57, 255, 20, 0.36),
+    -1px 0 rgba(255, 0, 170, 0.42);
+}
+
+.background-signal-fragment[data-signal-type="danger"]:hover,
+.background-signal-fragment[data-signal-type="danger"]:focus-visible {
+  color: rgba(255, 146, 88, 0.72);
+  text-shadow:
+    1px 0 rgba(255, 228, 92, 0.24),
+    -1px 0 rgba(255, 0, 68, 0.38),
+    0 0 10px rgba(255, 82, 46, 0.32);
+}
+
+.background-signal-fragment[data-signal-type="z"]:hover,
+.background-signal-fragment[data-signal-type="z"]:focus-visible {
+  color: rgba(255, 244, 164, 0.78);
+  text-shadow:
+    1px 0 rgba(57, 255, 20, 0.5),
+    -1px 0 rgba(255, 0, 170, 0.4),
+    0 0 14px rgba(255, 228, 92, 0.4);
+}
+
+.background-signal-fragment.is-leaving {
+  pointer-events: none;
+  animation: signalFragmentFade 560ms steps(3, end) forwards;
+}
+
 .machine-layout {
   position: relative;
   z-index: 60;
@@ -744,39 +882,53 @@ button {
   position: relative;
   z-index: 60;
   overflow: visible;
-  border: 2px solid #000;
-  background: var(--panel-gray);
+  border: 1px solid rgba(57, 255, 20, 0.24);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.035) 0,
+      rgba(0, 152, 234, 0.035) 1px,
+      transparent 1px,
+      transparent 9px
+    ),
+    rgba(0, 10, 7, 0.46);
   box-shadow:
-    inset 2px 2px 0 var(--panel-light),
-    inset -2px -2px 0 var(--panel-dark),
-    6px 6px 0 #000;
+    0 0 22px rgba(57, 255, 20, 0.09),
+    0 0 14px rgba(0, 152, 234, 0.08),
+    inset 0 0 16px rgba(0, 152, 234, 0.055);
+  opacity: 0.92;
 }
 
 .terminal-top {
   display: flex;
   align-items: center;
   gap: 7px;
-  min-height: 26px;
-  padding: 4px 9px;
-  color: #eaffee;
+  min-height: 22px;
+  padding: 3px 8px;
+  color: rgba(216, 255, 226, 0.86);
   background:
-    linear-gradient(90deg, #061b10, #0ba83a 48%, #39ff14 52%, #061b10),
-    #0b2f16;
-  border-bottom: 2px solid #000;
-  box-shadow: inset 0 -1px 0 rgba(0, 152, 234, 0.55);
+    linear-gradient(90deg, rgba(0, 152, 234, 0.08), rgba(57, 255, 20, 0.12), rgba(0, 152, 234, 0.04)),
+    rgba(0, 12, 8, 0.58);
+  border-bottom: 1px solid rgba(0, 152, 234, 0.28);
+  box-shadow: inset 0 -1px 0 rgba(57, 255, 20, 0.08);
 }
 
 .terminal-top p {
   margin: 0 0 0 6px;
-  font-size: 0.8rem;
+  color: rgba(216, 255, 226, 0.88);
+  font-size: 0.74rem;
   font-weight: 900;
+  text-shadow:
+    1px 0 rgba(0, 152, 234, 0.36),
+    0 0 9px rgba(57, 255, 20, 0.18);
 }
 
 .terminal-light {
-  width: 11px;
-  height: 11px;
-  border: 2px solid #00120a;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(216, 255, 226, 0.24);
   border-radius: 50%;
+  opacity: 0.72;
 }
 
 .terminal-light.red {
@@ -792,8 +944,15 @@ button {
 }
 
 .terminal-screen {
-  padding: 5px;
+  padding: 4px;
   background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.04) 0,
+      rgba(57, 255, 20, 0.04) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
     repeating-linear-gradient(
       90deg,
       rgba(0, 152, 234, 0.035) 0,
@@ -801,21 +960,23 @@ button {
       transparent 2px,
       transparent 10px
     ),
-    #06120c;
-  border-top: 2px solid rgba(255, 255, 255, 0.45);
+    rgba(0, 9, 6, 0.72);
+  border-top: 0;
 }
 
 .terminal-log {
-  height: 190px;
-  max-height: 190px;
+  height: 150px;
+  max-height: 150px;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 6px;
-  border: 2px inset #8a8a80;
-  color: var(--soft-green);
-  font-size: 0.86rem;
+  padding: 5px 6px;
+  border: 1px solid rgba(57, 255, 20, 0.18);
+  color: rgba(156, 255, 143, 0.88);
+  background: rgba(0, 5, 3, 0.34);
+  font-size: 0.82rem;
   text-align: left;
   scrollbar-color: var(--ton-blue) #020302;
+  box-shadow: inset 0 0 14px rgba(57, 255, 20, 0.055);
 }
 
 .terminal-line {
@@ -893,25 +1054,25 @@ button {
 }
 
 .event-feed-footer {
-  margin-top: 5px;
-  padding: 4px 7px;
-  border: 1px solid rgba(57, 255, 20, 0.75);
-  color: var(--pepe-green);
+  margin-top: 4px;
+  padding: 3px 7px;
+  border: 1px solid rgba(57, 255, 20, 0.28);
+  color: rgba(57, 255, 20, 0.78);
   background:
     repeating-linear-gradient(
       0deg,
-      rgba(57, 255, 20, 0.07) 0,
-      rgba(57, 255, 20, 0.07) 1px,
+      rgba(57, 255, 20, 0.045) 0,
+      rgba(57, 255, 20, 0.045) 1px,
       transparent 1px,
       transparent 5px
     ),
-    rgba(0, 12, 8, 0.92);
-  font-size: 0.72rem;
+    rgba(0, 12, 8, 0.5);
+  font-size: 0.68rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   box-shadow:
-    inset 0 0 12px rgba(57, 255, 20, 0.12),
-    0 0 10px rgba(0, 152, 234, 0.18);
+    inset 0 0 10px rgba(57, 255, 20, 0.055),
+    0 0 10px rgba(0, 152, 234, 0.08);
 }
 
 .event-feed-footer::after {
@@ -1629,6 +1790,148 @@ button {
     ),
     rgba(0, 0, 0, 0.76);
   animation: achievementOverlayFade 0.42s ease-out;
+}
+
+.signal-fragment-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 8050;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(57, 255, 20, 0.08) 0,
+      rgba(57, 255, 20, 0.08) 1px,
+      transparent 1px,
+      transparent 6px
+    ),
+    rgba(0, 0, 0, 0.58);
+  animation: achievementOverlayFade 0.32s ease-out;
+}
+
+.signal-fragment-modal-card {
+  width: min(390px, 100%);
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid rgba(57, 255, 20, 0.62);
+  color: rgba(216, 255, 226, 0.92);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.08) 0,
+      rgba(0, 152, 234, 0.08) 2px,
+      transparent 2px,
+      transparent 9px
+    ),
+    rgba(0, 8, 5, 0.94);
+  box-shadow:
+    0 0 24px rgba(57, 255, 20, 0.22),
+    -2px 0 0 rgba(0, 152, 234, 0.62),
+    2px 0 0 rgba(255, 0, 170, 0.34),
+    inset 0 0 18px rgba(57, 255, 20, 0.06);
+  text-align: center;
+  animation: achievementTuneIn 0.48s ease-out, achievementSoftGlitch 2s steps(2, end) 0.48s infinite;
+}
+
+.signal-fragment-modal-card[data-signal-type="ton"] {
+  border-color: rgba(0, 152, 234, 0.68);
+  box-shadow:
+    0 0 24px rgba(0, 152, 234, 0.22),
+    -2px 0 0 rgba(57, 255, 20, 0.42),
+    2px 0 0 rgba(0, 152, 234, 0.46),
+    inset 0 0 18px rgba(0, 152, 234, 0.08);
+}
+
+.signal-fragment-modal-card[data-signal-type="corrupt"] {
+  border-color: rgba(255, 0, 170, 0.55);
+  box-shadow:
+    0 0 24px rgba(255, 0, 170, 0.16),
+    -2px 0 0 rgba(57, 255, 20, 0.46),
+    2px 0 0 rgba(255, 0, 170, 0.46),
+    inset 0 0 18px rgba(57, 255, 20, 0.05);
+}
+
+.signal-fragment-modal-card[data-signal-type="danger"] {
+  border-color: rgba(255, 82, 46, 0.58);
+  box-shadow:
+    0 0 22px rgba(255, 82, 46, 0.16),
+    -2px 0 0 rgba(255, 126, 54, 0.42),
+    2px 0 0 rgba(255, 0, 68, 0.34),
+    inset 0 0 18px rgba(255, 82, 46, 0.05);
+}
+
+.signal-fragment-modal-card[data-signal-type="z"] {
+  border-color: rgba(255, 228, 92, 0.68);
+  box-shadow:
+    0 0 26px rgba(255, 228, 92, 0.18),
+    -2px 0 0 rgba(57, 255, 20, 0.54),
+    2px 0 0 rgba(255, 0, 170, 0.42),
+    inset 0 0 20px rgba(255, 228, 92, 0.06);
+}
+
+.signal-fragment-modal-card span,
+.signal-fragment-modal-card strong,
+.signal-fragment-modal-card p,
+.signal-fragment-modal-card small {
+  margin: 0;
+}
+
+.signal-fragment-modal-card span {
+  color: rgba(137, 220, 255, 0.66);
+  font-size: 0.62rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.signal-fragment-modal-card strong {
+  color: var(--pepe-green);
+  font-size: clamp(0.9rem, 3vw, 1.15rem);
+  text-shadow:
+    1px 0 rgba(0, 152, 234, 0.72),
+    0 0 14px rgba(57, 255, 20, 0.38);
+}
+
+.signal-fragment-modal-card p {
+  color: rgba(216, 255, 226, 0.82);
+  font-size: 0.78rem;
+}
+
+.signal-fragment-modal-card small {
+  color: rgba(137, 220, 255, 0.58);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+
+.signal-fragment-modal-card button {
+  justify-self: center;
+  margin-top: 4px;
+  padding: 5px 8px;
+  border: 1px solid rgba(0, 152, 234, 0.68);
+  color: rgba(216, 255, 226, 0.9);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(57, 255, 20, 0.08) 0,
+      rgba(57, 255, 20, 0.08) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    rgba(0, 12, 8, 0.88);
+  font-size: 0.72rem;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(0, 152, 234, 0.16);
+}
+
+.signal-fragment-modal-card button:hover,
+.signal-fragment-modal-card button:focus-visible {
+  color: #fff;
+  border-color: var(--pepe-green);
+  outline: 1px dotted rgba(57, 255, 20, 0.86);
+  outline-offset: 2px;
+  text-shadow: 0 0 10px rgba(57, 255, 20, 0.42);
 }
 
 .good-find-modal-overlay {
@@ -2666,56 +2969,122 @@ button {
 .button-zone p {
   margin: 0;
   padding: 3px 9px;
-  border: 2px solid var(--pepe-green);
-  color: var(--pepe-green);
+  border: 1px solid rgba(57, 255, 20, 0.68);
+  color: rgba(216, 255, 226, 0.96);
   background:
     repeating-linear-gradient(
       90deg,
-      rgba(0, 152, 234, 0.14) 0,
-      rgba(0, 152, 234, 0.14) 2px,
+      rgba(0, 152, 234, 0.1) 0,
+      rgba(0, 152, 234, 0.1) 2px,
       transparent 2px,
       transparent 9px
     ),
-    rgba(0, 12, 8, 0.92);
+    rgba(0, 12, 8, 0.64);
   font-size: clamp(0.82rem, 2.2vw, 1rem);
   font-weight: 900;
   text-align: center;
   text-transform: uppercase;
   box-shadow:
-    0 0 0 2px #000,
-    0 0 16px rgba(57, 255, 20, 0.22),
-    inset 0 0 12px rgba(57, 255, 20, 0.08);
+    0 0 16px rgba(57, 255, 20, 0.18),
+    inset 0 0 12px rgba(57, 255, 20, 0.07);
   text-shadow:
-    1px 0 var(--ton-blue),
-    0 0 10px rgba(57, 255, 20, 0.44);
+    1px 0 rgba(0, 152, 234, 0.74),
+    0 0 12px rgba(57, 255, 20, 0.52);
   animation: commandBannerFlicker 3.6s steps(2, end) infinite;
 }
 
 .status-panel {
+  position: relative;
   width: min(720px, 100%);
   display: grid;
   gap: 3px;
   padding: 5px 9px;
-  border: 1px solid var(--ton-blue);
-  color: var(--pepe-green);
+  overflow: hidden;
+  border: 1px solid rgba(0, 152, 234, 0.24);
+  color: rgba(156, 255, 143, 0.76);
   background:
     repeating-linear-gradient(
       0deg,
-      rgba(57, 255, 20, 0.06) 0,
-      rgba(57, 255, 20, 0.06) 1px,
+      rgba(57, 255, 20, 0.025) 0,
+      rgba(57, 255, 20, 0.025) 1px,
       transparent 1px,
       transparent 5px
     ),
-    rgba(0, 12, 8, 0.9);
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.028) 0,
+      rgba(0, 152, 234, 0.028) 1px,
+      transparent 1px,
+      transparent 13px
+    ),
+    rgba(0, 12, 8, 0.28);
   font-size: clamp(0.66rem, 1.8vw, 0.78rem);
   line-height: 1.25;
+  cursor: default;
+  opacity: 0.72;
   text-align: center;
   box-shadow:
-    0 0 0 2px #000,
-    0 0 12px rgba(0, 152, 234, 0.24);
+    0 0 12px rgba(0, 152, 234, 0.055),
+    inset 0 0 14px rgba(57, 255, 20, 0.022);
+  filter: saturate(0.88);
+  transition:
+    color 450ms steps(2, end),
+    filter 450ms steps(2, end),
+    text-shadow 450ms steps(2, end);
+}
+
+.status-panel::before {
+  content: "010010 111000 00 101101 0110 1001";
+  position: absolute;
+  inset: 4px 10px auto;
+  z-index: 0;
+  color: rgba(57, 255, 20, 0.25);
+  font-size: 0.56rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  opacity: 0.32;
+  pointer-events: none;
+  text-align: left;
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.24);
+  transition: opacity 850ms ease, color 850ms ease;
+}
+
+.status-panel::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  z-index: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 152, 234, 0.36),
+    rgba(57, 255, 20, 0.3),
+    transparent
+  );
+  opacity: 0.18;
+  pointer-events: none;
+  transition: opacity 850ms ease;
+}
+
+.status-panel:hover {
+  color: rgba(186, 255, 178, 0.82);
+  filter: saturate(0.98);
+}
+
+.status-panel:hover::before {
+  opacity: 0.26;
+}
+
+.status-panel:hover::after {
+  opacity: 0.36;
+  animation: passiveDataSweep 520ms steps(4, end);
 }
 
 .next-badge-strip {
+  position: relative;
   width: min(620px, 100%);
   min-height: 36px;
   display: flex;
@@ -2724,39 +3093,93 @@ button {
   align-items: center;
   gap: 2px;
   padding: 4px 8px 5px;
-  border: 1px solid var(--pepe-green);
-  color: var(--soft-green);
+  overflow: hidden;
+  border: 1px solid rgba(57, 255, 20, 0.24);
+  color: rgba(156, 255, 143, 0.72);
   background:
     repeating-linear-gradient(
       90deg,
-      rgba(0, 152, 234, 0.12) 0,
-      rgba(0, 152, 234, 0.12) 2px,
+      rgba(0, 152, 234, 0.045) 0,
+      rgba(0, 152, 234, 0.045) 2px,
       transparent 2px,
       transparent 8px
     ),
-    rgba(0, 10, 7, 0.94);
+    rgba(0, 10, 7, 0.24);
   font-size: clamp(0.64rem, 1.7vw, 0.76rem);
   line-height: 1.15;
+  opacity: 0.72;
   text-align: center;
   text-transform: uppercase;
   box-shadow:
-    0 0 0 2px #000,
-    0 0 12px rgba(57, 255, 20, 0.18),
-    inset 0 0 12px rgba(0, 152, 234, 0.12);
+    0 0 14px rgba(57, 255, 20, 0.06),
+    inset 0 0 14px rgba(0, 152, 234, 0.035);
   animation: nextBadgeFlicker 5.2s steps(2, end) infinite;
+  transition:
+    opacity 850ms ease,
+    border-color 850ms ease,
+    box-shadow 850ms ease,
+    color 850ms ease,
+    filter 850ms ease;
+}
+
+.next-badge-strip::before {
+  content: "001101 10 0110 1011 000";
+  position: absolute;
+  inset: 3px 8px auto;
+  z-index: 0;
+  color: rgba(57, 255, 20, 0.28);
+  font-size: 0.54rem;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  opacity: 0.38;
+  pointer-events: none;
+  text-align: left;
+  transition: opacity 850ms ease;
+}
+
+.next-badge-strip::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 7px;
+  z-index: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.32), rgba(0, 152, 234, 0.32), transparent);
+  opacity: 0.18;
+  pointer-events: none;
+  transition: opacity 850ms ease;
 }
 
 .next-badge-strip:hover,
 .next-badge-strip:focus-visible {
-  border-color: var(--ton-blue);
+  border-color: rgba(0, 152, 234, 0.64);
   color: #eaffee;
-  outline: 2px solid var(--pepe-green);
+  opacity: 1;
+  filter: brightness(1.08) saturate(1.12);
+  box-shadow:
+    0 0 20px rgba(0, 152, 234, 0.14),
+    0 0 18px rgba(57, 255, 20, 0.1),
+    inset 0 0 18px rgba(57, 255, 20, 0.055);
+  outline: 1px dotted rgba(57, 255, 20, 0.72);
   outline-offset: 2px;
+}
+
+.next-badge-strip:hover::before,
+.next-badge-strip:focus-visible::before {
+  opacity: 0.1;
+}
+
+.next-badge-strip:hover::after,
+.next-badge-strip:focus-visible::after {
+  opacity: 0.68;
 }
 
 .next-badge-strip span,
 .next-badge-strip strong,
 .next-badge-strip em {
+  position: relative;
+  z-index: 1;
   margin: 0;
   font-style: normal;
   white-space: nowrap;
@@ -2800,53 +3223,129 @@ button {
 }
 
 .main-actions button {
-  padding: 4px 7px;
+  position: relative;
+  padding: 5px 8px;
+  overflow: hidden;
   font-size: 0.78rem;
-  border: 2px solid #000;
-  color: #00120a;
-  background: var(--panel-gray);
+  border: 1px solid rgba(57, 255, 20, 0.5);
+  color: rgba(216, 255, 226, 0.9);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(57, 255, 20, 0.07) 0,
+      rgba(57, 255, 20, 0.07) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    rgba(0, 16, 10, 0.78);
   font-weight: 900;
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.34);
   box-shadow:
-    inset 2px 2px 0 var(--panel-light),
-    inset -2px -2px 0 var(--panel-dark),
-    2px 2px 0 #000;
+    0 0 12px rgba(57, 255, 20, 0.11),
+    inset 0 0 12px rgba(57, 255, 20, 0.07);
+  transition:
+    transform 180ms ease,
+    border-color 650ms ease,
+    box-shadow 650ms ease,
+    color 650ms ease,
+    filter 650ms ease,
+    background-color 650ms ease;
+}
+
+.main-actions button::after {
+  content: "";
+  position: absolute;
+  inset: auto 6px 5px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.52), transparent);
+  opacity: 0.24;
+  pointer-events: none;
+  transition: opacity 650ms ease, transform 650ms ease;
 }
 
 .main-actions button:first-child {
-  background: var(--pepe-green);
+  border-color: rgba(57, 255, 20, 0.7);
+  color: #eaffee;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.055) 0,
+      rgba(0, 152, 234, 0.055) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    rgba(2, 36, 16, 0.82);
+  box-shadow:
+    0 0 14px rgba(57, 255, 20, 0.18),
+    inset 0 0 14px rgba(57, 255, 20, 0.1);
 }
 
 .main-actions button:nth-child(2) {
-  border-color: var(--pepe-green);
-  color: #001018;
-  background: linear-gradient(180deg, #40d8ff, var(--ton-blue));
+  border-color: rgba(0, 152, 234, 0.48);
+  color: rgba(137, 220, 255, 0.86);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 152, 234, 0.08) 0,
+      rgba(0, 152, 234, 0.08) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    rgba(0, 13, 18, 0.72);
   box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.44),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.24),
-    3px 3px 0 #001018,
-    0 0 12px rgba(0, 152, 234, 0.5);
-  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.22);
+    0 0 12px rgba(0, 152, 234, 0.12),
+    inset 0 0 12px rgba(0, 152, 234, 0.07);
+  text-shadow: 0 0 8px rgba(0, 152, 234, 0.34);
+}
+
+.main-actions button:hover,
+.main-actions button:focus-visible {
+  color: #ffffff;
+  border-color: rgba(57, 255, 20, 0.86);
+  filter: brightness(1.14) saturate(1.16);
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 20px rgba(57, 255, 20, 0.22),
+    0 0 12px rgba(0, 152, 234, 0.14),
+    inset 0 0 16px rgba(57, 255, 20, 0.12);
 }
 
 .main-actions button:nth-child(2):hover,
 .main-actions button:nth-child(2):focus-visible {
-  color: #001018;
-  border-color: var(--pepe-green);
-  background: linear-gradient(180deg, #7ce8ff, #00aaff);
+  color: #dff8ff;
+  border-color: rgba(0, 152, 234, 0.78);
   box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.5),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.2),
-    3px 3px 0 #001018,
-    0 0 18px rgba(0, 152, 234, 0.75);
+    0 0 20px rgba(0, 152, 234, 0.26),
+    0 0 12px rgba(57, 255, 20, 0.1),
+    inset 0 0 16px rgba(0, 152, 234, 0.12);
+}
+
+.main-actions button:hover::after,
+.main-actions button:focus-visible::after {
+  opacity: 0.8;
+  transform: translateY(-2px);
 }
 
 .main-actions button:focus-visible {
-  outline: 2px solid var(--pepe-green);
+  outline: 1px dotted rgba(57, 255, 20, 0.8);
   outline-offset: 2px;
 }
 
 .main-actions button:active {
-  transform: translate(2px, 2px);
+  transform: translateY(1px);
+}
+
+.main-actions button:disabled,
+.main-actions button:disabled:hover,
+.main-actions button:disabled:focus-visible {
+  color: rgba(216, 255, 226, 0.5);
+  border-color: rgba(57, 255, 20, 0.22);
+  cursor: not-allowed;
+  filter: grayscale(0.75) brightness(0.68);
+  transform: none;
+  box-shadow:
+    0 0 8px rgba(57, 255, 20, 0.05),
+    inset 0 0 8px rgba(57, 255, 20, 0.035);
 }
 
 .existential-button {
@@ -2879,6 +3378,8 @@ button {
 }
 
 .status-row {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: center;
   gap: 5px 10px;
@@ -2890,6 +3391,14 @@ button {
   white-space: nowrap;
 }
 
+.status-panel:hover .stat-chunk {
+  animation: passiveDataDecode 450ms steps(2, end);
+}
+
+.status-panel:hover .status-counts .stat-chunk {
+  animation-duration: 360ms;
+}
+
 .status-row .stat-chunk + .stat-chunk::before {
   content: "·";
   margin-right: 10px;
@@ -2897,8 +3406,9 @@ button {
 }
 
 .status-counts {
-  color: #89dcff;
+  color: rgba(137, 220, 255, 0.88);
   font-weight: 900;
+  text-shadow: 0 0 9px rgba(57, 255, 20, 0.18);
 }
 
 .status-counts .stat-chunk + .stat-chunk::before {
@@ -2906,7 +3416,7 @@ button {
 }
 
 .worldwide-nopes {
-  color: var(--pepe-green);
+  color: rgba(216, 255, 226, 0.9);
   font-weight: 900;
 }
 
@@ -2915,11 +3425,42 @@ button {
 }
 
 .status-stats {
-  color: var(--pepe-green);
+  color: rgba(156, 255, 143, 0.74);
 }
 
 .status-latest {
-  color: rgba(216, 255, 226, 0.72);
+  color: rgba(137, 220, 255, 0.58);
+}
+
+@keyframes passiveDataDecode {
+  0% {
+    letter-spacing: 0.035em;
+    text-shadow:
+      1px 0 rgba(0, 152, 234, 0.42),
+      -1px 0 rgba(57, 255, 20, 0.24);
+  }
+
+  42% {
+    letter-spacing: 0.012em;
+    text-shadow:
+      -1px 0 rgba(255, 0, 170, 0.2),
+      1px 0 rgba(57, 255, 20, 0.3);
+  }
+
+  100% {
+    letter-spacing: 0;
+    text-shadow: inherit;
+  }
+}
+
+@keyframes passiveDataSweep {
+  0% {
+    transform: translateX(-12%);
+  }
+
+  100% {
+    transform: translateX(12%);
+  }
 }
 
 .mega-nope {
@@ -6076,6 +6617,140 @@ button {
   }
 }
 
+@keyframes signalFragmentGlitch {
+  0%,
+  84%,
+  100% {
+    text-shadow:
+      0 0 10px rgba(57, 255, 20, 0.26),
+      1px 0 rgba(0, 152, 234, 0.22);
+  }
+
+  86% {
+    text-shadow:
+      2px 0 rgba(0, 152, 234, 0.42),
+      -1px 0 rgba(255, 0, 170, 0.22);
+  }
+
+  88% {
+    text-shadow:
+      -1px 0 rgba(57, 255, 20, 0.42),
+      1px 0 rgba(0, 152, 234, 0.28);
+  }
+}
+
+@keyframes signalFragmentTonDecode {
+  0%,
+  78%,
+  100% {
+    opacity: 0.2;
+    text-shadow:
+      0 0 6px rgba(0, 152, 234, 0.22),
+      1px 0 rgba(57, 255, 20, 0.1);
+  }
+
+  82% {
+    opacity: 0.32;
+    text-shadow:
+      1px 0 rgba(0, 152, 234, 0.38),
+      0 0 8px rgba(137, 220, 255, 0.24);
+  }
+}
+
+@keyframes signalFragmentCorruptJitter {
+  0%,
+  72%,
+  100% {
+    opacity: 0.18;
+    text-shadow:
+      1px 0 rgba(57, 255, 20, 0.24),
+      -1px 0 rgba(255, 0, 170, 0.2);
+  }
+
+  76% {
+    opacity: 0.36;
+    text-shadow:
+      -2px 0 rgba(255, 0, 170, 0.34),
+      1px 0 rgba(57, 255, 20, 0.28);
+  }
+
+  80% {
+    opacity: 0.16;
+  }
+}
+
+@keyframes signalFragmentDangerFlicker {
+  0%,
+  68%,
+  100% {
+    opacity: 0.16;
+    text-shadow:
+      1px 0 rgba(255, 126, 54, 0.2),
+      0 0 6px rgba(255, 0, 68, 0.16);
+  }
+
+  72% {
+    opacity: 0.34;
+    text-shadow:
+      1px 0 rgba(255, 228, 92, 0.22),
+      -1px 0 rgba(255, 0, 68, 0.34);
+  }
+}
+
+@keyframes signalFragmentZShimmer {
+  0%,
+  70%,
+  100% {
+    opacity: 0.22;
+    text-shadow:
+      1px 0 rgba(57, 255, 20, 0.32),
+      -1px 0 rgba(255, 0, 170, 0.24),
+      0 0 8px rgba(255, 228, 92, 0.22);
+  }
+
+  74% {
+    opacity: 0.42;
+    text-shadow:
+      1px 0 rgba(57, 255, 20, 0.42),
+      -1px 0 rgba(255, 0, 170, 0.34),
+      0 0 12px rgba(255, 228, 92, 0.34);
+  }
+}
+
+@keyframes signalFragmentAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(3px) skewX(-4deg);
+  }
+
+  38% {
+    opacity: 0.28;
+    transform: translateX(2px);
+  }
+
+  100% {
+    opacity: 0.18;
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes signalFragmentFade {
+  0% {
+    opacity: 0.2;
+    transform: translate(0, 0);
+  }
+
+  42% {
+    opacity: 0.34;
+    transform: translateX(-2px) skewX(3deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
 @keyframes introExit {
   0% {
     opacity: 1;
@@ -7152,14 +7827,14 @@ button {
   }
 
   .terminal-screen {
-    padding: 5px;
+    padding: 4px;
   }
 
   .terminal-log {
-    height: 150px;
-    max-height: 150px;
-    padding: 6px;
-    font-size: 0.84rem;
+    height: 125px;
+    max-height: 125px;
+    padding: 5px;
+    font-size: 0.8rem;
   }
 
   .terminal-line {
@@ -7167,8 +7842,14 @@ button {
   }
 
   .event-feed-footer {
-    margin-top: 4px;
+    margin-top: 3px;
     padding: 3px 6px;
+  }
+
+  .background-signal-fragment {
+    max-width: 12ch;
+    font-size: 0.5rem;
+    opacity: 0.2;
   }
 
   .button-zone p {
@@ -7189,6 +7870,11 @@ button {
     width: min(680px, 100%);
     padding: 4px 7px;
     gap: 4px;
+    opacity: 0.88;
+  }
+
+  .next-badge-strip {
+    opacity: 0.86;
   }
 
   .main-actions {
@@ -7433,9 +8119,15 @@ button {
   }
 
   .terminal-log {
-    height: 150px;
-    max-height: 150px;
-    font-size: 0.82rem;
+    height: 115px;
+    max-height: 115px;
+    font-size: 0.78rem;
+  }
+
+  .background-signal-fragment {
+    max-width: 10ch;
+    font-size: 0.48rem;
+    opacity: 0.2;
   }
 
   .telegram-leaderboard-shell {

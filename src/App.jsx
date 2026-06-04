@@ -48,6 +48,9 @@ const STORAGE_KEYS = {
   zRollTokens: "nope_z_roll_tokens",
   zChamberTeaserSeen: "nope_z_chamber_teaser_seen",
   nopeScore: "nope_score",
+  signalFragmentsFound: "nope_signal_fragments_found",
+  signalFragmentsClicked: "nope_signal_fragments_clicked",
+  signalTypeClicks: "nope_signal_type_clicks",
 };
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
@@ -101,6 +104,114 @@ const Z_ROLL_ACHIEVEMENT_IDS = new Set([
   "total-nopeification",
   "uberly-pointless",
 ]);
+const BACKGROUND_SIGNAL_FRAGMENTS = [
+  { id: "static-nope", text: "01101110 01101111 01110000 01100101" },
+  { id: "z-leak", text: "01011010 00110001" },
+  { id: "nope-query", text: "01101110 01101111 01110000 01100101 00111111" },
+  { id: "null-signal", text: "00000000 01001110 01001111" },
+  { id: "bad-packet", text: "10 NOPE 01 404 0110" },
+];
+const BACKGROUND_SIGNAL_SNIPPETS = [
+  "0110101",
+  "01011010",
+  "001101",
+  "NOPE 01",
+  "0X00",
+  "0110 10",
+  "Z 001",
+  "101101",
+  "00 NOPE",
+];
+const SIGNAL_FRAGMENT_TYPES = [
+  { type: "normal", weight: 65 },
+  { type: "ton", weight: 18 },
+  { type: "corrupt", weight: 10 },
+  { type: "danger", weight: 5 },
+  { type: "z", weight: 2 },
+];
+const SIGNAL_FRAGMENT_TYPE_SNIPPETS = {
+  normal: BACKGROUND_SIGNAL_SNIPPETS,
+  ton: ["TON 01", "CHAIN 00", "0101 NET", "T.me 10", "0:TON", "SYNC 01"],
+  corrupt: ["N0?E", "ERR 011", "NO//PE", "1?0?1", "BAD 0X", "NULL??"],
+  danger: ["RED 01", "BURN 10", "NOPE!", "ASH 00", "WARN 1", "STOP 0"],
+  z: ["Z 001", "Z//NO", "ROLL 1", "010 Z", "Z? 00", "NO. Z"],
+};
+const SIGNAL_FRAGMENT_SAFE_ZONES = [
+  { x: [4, 18], y: [20, 42] },
+  { x: [74, 91], y: [20, 43] },
+  { x: [5, 24], y: [66, 86] },
+  { x: [70, 90], y: [63, 84] },
+  { x: [12, 28], y: [46, 58] },
+  { x: [72, 88], y: [46, 58] },
+];
+const SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES = [
+  { x: [4, 18], y: [22, 36] },
+  { x: [58, 70], y: [34, 48] },
+  { x: [6, 22], y: [72, 84] },
+  { x: [54, 68], y: [72, 84] },
+];
+const SIGNAL_FRAGMENT_MESSAGES = {
+  normal: [
+    {
+      title: "SIGNAL FRAGMENT DETECTED",
+      body: ["01101110 01101111 01110000 01100101", "the machine is leaking.", "that feels unhealthy."],
+      button: "CLOSE STATIC",
+    },
+    {
+      title: "CORRUPTED BACKGROUND NOISE",
+      body: ["background noise decoded.", "result: still nope."],
+      button: "DENY SIGNAL",
+    },
+  ],
+  ton: [
+    {
+      title: "CHAIN STATIC FOUND",
+      body: ["network signal recovered.", "value moved: zero.", "confidence: inappropriate."],
+      button: "CLOSE STATIC",
+    },
+    {
+      title: "CHAIN STATIC FOUND",
+      body: ["telegram echo detected.", "nobody asked.", "NOPE listened anyway."],
+      button: "RETURN TO IGNORANCE",
+    },
+  ],
+  corrupt: [
+    {
+      title: "CORRUPTED SIGNAL OPENED",
+      body: ["this fragment has been chewed by the machine.", "please do not feed it feelings."],
+      button: "DENY SIGNAL",
+    },
+    {
+      title: "CORRUPTED SIGNAL OPENED",
+      body: ["decode failed successfully.", "meaning: probably NOPE."],
+      button: "PRETEND NOTHING HAPPENED",
+    },
+  ],
+  danger: [
+    {
+      title: "DANGER SIGNAL CLICKED",
+      body: ["red static means stop.", "you clicked it anyway.", "excellent work."],
+      button: "CLOSE STATIC",
+    },
+    {
+      title: "DANGER SIGNAL CLICKED",
+      body: ["burn warning detected.", "the grinder smiled.", "that is not normal."],
+      button: "PRETEND NOTHING HAPPENED",
+    },
+  ],
+  z: [
+    {
+      title: "Z SIGNAL LEAK",
+      body: ["the final NO is listening.", "roll 1.", "or don't.", "mostly don't."],
+      button: "DENY SIGNAL",
+    },
+    {
+      title: "Z SIGNAL LEAK",
+      body: ["Z Chamber noise detected.", "probability looked away."],
+      button: "RETURN TO IGNORANCE",
+    },
+  ],
+};
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -118,6 +229,21 @@ function randomChance(chance) {
 
 function pickRandom(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function pickWeightedSignalType() {
+  const totalWeight = SIGNAL_FRAGMENT_TYPES.reduce((total, item) => total + item.weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const item of SIGNAL_FRAGMENT_TYPES) {
+    roll -= item.weight;
+
+    if (roll <= 0) {
+      return item.type;
+    }
+  }
+
+  return "normal";
 }
 
 function formatDropChance(chance) {
@@ -314,6 +440,11 @@ export default function App() {
   const [activeAchievementInspect, setActiveAchievementInspect] = useState(null);
   const [showTelegramLoginModal, setShowTelegramLoginModal] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [activeSignalFragment, setActiveSignalFragment] = useState(null);
+  const [visibleSignalFragments, setVisibleSignalFragments] = useState([]);
+  const [signalFragmentsFound, setSignalFragmentsFound] = useState(() =>
+    Math.max(readStoredNumber(STORAGE_KEYS.signalFragmentsFound), readStoredNumber(STORAGE_KEYS.signalFragmentsClicked)),
+  );
   const [isZChamberOpen, setIsZChamberOpen] = useState(false);
   const [zChamberMode, setZChamberMode] = useState("real");
   const [activeZRollResult, setActiveZRollResult] = useState(null);
@@ -367,6 +498,8 @@ export default function App() {
   const shareCopyTimerRef = useRef(null);
   const importantModalActionTimerRef = useRef(null);
   const scoreDeltaTimerRef = useRef(null);
+  const signalFragmentSpawnTimerRef = useRef(null);
+  const signalFragmentRemoveTimersRef = useRef([]);
   const firstStickerHighlightTimerRef = useRef(null);
   const sacrificeEffectTimerRef = useRef(null);
   const stickerBookTearTimerRef = useRef(null);
@@ -414,6 +547,28 @@ export default function App() {
   const globalPulseTimerRef = useRef(null);
   const grinderPromptPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
+  const shouldPauseSignalFragments = showIntro ||
+    isBooting ||
+    isStickerBookOpen ||
+    Boolean(activeSignalFragment) ||
+    Boolean(activeAchievement) ||
+    Boolean(activeGoodFindModal) ||
+    Boolean(activeCraftResult) ||
+    Boolean(activeSacrificeEntity) ||
+    Boolean(activeUberSacrificeEntity) ||
+    Boolean(activeStickerInspectEntity) ||
+    Boolean(activeAchievementInspect) ||
+    showTelegramLoginModal ||
+    showLeaderboardModal ||
+    isZChamberOpen ||
+    Boolean(activeZTokenPopup) ||
+    showZChamberTeaserPopup ||
+    Boolean(activeZRollResult) ||
+    showGrinderReadyPrompt ||
+    showFirstStickerPopup ||
+    Boolean(activeBreachOverlay) ||
+    showResetConfirm ||
+    showExistentialPopup;
   const telegramDiscoveryHapticCooldownRef = useRef(false);
   const telegramDiscoveryHapticTimerRef = useRef(null);
   const telegramSignalLineRef = useRef(false);
@@ -830,6 +985,89 @@ export default function App() {
     window.localStorage.setItem(STORAGE_KEYS.forcedStickerBookPopupCount, String(forcedStickerBookPopupCount));
     forcedStickerBookPopupCountRef.current = forcedStickerBookPopupCount;
   }, [forcedStickerBookPopupCount]);
+
+  useEffect(() => {
+    window.clearTimeout(signalFragmentSpawnTimerRef.current);
+    signalFragmentRemoveTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    signalFragmentRemoveTimersRef.current = [];
+
+    if (shouldPauseSignalFragments) {
+      const pauseClearTimer = window.setTimeout(() => {
+        setVisibleSignalFragments([]);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(pauseClearTimer);
+      };
+    }
+
+    function removeFragment(fragmentId) {
+      setVisibleSignalFragments((currentFragments) =>
+        currentFragments.map((fragment) =>
+          fragment.instanceId === fragmentId ? { ...fragment, isLeaving: true } : fragment,
+        ),
+      );
+
+      const cleanupTimer = window.setTimeout(() => {
+        setVisibleSignalFragments((currentFragments) =>
+          currentFragments.filter((fragment) => fragment.instanceId !== fragmentId),
+        );
+      }, randomBetween(500, 1000));
+      signalFragmentRemoveTimersRef.current.push(cleanupTimer);
+    }
+
+    function spawnFragments() {
+      const isCompactSignalLayout = window.innerWidth <= 700;
+      const maxFragments = isCompactSignalLayout ? 1 : 3;
+      const safeZones = isCompactSignalLayout ? SIGNAL_FRAGMENT_MOBILE_SAFE_ZONES : SIGNAL_FRAGMENT_SAFE_ZONES;
+      const spawnCount = isCompactSignalLayout ? 1 : randomChance(0.08) ? 3 : randomChance(0.28) ? 2 : 1;
+
+      setVisibleSignalFragments((currentFragments) => {
+        const availableSlots = Math.max(0, maxFragments - currentFragments.length);
+        const nextSpawnCount = Math.min(spawnCount, availableSlots);
+
+        if (nextSpawnCount <= 0) {
+          return currentFragments;
+        }
+
+        const newFragments = Array.from({ length: nextSpawnCount }, () => {
+          const source = pickRandom(BACKGROUND_SIGNAL_FRAGMENTS);
+          const signalType = pickWeightedSignalType();
+          const typeSnippets = SIGNAL_FRAGMENT_TYPE_SNIPPETS[signalType] ?? BACKGROUND_SIGNAL_SNIPPETS;
+          const zone = pickRandom(safeZones);
+          const instanceId = `${source.id}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+          const fragment = {
+            ...source,
+            instanceId,
+            isLeaving: false,
+            signalType,
+            left: randomBetween(zone.x[0], zone.x[1]),
+            top: randomBetween(zone.y[0], zone.y[1]),
+            displayText: randomChance(0.78) ? pickRandom(typeSnippets) : source.text.split(" ").slice(0, randomBetween(1, 2)).join(" "),
+            duration: signalType === "danger" ? randomBetween(1800, 4200) : signalType === "z" ? randomBetween(2600, 5600) : randomBetween(2200, 5200),
+          };
+
+          const removeTimer = window.setTimeout(() => removeFragment(instanceId), fragment.duration);
+          signalFragmentRemoveTimersRef.current.push(removeTimer);
+
+          return fragment;
+        });
+
+        return [...currentFragments, ...newFragments];
+      });
+
+      signalFragmentSpawnTimerRef.current = window.setTimeout(spawnFragments, randomBetween(5500, 12000));
+    }
+
+    signalFragmentSpawnTimerRef.current = window.setTimeout(spawnFragments, randomBetween(3500, 8500));
+
+    return () => {
+      window.clearTimeout(signalFragmentSpawnTimerRef.current);
+      signalFragmentRemoveTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      signalFragmentRemoveTimersRef.current = [];
+    };
+  }, [shouldPauseSignalFragments]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEYS.unlockedAchievements, JSON.stringify(unlockedAchievements));
@@ -1527,6 +1765,14 @@ export default function App() {
       "burn-pile-curator": [snapshot.burnPileCount, 10, "burn pile NOPEs"],
       "common-sense-lost": [snapshot.commonCollectedCount, 25, "common trash stickers"],
       "contract-said-non": [snapshot.contractCopyCount, 1, "contract copies"],
+      "colour-blind-regret": [
+        Number(snapshot.signalNormalClickCount >= 1) +
+          Number(snapshot.signalTonClickCount >= 1) +
+          Number(snapshot.signalCorruptClickCount >= 1) +
+          Number(snapshot.signalDangerClickCount >= 1),
+        4,
+        "signal colours",
+      ],
       "copypasta-contagion": [snapshot.shareCopyCount, 10, "share copies"],
       "duplicate-damage": [snapshot.duplicateCount, 10, "duplicates"],
       "emotional-recycling": [snapshot.duplicateCount, 50, "duplicates"],
@@ -1535,6 +1781,7 @@ export default function App() {
       "final-boss-press": [snapshot.nopeCount, 500, "NOPE presses"],
       "first-try-disgusting": [snapshot.zNopeAcquired && snapshot.zRollAttempts === 1 ? 1 : 0, 1, "first-try Z"],
       "found-in-the-ashes": [snapshot.restoredFromBurnCount, 1, "restored NOPEs"],
+      "found-the-static": [snapshot.signalFragmentClickCount, 1, "static signals"],
       "forbidden-behaviour": [snapshot.gifCollectedCount, 1, "loops"],
       "fuel-goblin": [snapshot.duplicateMaterialEarnedCount, 25, "duplicate fuel"],
       "fuel-hoarder": [snapshot.duplicateMaterialEarnedCount, 100, "duplicate fuel"],
@@ -1556,8 +1803,11 @@ export default function App() {
       "phoenix-nopedex": [snapshot.restoredFromBurnCount, 5, "restored NOPEs"],
       "public-embarrassment": [snapshot.shareCount, 5, "shares"],
       "rubbish-with-range": [snapshot.uncommonCollectedCount, 10, "uncommon trash stickers"],
+      "red-flag-clicker": [snapshot.signalDangerClickCount, 1, "red signals"],
       "scorched-earth": [snapshot.sacrificeCount, 25, "sacrifices"],
+      "signal-goblin": [snapshot.signalFragmentClickCount, 15, "static signals"],
       "spread-the-disease": [snapshot.shareCount, 1, "shares"],
+      "static-addict": [snapshot.signalFragmentClickCount, 5, "static signals"],
       "sticker-gremlin": [snapshot.normalCollectedCount, 50, "stickers"],
       "ten-z-rolls-zero-z": [snapshot.zRollFailures, 10, "failed Z rolls"],
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
@@ -1571,6 +1821,7 @@ export default function App() {
       "trash-collector": [snapshot.normalCollectedCount, 10, "stickers"],
       "uberly-pointless": [snapshot.uberCollectedCount, 1, "Uber NOPEs"],
       "why-are-you-like-this": [snapshot.normalCollectedCount, NORMAL_TOTAL, "stickers"],
+      "z-heard-you": [snapshot.signalZClickCount, 1, "Z leaks"],
       "z-nope-failed-once": [snapshot.zRollFailures, 1, "failed Z rolls"],
     };
     const progress = progressMap[achievement.id];
@@ -1778,6 +2029,65 @@ export default function App() {
     setAchievementStats(nextStats);
 
     return nextStats;
+  }
+
+  function openSignalFragment(fragment) {
+    const signalType = fragment.signalType ?? "normal";
+    const nextFoundCount = Math.max(
+      readStoredNumber(STORAGE_KEYS.signalFragmentsFound),
+      readStoredNumber(STORAGE_KEYS.signalFragmentsClicked),
+    ) + 1;
+    const typeClickCounts = {
+      normal: 0,
+      ton: 0,
+      corrupt: 0,
+      danger: 0,
+      z: 0,
+      ...readStoredObject(STORAGE_KEYS.signalTypeClicks, {}),
+    };
+    const message = pickRandom(SIGNAL_FRAGMENT_MESSAGES[signalType] ?? SIGNAL_FRAGMENT_MESSAGES.normal);
+
+    setVisibleSignalFragments((currentFragments) =>
+      currentFragments.map((visibleFragment) =>
+        visibleFragment.instanceId === fragment.instanceId ? { ...visibleFragment, isLeaving: true } : visibleFragment,
+      ),
+    );
+    window.setTimeout(() => {
+      setVisibleSignalFragments((currentFragments) =>
+        currentFragments.filter((visibleFragment) => visibleFragment.instanceId !== fragment.instanceId),
+      );
+    }, 420);
+    setSignalFragmentsFound(nextFoundCount);
+    window.localStorage.setItem(STORAGE_KEYS.signalFragmentsClicked, String(nextFoundCount));
+    window.localStorage.setItem(STORAGE_KEYS.signalFragmentsFound, String(nextFoundCount));
+    window.localStorage.setItem(
+      STORAGE_KEYS.signalTypeClicks,
+      JSON.stringify({
+        ...typeClickCounts,
+        [signalType]: (typeClickCounts[signalType] ?? 0) + 1,
+      }),
+    );
+    setActiveSignalFragment({
+      ...message,
+      fragment,
+    });
+
+    const statKeyByType = {
+      normal: "signalNormalClickCount",
+      ton: "signalTonClickCount",
+      corrupt: "signalCorruptClickCount",
+      danger: "signalDangerClickCount",
+      z: "signalZClickCount",
+    };
+    const nextStats = updateAchievementStats({
+      signalFragmentClickCount: 1,
+      [statKeyByType[signalType] ?? "signalNormalClickCount"]: 1,
+    });
+    queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+
+    if (signalType === "z") {
+      addInstantNopeLine("Z signal noticed you. unfortunately.");
+    }
   }
 
   function shouldShowZChamberTeaser(achievement) {
@@ -2868,6 +3178,7 @@ ${shareUrl}`;
       "first-try-disgusting",
       "ten-z-rolls-zero-z",
       "the-final-no",
+      "z-heard-you",
       "z-nope-failed-once",
     ]);
     const cursedAchievementIds = new Set([
@@ -2892,19 +3203,24 @@ ${shareUrl}`;
       "ashes-to-nopedex",
       "burn-notice",
       "burn-pile-curator",
+      "colour-blind-regret",
       "common-mistake",
       "duplicate-damage",
       "emotional-recycling",
       "epic-waste-facility",
       "feed-the-machine",
       "found-in-the-ashes",
+      "found-the-static",
       "fuel-goblin",
       "fuel-hoarder",
       "industrial-regret",
       "machine-is-hungry",
       "phoenix-nopedex",
       "rarely-worth-it",
+      "red-flag-clicker",
       "scorched-earth",
+      "signal-goblin",
+      "static-addict",
       "trash-alchemist",
       "upgraded-nothing",
     ]);
@@ -3631,6 +3947,23 @@ ${shareUrl}`;
           <span key={index}>NOPE NON TON 404 REJECT NOTPEPE NOPE 0X00 NON</span>
         ))}
       </div>
+      {!shouldPauseSignalFragments && (
+        <div className="background-signal-fragments" aria-label="Hidden background signal fragments">
+          {visibleSignalFragments.map((fragment) => (
+          <button
+            className={`background-signal-fragment ${fragment.isLeaving ? "is-leaving" : ""}`}
+            data-signal-type={fragment.signalType}
+            type="button"
+            onClick={() => openSignalFragment(fragment)}
+            aria-label="Decode hidden signal fragment"
+            key={fragment.instanceId}
+            style={{ "--signal-x": `${fragment.left}%`, "--signal-y": `${fragment.top}%` }}
+          >
+            {fragment.displayText}
+          </button>
+          ))}
+        </div>
+      )}
       {ambientWarning && <div className="glitch-warning">{ambientWarning}</div>}
       <header className="os-header" aria-label="NOPE OS">
         <strong>NOPE OS 0.0.1</strong>
@@ -3864,6 +4197,27 @@ ${shareUrl}`;
           </button>
         )}
       </footer>
+
+      {activeSignalFragment && (
+        <section
+          className="signal-fragment-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, () => setActiveSignalFragment(null))}
+        >
+          <div className="signal-fragment-modal-card" data-signal-type={activeSignalFragment.fragment.signalType ?? "normal"}>
+            <span>{activeSignalFragment.fragment.text}</span>
+            <strong>{activeSignalFragment.title}</strong>
+            {activeSignalFragment.body.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            <small>fragments decoded: {signalFragmentsFound.toString().padStart(3, "0")}</small>
+            <button type="button" onClick={() => setActiveSignalFragment(null)}>
+              [ {activeSignalFragment.button} ]
+            </button>
+          </div>
+        </section>
+      )}
 
       {activeBreachOverlay && (
         <section className={`breach-overlay ${activeBreachOverlay.intensity || "forbidden"}`} aria-label="Forbidden loop breach">

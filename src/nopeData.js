@@ -31,6 +31,7 @@ export const defaultAchievementStats = {
   shareCopyCount: 0,
   shareCount: 0,
   uberSacrificeCount: 0,
+  zChamberTeaserSeen: 0,
   zNopeAcquired: 0,
   zRollAttempts: 0,
   zRollFailures: 0,
@@ -462,6 +463,7 @@ export const ranks = [
 export const achievements = [
   { id: "first-bad-decision", name: "FIRST BAD DECISION", description: "pressed NOPE once.", reward: "nothing", check: ({ nopeCount }) => nopeCount >= 1 },
   { id: "mild-regret", name: "MILD REGRET", description: "pressed NOPE 10 times.", reward: "still nothing", check: ({ nopeCount }) => nopeCount >= 10 },
+  { id: "peeked-at-the-z", name: "PEEKED AT THE Z", description: "entered the Z Chamber before you deserved it.", reward: "forbidden preview", check: ({ zChamberTeaserSeen }) => zChamberTeaserSeen >= 1 },
   { id: "terminal-idiot-press", name: "TERMINAL IDIOT", description: "pressed NOPE 25 times.", reward: "questionable pride", check: ({ nopeCount }) => nopeCount >= 25 },
   { id: "nope-enjoyer-press", name: "NOPE ENJOYER", description: "pressed NOPE 50 times.", reward: "absolutely nothing", check: ({ nopeCount }) => nopeCount >= 50 },
   { id: "high-priest-press", name: "HIGH PRIEST OF NO", description: "pressed NOPE 100 times.", reward: "ceremonial regret", check: ({ nopeCount }) => nopeCount >= 100 },

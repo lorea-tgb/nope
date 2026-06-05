@@ -54,6 +54,7 @@ const STORAGE_KEYS = {
   signalFragmentsClicked: "nope_signal_fragments_clicked",
   signalTypeClicks: "nope_signal_type_clicks",
   scoreCombo: "nope_score_combo",
+  scoreHudPosition: "nope_score_hud_position",
   zSignalCharge: "nope_z_signal_charge",
 };
 
@@ -575,6 +576,41 @@ function readStoredComboState() {
   };
 }
 
+function getDefaultScoreHudPosition() {
+  if (typeof window === "undefined") {
+    return { x: 16, y: 126 };
+  }
+
+  return {
+    x: Math.max(12, Math.round(window.innerWidth / 2 - 470)),
+    y: Math.max(12, Math.min(window.innerHeight - 190, 126)),
+  };
+}
+
+function clampScoreHudPosition(position) {
+  if (typeof window === "undefined") {
+    return position;
+  }
+
+  const maxX = Math.max(12, window.innerWidth - 250);
+  const maxY = Math.max(12, window.innerHeight - 190);
+
+  return {
+    x: Math.min(Math.max(12, Math.round(position.x)), maxX),
+    y: Math.min(Math.max(12, Math.round(position.y)), maxY),
+  };
+}
+
+function readStoredScoreHudPosition() {
+  const storedPosition = readStoredObject(STORAGE_KEYS.scoreHudPosition, {});
+
+  if (!Number.isFinite(storedPosition.x) || !Number.isFinite(storedPosition.y)) {
+    return getDefaultScoreHudPosition();
+  }
+
+  return clampScoreHudPosition(storedPosition);
+}
+
 function getTelegramWebApp() {
   if (typeof window === "undefined") {
     return null;
@@ -597,6 +633,8 @@ export default function App() {
   const [scoreHeat, setScoreHeat] = useState(0);
   const [scoreCombo, setScoreCombo] = useState(() => readStoredComboState());
   const [comboNotice, setComboNotice] = useState(null);
+  const [scoreHudPosition, setScoreHudPosition] = useState(() => readStoredScoreHudPosition());
+  const [isScoreHudDragging, setIsScoreHudDragging] = useState(false);
   const [achievementStats, setAchievementStats] = useState(() =>
     readStoredObject(STORAGE_KEYS.achievementStats, defaultAchievementStats),
   );
@@ -707,6 +745,8 @@ export default function App() {
   const scoreRollingStartedAtRef = useRef(null);
   const displayedNopeScoreRef = useRef(displayedNopeScore);
   const scoreHeatRef = useRef(scoreHeat);
+  const scoreHudDragOffsetRef = useRef({ x: 0, y: 0 });
+  const scoreHudPositionRef = useRef(scoreHudPosition);
   const signalFragmentSpawnTimerRef = useRef(null);
   const signalFragmentRemoveTimersRef = useRef([]);
   const firstStickerHighlightTimerRef = useRef(null);
@@ -1207,6 +1247,22 @@ export default function App() {
   useEffect(() => {
     scoreHeatRef.current = scoreHeat;
   }, [scoreHeat]);
+
+  useEffect(() => {
+    scoreHudPositionRef.current = scoreHudPosition;
+  }, [scoreHudPosition]);
+
+  useEffect(() => {
+    function handleScoreHudResize() {
+      setScoreHudPosition((currentPosition) => clampScoreHudPosition(currentPosition));
+    }
+
+    window.addEventListener("resize", handleScoreHudResize);
+
+    return () => {
+      window.removeEventListener("resize", handleScoreHudResize);
+    };
+  }, []);
 
   useEffect(() => {
     const heatDecayTimer = window.setInterval(() => {
@@ -2465,6 +2521,42 @@ export default function App() {
     return NOPE_SCORE_VALUES.achievementBasic;
   }
 
+  function getAchievementScoreReason(achievement) {
+    const displayTier = getAchievementDisplayTier(achievement.id);
+    const reasonByTier = {
+      "achievement-tier-basic": "achievement:basic",
+      "achievement-tier-cursed": "achievement:cursed",
+      "achievement-tier-special": "achievement:special",
+      "achievement-tier-z": "achievement:z",
+    };
+
+    return reasonByTier[displayTier.className] ?? "achievement:basic";
+  }
+
+  function createAchievementPopupPayload(achievement, { skipCombo = false, skipScore = false } = {}) {
+    return {
+      ...achievement,
+      pendingScoreBonus: skipScore ? 0 : getAchievementScore(achievement),
+      pendingScoreReason: getAchievementScoreReason(achievement),
+      pendingScoreSkipCombo: skipCombo,
+      scoreAwarded: skipScore,
+    };
+  }
+
+  function awardPendingAchievementScore(achievement) {
+    if (!achievement || achievement.scoreAwarded || !Number.isFinite(achievement.pendingScoreBonus) || achievement.pendingScoreBonus <= 0) {
+      return 0;
+    }
+
+    const scoreGain = awardNopeScore(achievement.pendingScoreBonus, achievement.pendingScoreReason ?? "achievement:basic", {
+      displayLabel: "ACHIEVEMENT BONUS",
+      skipCombo: achievement.pendingScoreSkipCombo,
+    });
+
+    achievement.scoreAwarded = true;
+    return scoreGain;
+  }
+
   function getGrinderScore(targetTier) {
     const craftScores = {
       epic: NOPE_SCORE_VALUES.craftEpic,
@@ -2508,20 +2600,10 @@ export default function App() {
     const nextUnlockedIds = [...unlockedAchievementsRef.current, ...newAchievements.map((achievement) => achievement.id)];
     unlockedAchievementsRef.current = nextUnlockedIds;
     setUnlockedAchievements(nextUnlockedIds);
-    setAchievementQueueSynced((currentQueue) => [...currentQueue, ...newAchievements]);
-    if (!skipScore) {
-      newAchievements.forEach((achievement) => {
-        const displayTier = getAchievementDisplayTier(achievement.id);
-        const reasonByTier = {
-          "achievement-tier-basic": "achievement:basic",
-          "achievement-tier-cursed": "achievement:cursed",
-          "achievement-tier-special": "achievement:special",
-          "achievement-tier-z": "achievement:z",
-        };
-
-        awardNopeScore(getAchievementScore(achievement), reasonByTier[displayTier.className] ?? "achievement:basic", { skipCombo });
-      });
-    }
+    setAchievementQueueSynced((currentQueue) => [
+      ...currentQueue,
+      ...newAchievements.map((achievement) => createAchievementPopupPayload(achievement, { skipCombo, skipScore })),
+    ]);
     awardZRollTokensForAchievements(newAchievements);
 
     if (!activeAchievementRef.current) {
@@ -2674,14 +2756,14 @@ export default function App() {
 
     const dismissedAchievement = activeAchievementRef.current;
     const shouldQueueTeaser = shouldShowZChamberTeaser(dismissedAchievement);
+    awardPendingAchievementScore(dismissedAchievement);
 
     if (achievementQueueRef.current.length > 0) {
       if (shouldQueueTeaser) {
         pendingZChamberTeaserRef.current = true;
       }
-      const [nextAchievement, ...remainingAchievements] = achievementQueueRef.current;
-      setActiveAchievementSynced(nextAchievement);
-      setAchievementQueueSynced(remainingAchievements);
+      setActiveAchievementSynced(null);
+      startNextAchievement(350);
       return;
     }
 
@@ -2989,6 +3071,62 @@ export default function App() {
     }, randomBetween(6000, 8000));
   }
 
+  function canDragScoreHud() {
+    return typeof window !== "undefined" &&
+      window.matchMedia("(min-width: 701px) and (pointer: fine)").matches;
+  }
+
+  function saveScoreHudPosition(position) {
+    window.localStorage.setItem(STORAGE_KEYS.scoreHudPosition, JSON.stringify(position));
+  }
+
+  function handleScoreHudPointerDown(event) {
+    if (!canDragScoreHud() || event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    scoreHudDragOffsetRef.current = {
+      x: event.clientX - scoreHudPositionRef.current.x,
+      y: event.clientY - scoreHudPositionRef.current.y,
+    };
+    setIsScoreHudDragging(true);
+  }
+
+  function handleScoreHudPointerMove(event) {
+    if (!isScoreHudDragging || !canDragScoreHud()) {
+      return;
+    }
+
+    const nextPosition = clampScoreHudPosition({
+      x: event.clientX - scoreHudDragOffsetRef.current.x,
+      y: event.clientY - scoreHudDragOffsetRef.current.y,
+    });
+
+    scoreHudPositionRef.current = nextPosition;
+    setScoreHudPosition(nextPosition);
+  }
+
+  function handleScoreHudPointerUp(event) {
+    if (!isScoreHudDragging) {
+      return;
+    }
+
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
+    setIsScoreHudDragging(false);
+    saveScoreHudPosition(scoreHudPositionRef.current);
+  }
+
+  function resetScoreHudPosition() {
+    const defaultPosition = getDefaultScoreHudPosition();
+    const nextPosition = clampScoreHudPosition(defaultPosition);
+
+    scoreHudPositionRef.current = nextPosition;
+    setScoreHudPosition(nextPosition);
+    window.localStorage.removeItem(STORAGE_KEYS.scoreHudPosition);
+  }
+
   function triggerTelegramHaptic(style = "light") {
     try {
       telegramWebApp?.HapticFeedback?.impactOccurred?.(style);
@@ -3232,7 +3370,10 @@ export default function App() {
       const nextUnlockedIds = [...unlockedAchievementsRef.current, forcedAchievement.id];
       unlockedAchievementsRef.current = nextUnlockedIds;
       setUnlockedAchievements(nextUnlockedIds);
-      setAchievementQueueSynced((currentQueue) => [...currentQueue, forcedAchievement]);
+      setAchievementQueueSynced((currentQueue) => [
+        ...currentQueue,
+        createAchievementPopupPayload(forcedAchievement, { skipScore: true }),
+      ]);
     }
 
     awardZRollTokensForAchievements([forcedAchievement]);
@@ -4669,6 +4810,45 @@ ${shareUrl}`;
         </div>
       )}
       {ambientWarning && <div className="glitch-warning">{ambientWarning}</div>}
+      <aside
+        className={`nope-score ${isScoreHudDragging ? "is-dragging" : ""}`}
+        aria-label="NOPE score"
+        onPointerDown={handleScoreHudPointerDown}
+        onPointerMove={handleScoreHudPointerMove}
+        onPointerUp={handleScoreHudPointerUp}
+        onPointerCancel={handleScoreHudPointerUp}
+        style={{ "--score-hud-x": `${scoreHudPosition.x}px`, "--score-hud-y": `${scoreHudPosition.y}px` }}
+      >
+        <div className={`nope-score-visual heat-${scoreHeat >= 9 ? "overload" : scoreHeat >= 6 ? "hot" : scoreHeat >= 3 ? "warm" : "idle"} ${scoreBursts.length > 0 ? "is-updating" : ""} ${isScoreSettled ? "score-settled" : ""} ${scoreBursts.some((burst) => burst.tier === "large" || burst.tier === "huge") ? "score-big" : ""} ${scoreBursts.some((burst) => burst.tier === "z") ? "score-z" : ""}`}>
+          <span onDoubleClick={resetScoreHudPosition} title="double click to re-anchor score signal">NOPE SCORE</span>
+          <strong>{formattedNopeScore}</strong>
+          <em>value: still zero</em>
+          <div className={`z-signal-charge-meter ${zSignalChargePercent >= 100 ? "is-full" : ""}`} style={{ "--z-charge": `${zSignalChargePercent}%` }}>
+            <span>Z SIGNAL CHARGE</span>
+            <b>{zSignalChargePercent}%</b>
+          </div>
+          {scoreCombo.activeHitsLeft > 0 && (
+            <div className={`nope-combo-indicator ${scoreBursts.some((burst) => burst.comboApplied) ? "combo-pulsing" : ""}`}>
+              <b>NOPE COMBO x{NOPE_COMBO_MULTIPLIER}</b>
+              <small>{scoreCombo.activeHitsLeft} hits left</small>
+            </div>
+          )}
+          {scoreBursts.length > 0 && (
+            <div className="nope-score-bursts" aria-live="polite">
+              {scoreBursts.map((burst, index) => (
+                <b
+                  className={`nope-score-delta score-delta-${burst.tier} ${burst.comboApplied ? "score-delta-combo" : ""}`}
+                  key={burst.id}
+                  style={{ "--burst-index": scoreBursts.length - index - 1 }}
+                >
+                  <span>+{burst.amount}</span>
+                  <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
+                </b>
+              ))}
+            </div>
+          )}
+        </div>
+      </aside>
       <header className="os-header" aria-label="NOPE OS">
         <strong>NOPE OS 0.0.1</strong>
         <span>press NOPE. collect garbage. flex nothing.</span>
@@ -4774,35 +4954,6 @@ ${shareUrl}`;
           </button>
         </div>
         {renderTelegramLeaderboardShell()}
-        <aside className={`nope-score heat-${scoreHeat >= 9 ? "overload" : scoreHeat >= 6 ? "hot" : scoreHeat >= 3 ? "warm" : "idle"} ${scoreBursts.length > 0 ? "is-updating" : ""} ${isScoreSettled ? "score-settled" : ""} ${scoreBursts.some((burst) => burst.tier === "large" || burst.tier === "huge") ? "score-big" : ""} ${scoreBursts.some((burst) => burst.tier === "z") ? "score-z" : ""}`} aria-label="NOPE score">
-          <span>NOPE SCORE</span>
-          <strong>{formattedNopeScore}</strong>
-          <em>value: still zero</em>
-          <div className={`z-signal-charge-meter ${zSignalChargePercent >= 100 ? "is-full" : ""}`} style={{ "--z-charge": `${zSignalChargePercent}%` }}>
-            <span>Z SIGNAL CHARGE</span>
-            <b>{zSignalChargePercent}%</b>
-          </div>
-          {scoreCombo.activeHitsLeft > 0 && (
-            <div className={`nope-combo-indicator ${scoreBursts.some((burst) => burst.comboApplied) ? "combo-pulsing" : ""}`}>
-              <b>NOPE COMBO x{NOPE_COMBO_MULTIPLIER}</b>
-              <small>{scoreCombo.activeHitsLeft} hits left</small>
-            </div>
-          )}
-          {scoreBursts.length > 0 && (
-            <div className="nope-score-bursts" aria-live="polite">
-              {scoreBursts.map((burst, index) => (
-                <b
-                  className={`nope-score-delta score-delta-${burst.tier} ${burst.comboApplied ? "score-delta-combo" : ""}`}
-                  key={burst.id}
-                  style={{ "--burst-index": scoreBursts.length - index - 1 }}
-                >
-                  <span>+{burst.amount}</span>
-                  <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
-                </b>
-              ))}
-            </div>
-          )}
-        </aside>
         {comboNotice && (
           <div className={`nope-combo-notice combo-${comboNotice.type}`} key={comboNotice.id}>
             <strong>{comboNotice.type === "online" ? "NOPE COMBO ONLINE" : "NOPE COMBO EXPIRED"}</strong>
@@ -5238,7 +5389,7 @@ ${shareUrl}`;
             <strong>{activeAchievement.name}</strong>
             <span>{activeAchievement.description}</span>
             <em>reward: {activeAchievement.reward}</em>
-            <b>ACHIEVEMENT BONUS: +{getAchievementScore(activeAchievement)} NOPE SCORE</b>
+            {activeAchievement.pendingScoreBonus > 0 && <b>ACHIEVEMENT BONUS: +{activeAchievement.pendingScoreBonus} NOPE SCORE</b>}
             <b>value gained: zero</b>
             <button type="button" onClick={dismissAchievement} disabled={!isImportantModalActionReady}>
               [ erm... yea... nope ]
@@ -5476,6 +5627,9 @@ ${shareUrl}`;
                   </button>
                 ))}
               </div>
+              <button className="stickerbook-close-button" type="button" onClick={() => setIsStickerBookOpen(false)}>
+                CLOSE BOOK
+              </button>
               <button className="stickerbook-top-button" type="button" onClick={scrollStickerBookToTop}>
                 Back to Top? Fine...
               </button>

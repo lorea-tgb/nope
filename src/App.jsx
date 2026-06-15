@@ -9,7 +9,6 @@ import {
   UBER_TOTAL,
   achievements,
   allNopeEntities,
-  bootLines,
   defaultAchievementStats,
   forbiddenNopeGifs,
   getNopeEntityById,
@@ -33,7 +32,15 @@ const STORAGE_KEYS = {
   firstStickerForced: "nope_first_sticker_forced",
   firstStickerPopupSeen: "nope_first_sticker_popup_seen",
   foundOrder: "nope_found_order",
+  currentBadIdea: "nope_current_bad_idea",
+  currentBadIdeaProgress: "nope_current_bad_idea_progress",
+  badIdeasCompleted: "nope_bad_ideas_completed",
+  nopeSurgeCharge: "nope_surge_charge",
+  nopeSurgeReady: "nope_surge_ready",
+  nopeSurgeActive: "nope_surge_active",
+  nopeSurgeActivations: "nope_surge_activations",
   forcedStickerBookPopupCount: "nope_forced_stickerbook_popup_count",
+  bootPopupSeen: "nope_boot_popup_seen",
   introSeen: "nopeIntroSeen",
   latestDiscoveryId: "nopeMachine.latestDiscoveryId",
   lastGrinderPromptNopeCount: "nope_last_grinder_prompt_count",
@@ -54,9 +61,9 @@ const STORAGE_KEYS = {
   signalFragmentsClicked: "nope_signal_fragments_clicked",
   signalTypeClicks: "nope_signal_type_clicks",
   scoreCombo: "nope_score_combo",
-  scoreHudPosition: "nope_score_hud_position",
   zSignalCharge: "nope_z_signal_charge",
 };
+const LEGACY_SCORE_HUD_POSITION_KEY = "nope_score_hud_position";
 
 const FORCED_STICKERBOOK_DROP_THRESHOLD = 1;
 const IMPORTANT_MODAL_ACTION_DELAY = 1000;
@@ -84,41 +91,41 @@ const DUPLICATE_GRINDER_RECIPES = [
   { cost: 5, source: "mythic", target: "uber", button: "GRIND MYTHICS" },
 ];
 const NOPE_SCORE_VALUES = {
-  achievementBasic: 50,
-  achievementCursed: 300,
-  achievementSpecial: 125,
-  achievementZ: 500,
-  burnCommon: 25,
-  burnEpic: 150,
-  burnMythic: 400,
-  burnRare: 75,
-  burnUber: 1500,
-  burnUncommon: 40,
-  craftEpic: 250,
-  craftMythic: 500,
-  craftRare: 150,
-  craftUber: 1200,
-  duplicateGif: 3,
-  duplicateSticker: 2,
-  grinderCraft: 100,
-  loopCursed: 100,
-  loopForbidden: 50,
-  loopGlitch: 25,
-  loopIllegal: 250,
-  newCommon: 8,
-  newEpic: 35,
-  newMythic: 75,
-  newRare: 20,
-  newUber: 250,
-  newUncommon: 12,
-  press: 1,
-  signalCorrupt: 35,
-  signalDanger: 75,
-  signalNormal: 10,
-  signalTon: 20,
-  signalZ: 150,
-  zNope: 5000,
-  zRollFailure: 250,
+  achievementBasic: 2500,
+  achievementCursed: 50000,
+  achievementSpecial: 10000,
+  achievementZ: 100000,
+  burnCommon: 1000,
+  burnEpic: 12500,
+  burnMythic: 50000,
+  burnRare: 5000,
+  burnUber: 250000,
+  burnUncommon: 2500,
+  craftEpic: 15000,
+  craftMythic: 35000,
+  craftRare: 7500,
+  craftUber: 100000,
+  duplicateGif: 50,
+  duplicateSticker: 25,
+  grinderCraft: 5000,
+  loopCursed: 7500,
+  loopForbidden: 2500,
+  loopGlitch: 1000,
+  loopIllegal: 25000,
+  newCommon: 250,
+  newEpic: 2500,
+  newMythic: 7500,
+  newRare: 1000,
+  newUber: 25000,
+  newUncommon: 500,
+  press: 10,
+  signalCorrupt: 2500,
+  signalDanger: 7500,
+  signalNormal: 500,
+  signalTon: 1000,
+  signalZ: 25000,
+  zNope: 1000000,
+  zRollFailure: 25000,
 };
 const NOPE_SCORE_REASON_LABELS = {
   "achievement:basic": "ACHIEVEMENT",
@@ -126,6 +133,7 @@ const NOPE_SCORE_REASON_LABELS = {
   "achievement:special": "BAD IDEA BONUS",
   "achievement:z": "Z ACHIEVEMENT",
   burn: "BURN BONUS",
+  "bad-idea": "BAD IDEA COMPLETE",
   discovery: "NEW FIND",
   duplicate: "DUPLICATE",
   grinder: "GRINDER BONUS",
@@ -139,10 +147,78 @@ const NOPE_SCORE_REASON_LABELS = {
   "z-roll-failure": "Z FAILURE BONUS",
 };
 const NOPE_COMBO_MULTIPLIER = 1.5;
-const NOPE_COMBO_TRIGGER_SCORE = 300;
+const NOPE_COMBO_TRIGGER_SCORE = 25000;
 const NOPE_COMBO_WINDOW_EVENTS = 10;
 const NOPE_COMBO_ACTIVE_EVENTS = 10;
-const Z_SIGNAL_CHARGE_TARGET = 3000;
+const Z_SIGNAL_CHARGE_TARGET = 500000;
+const NOPE_SURGE_DURATION_MS = 45000;
+const NOPE_SURGE_SCORE_MULTIPLIER = 2;
+const NOPE_SURGE_CHARGE_TARGET = 500000;
+const NOPE_SURGE_HELP_TEXT = "NOPE SURGE fills from meaningful score. Find trash, grind trash, burn trash, click static, fail Z rolls. Button spam barely helps. Obviously.";
+const CURRENT_BAD_IDEAS = [
+  {
+    id: "press_25",
+    reward: 25000,
+    target: 25,
+    title: "KEEP PRESSING. UNFORTUNATELY.",
+    type: "press",
+  },
+  {
+    id: "find_3_stickers",
+    reward: 50000,
+    target: 3,
+    title: "RECOVER 3 PIECES OF TRASH",
+    type: "newSticker",
+  },
+  {
+    id: "click_2_signals",
+    reward: 50000,
+    target: 2,
+    title: "DECODE 2 BACKGROUND LIES",
+    type: "signal",
+  },
+  {
+    id: "grind_once",
+    reward: 75000,
+    target: 1,
+    title: "FEED THE MACHINE",
+    type: "grinder",
+  },
+  {
+    id: "burn_1",
+    reward: 75000,
+    target: 1,
+    title: "DAMAGE YOUR COLLECTION",
+    type: "burn",
+  },
+  {
+    id: "fail_z_once",
+    reward: 100000,
+    target: 1,
+    title: "LOSE TO THE Z CHAMBER",
+    type: "zFail",
+  },
+  {
+    id: "find_loop",
+    reward: 75000,
+    target: 1,
+    title: "CATCH MOVING REGRET",
+    type: "loop",
+  },
+];
+function getBadIdeaTaskText(mission) {
+  const taskTextById = {
+    burn_1: "Burn or sacrifice 1 sticker.",
+    click_2_signals: "Click 2 background signal fragments.",
+    fail_z_once: "Fail 1 real Z roll.",
+    find_3_stickers: "Find 3 new pieces of trash.",
+    find_loop: "Find 1 loop/GIF.",
+    grind_once: "Use the Duplicate Grinder once.",
+    press_25: "Press NOPE 25 times.",
+  };
+
+  return taskTextById[mission?.id] ?? "Do the thing the machine should not have suggested.";
+}
 const Z_ROLL_ACHIEVEMENT_IDS = new Set([
   "absolute-degenerate",
   "again-really",
@@ -175,6 +251,39 @@ const BACKGROUND_SIGNAL_FRAGMENTS = [
   { id: "nope-query", text: "01101110 01101111 01110000 01100101 00111111" },
   { id: "null-signal", text: "00000000 01001110 01001111" },
   { id: "bad-packet", text: "10 NOPE 01 404 0110" },
+];
+const BOOT_POPUP_LINES = [
+  "NOPE MACHINE detected.",
+  "checking utility...",
+  "utility not found.",
+  "checking value...",
+  "value not found.",
+  "checking contract...",
+  "contract detected.",
+  "contract is on TON.",
+  "or NOT.",
+  "obviously.",
+  "Press the big stupid button....",
+  "you might find something.",
+  "probably not though.",
+];
+const BOOT_POPUP_LINE_TIMING = {
+  "checking contract...": { hold: [850, 1100], typeDelay: [32, 58] },
+  "contract is on TON.": { hold: [700, 900] },
+  "or NOT.": { hold: [500, 750] },
+  "obviously.": { hold: [650, 850] },
+  "you might find something.": { hold: [900, 1200] },
+  "probably not though.": { hold: [900, 1200] },
+};
+const BOOT_POPUP_DEFAULT_TIMING = {
+  exit: [180, 300],
+  hold: [350, 550],
+  typeDelay: [16, 34],
+};
+const INITIAL_FEED_LINES = [
+  "feed online.",
+  "button awaiting poor decision.",
+  "bad idea loaded. follow it or don't.",
 ];
 const BACKGROUND_SIGNAL_SNIPPETS = [
   "0110101",
@@ -251,13 +360,6 @@ const SIGNAL_FRAGMENT_SCORE_REWARDS = {
   corrupt: NOPE_SCORE_VALUES.signalCorrupt,
   danger: NOPE_SCORE_VALUES.signalDanger,
   z: NOPE_SCORE_VALUES.signalZ,
-};
-const SIGNAL_FRAGMENT_SCORE_LINES = {
-  normal: "signal fragment decoded. value remained zero.",
-  ton: "chain static decoded. score reluctantly increased.",
-  corrupt: "corrupted signal clicked. machine became slightly worse.",
-  danger: "red signal clicked. warning ignored successfully.",
-  z: "Z signal noticed you. unfortunately.",
 };
 const SIGNAL_FRAGMENT_MESSAGES = {
   normal: [
@@ -395,6 +497,10 @@ function formatScoreReason(reason) {
   return reason.replace(/[-:]/g, " ").toUpperCase();
 }
 
+function formatScoreAmount(amount) {
+  return Math.floor(Number(amount) || 0).toLocaleString("en-US");
+}
+
 function easeInOutCubic(progress) {
   return progress < 0.5
     ? 4 * progress * progress * progress
@@ -406,27 +512,23 @@ function easeOutCubic(progress) {
 }
 
 function getScoreRollDuration(scoreGap) {
-  if (scoreGap <= 1) {
-    return 600;
-  }
-
-  if (scoreGap < 25) {
-    return 850;
-  }
-
-  if (scoreGap < 250) {
-    return 1500;
-  }
-
   if (scoreGap < 1000) {
-    return 2600;
+    return 650;
   }
 
-  if (scoreGap < 5000) {
-    return 3900;
+  if (scoreGap < 10000) {
+    return 1400;
   }
 
-  return 6000;
+  if (scoreGap < 100000) {
+    return 2400;
+  }
+
+  if (scoreGap < 1000000) {
+    return 3300;
+  }
+
+  return 4000;
 }
 
 function animateScrollToTop(element, duration = 700) {
@@ -576,14 +678,24 @@ function readStoredComboState() {
   };
 }
 
+function getCurrentBadIdeaById(id) {
+  return CURRENT_BAD_IDEAS.find((mission) => mission.id === id) ?? null;
+}
+
+function pickNextBadIdeaId(previousId = null) {
+  const missionPool = CURRENT_BAD_IDEAS.filter((mission) => mission.id !== previousId);
+
+  return pickRandom(missionPool.length > 0 ? missionPool : CURRENT_BAD_IDEAS).id;
+}
+
 function getDefaultScoreHudPosition() {
   if (typeof window === "undefined") {
-    return { x: 16, y: 126 };
+    return { x: 40, y: 150 };
   }
 
   return {
-    x: Math.max(12, Math.round(window.innerWidth / 2 - 470)),
-    y: Math.max(12, Math.min(window.innerHeight - 190, 126)),
+    x: Math.round(Math.min(Math.max(window.innerWidth * 0.03, 28), 52)),
+    y: Math.round(Math.min(Math.max(window.innerHeight * 0.16, 120), 170)),
   };
 }
 
@@ -599,16 +711,6 @@ function clampScoreHudPosition(position) {
     x: Math.min(Math.max(12, Math.round(position.x)), maxX),
     y: Math.min(Math.max(12, Math.round(position.y)), maxY),
   };
-}
-
-function readStoredScoreHudPosition() {
-  const storedPosition = readStoredObject(STORAGE_KEYS.scoreHudPosition, {});
-
-  if (!Number.isFinite(storedPosition.x) || !Number.isFinite(storedPosition.y)) {
-    return getDefaultScoreHudPosition();
-  }
-
-  return clampScoreHudPosition(storedPosition);
 }
 
 function getTelegramWebApp() {
@@ -633,7 +735,7 @@ export default function App() {
   const [scoreHeat, setScoreHeat] = useState(0);
   const [scoreCombo, setScoreCombo] = useState(() => readStoredComboState());
   const [comboNotice, setComboNotice] = useState(null);
-  const [scoreHudPosition, setScoreHudPosition] = useState(() => readStoredScoreHudPosition());
+  const [scoreHudPosition, setScoreHudPosition] = useState(() => getDefaultScoreHudPosition());
   const [isScoreHudDragging, setIsScoreHudDragging] = useState(false);
   const [achievementStats, setAchievementStats] = useState(() =>
     readStoredObject(STORAGE_KEYS.achievementStats, defaultAchievementStats),
@@ -715,12 +817,33 @@ export default function App() {
   const [latestDiscoveryId, setLatestDiscoveryId] = useState(() =>
     readStoredString(STORAGE_KEYS.latestDiscoveryId),
   );
-  const [isBooting, setIsBooting] = useState(true);
+  const [showBootPopup, setShowBootPopup] = useState(() => readStoredString(STORAGE_KEYS.bootPopupSeen) !== "true");
+  const [bootPopupText, setBootPopupText] = useState("");
+  const [bootPopupPhase, setBootPopupPhase] = useState("typing");
+  const [isBooting, setIsBooting] = useState(() => readStoredString(STORAGE_KEYS.bootPopupSeen) !== "true");
   const [isGlitching, setIsGlitching] = useState(false);
   const [isAmbientGlitch, setIsAmbientGlitch] = useState(false);
   const [ambientWarning, setAmbientWarning] = useState(null);
   const [isNopeIdle, setIsNopeIdle] = useState(false);
   const [isStickerBookOpen, setIsStickerBookOpen] = useState(false);
+  const [isZSignalExpanded, setIsZSignalExpanded] = useState(false);
+  const [currentBadIdeaId, setCurrentBadIdeaId] = useState(() => {
+    const storedMissionId = readStoredString(STORAGE_KEYS.currentBadIdea);
+
+    return getCurrentBadIdeaById(storedMissionId)?.id ?? pickNextBadIdeaId();
+  });
+  const [currentBadIdeaProgress, setCurrentBadIdeaProgress] = useState(() => readStoredNumber(STORAGE_KEYS.currentBadIdeaProgress));
+  const [badIdeasCompleted, setBadIdeasCompleted] = useState(() => readStoredNumber(STORAGE_KEYS.badIdeasCompleted));
+  const [activeBadIdeaCompletion, setActiveBadIdeaCompletion] = useState(null);
+  const [showBadIdeaDetails, setShowBadIdeaDetails] = useState(false);
+  const [nopeSurgeCharge, setNopeSurgeCharge] = useState(() => readStoredNumber(STORAGE_KEYS.nopeSurgeCharge));
+  const [isNopeSurgeReady, setIsNopeSurgeReady] = useState(() => readStoredString(STORAGE_KEYS.nopeSurgeReady) === "true");
+  const [nopeSurgeEndsAt, setNopeSurgeEndsAt] = useState(0);
+  const [nopeSurgeRemainingMs, setNopeSurgeRemainingMs] = useState(0);
+  const [nopeSurgeActivations, setNopeSurgeActivations] = useState(() => readStoredNumber(STORAGE_KEYS.nopeSurgeActivations));
+  const [showNopeSurgePopup, setShowNopeSurgePopup] = useState(false);
+  const [nopeSurgeChargeFeedback, setNopeSurgeChargeFeedback] = useState(null);
+  const [isStatsExpanded, setIsStatsExpanded] = useState(false);
   const [stickerTab, setStickerTab] = useState("all");
   const [stickerFilter, setStickerFilter] = useState("all");
   const [copiedShareId, setCopiedShareId] = useState(null);
@@ -739,6 +862,7 @@ export default function App() {
   const shareCopyTimerRef = useRef(null);
   const importantModalActionTimerRef = useRef(null);
   const scoreBurstTimersRef = useRef([]);
+  const nopeSurgeChargeFeedbackTimerRef = useRef(null);
   const comboNoticeTimerRef = useRef(null);
   const scoreAnimationFrameRef = useRef(null);
   const scoreSettledTimerRef = useRef(null);
@@ -763,6 +887,8 @@ export default function App() {
   const duplicateGrinderSectionRef = useRef(null);
   const terminalLogRef = useRef(null);
   const lineIdRef = useRef(0);
+  const feedSeededRef = useRef(false);
+  const bootPopupTimersRef = useRef([]);
   const nopeCountRef = useRef(nopeCount);
   const nopeScoreRef = useRef(nopeScore);
   const scoreComboRef = useRef(scoreCombo);
@@ -799,6 +925,14 @@ export default function App() {
   const globalPulseTimerRef = useRef(null);
   const grinderPromptPulseTimerRef = useRef(null);
   const pendingGlobalNopesRef = useRef(0);
+  const currentBadIdeaIdRef = useRef(currentBadIdeaId);
+  const currentBadIdeaProgressRef = useRef(currentBadIdeaProgress);
+  const badIdeasCompletedRef = useRef(badIdeasCompleted);
+  const activeBadIdeaCompletionRef = useRef(activeBadIdeaCompletion);
+  const nopeSurgeChargeRef = useRef(nopeSurgeCharge);
+  const isNopeSurgeReadyRef = useRef(isNopeSurgeReady);
+  const nopeSurgeEndsAtRef = useRef(nopeSurgeEndsAt);
+  const nopeSurgeActivationsRef = useRef(nopeSurgeActivations);
   const signalFragmentContext = isStickerBookOpen ? "stickerbook" : "home";
   const hasSignalBlockingModal = Boolean(
     activeSignalFragment ||
@@ -820,11 +954,15 @@ export default function App() {
     showFirstStickerPopup ||
     activeBreachOverlay ||
     showResetConfirm ||
-    showExistentialPopup
+    showExistentialPopup ||
+    activeBadIdeaCompletion ||
+    showBadIdeaDetails ||
+    showNopeSurgePopup
   );
   const shouldPauseSignalFragments = showIntro ||
     isBooting ||
     hasSignalBlockingModal;
+  const showFirstPressPrompt = nopeCount === 0 && !showIntro && !showBootPopup && !isBooting && !hasSignalBlockingModal;
   const telegramDiscoveryHapticCooldownRef = useRef(false);
   const telegramDiscoveryHapticTimerRef = useRef(null);
   const telegramSignalLineRef = useRef(false);
@@ -839,6 +977,15 @@ export default function App() {
     () => displayedNopeScore.toString().padStart(9, "0"),
     [displayedNopeScore],
   );
+  const activeBadIdea = useMemo(
+    () => getCurrentBadIdeaById(currentBadIdeaId),
+    [currentBadIdeaId],
+  );
+  const currentBadIdeaDisplayProgress = Math.min(currentBadIdeaProgress, activeBadIdea?.target ?? 0);
+  const isNopeSurgeActive = nopeSurgeRemainingMs > 0;
+  const nopeSurgeSecondsLeft = Math.ceil(nopeSurgeRemainingMs / 1000);
+  const formattedNopeSurgeTime = `${String(Math.floor(nopeSurgeSecondsLeft / 60)).padStart(2, "0")}:${String(nopeSurgeSecondsLeft % 60).padStart(2, "0")}`;
+  const nopeSurgeChargePercent = isNopeSurgeReady ? 100 : Math.min(100, Math.floor((nopeSurgeCharge / NOPE_SURGE_CHARGE_TARGET) * 100));
   const zSignalChargePercent = Math.min(100, Math.floor((zSignalCharge / Z_SIGNAL_CHARGE_TARGET) * 100));
   const formattedGlobalCount = useMemo(() => {
     if (!isGlobalCounterAvailable || globalNopeCount === null) {
@@ -933,6 +1080,9 @@ export default function App() {
     activeZTokenPopup ||
     activeZSignalChargePopup ||
     showZChamberTeaserPopup ||
+    activeBadIdeaCompletion ||
+    showBadIdeaDetails ||
+    showNopeSurgePopup ||
     achievementQueue.length > 0,
   );
   const isInspectModalBlocked = Boolean(
@@ -949,7 +1099,10 @@ export default function App() {
     activeZRollResult ||
     activeZTokenPopup ||
     activeZSignalChargePopup ||
-    showZChamberTeaserPopup,
+    showZChamberTeaserPopup ||
+    activeBadIdeaCompletion ||
+    showBadIdeaDetails ||
+    showNopeSurgePopup,
   );
   const stickerBookNavItems = [
     ["all", "ALL TRASH", "ALL"],
@@ -974,6 +1127,11 @@ export default function App() {
 
   function addLine(line) {
     setLines((currentLines) => [...currentLines, line].slice(-80));
+  }
+
+  function clearBootPopupTimers() {
+    bootPopupTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    bootPopupTimersRef.current = [];
   }
 
   useEffect(() => {
@@ -1031,6 +1189,7 @@ export default function App() {
       window.clearTimeout(grinderPromptPulseTimerRef.current);
       window.clearTimeout(telegramDiscoveryHapticTimerRef.current);
       window.clearInterval(globalFlushIntervalRef.current);
+      clearBootPopupTimers();
     };
   }, []);
 
@@ -1235,6 +1394,7 @@ export default function App() {
     scoreBurstTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
     scoreBurstTimersRef.current = [];
     window.clearTimeout(comboNoticeTimerRef.current);
+    window.clearTimeout(nopeSurgeChargeFeedbackTimerRef.current);
     window.clearTimeout(scoreSettledTimerRef.current);
     window.cancelAnimationFrame(scoreAnimationFrameRef.current);
   }, []);
@@ -1245,6 +1405,70 @@ export default function App() {
   }, [scoreCombo]);
 
   useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.currentBadIdea, currentBadIdeaId);
+    currentBadIdeaIdRef.current = currentBadIdeaId;
+  }, [currentBadIdeaId]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.currentBadIdeaProgress, String(currentBadIdeaProgress));
+    currentBadIdeaProgressRef.current = currentBadIdeaProgress;
+  }, [currentBadIdeaProgress]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.badIdeasCompleted, String(badIdeasCompleted));
+    badIdeasCompletedRef.current = badIdeasCompleted;
+  }, [badIdeasCompleted]);
+
+  useEffect(() => {
+    activeBadIdeaCompletionRef.current = activeBadIdeaCompletion;
+  }, [activeBadIdeaCompletion]);
+
+  useEffect(() => {
+    const normalizedCharge = Math.min(NOPE_SURGE_CHARGE_TARGET, Math.max(0, nopeSurgeCharge));
+    window.localStorage.setItem(STORAGE_KEYS.nopeSurgeCharge, String(normalizedCharge));
+    nopeSurgeChargeRef.current = normalizedCharge;
+  }, [nopeSurgeCharge]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.nopeSurgeReady, String(isNopeSurgeReady));
+    isNopeSurgeReadyRef.current = isNopeSurgeReady;
+  }, [isNopeSurgeReady]);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEYS.nopeSurgeActivations, String(nopeSurgeActivations));
+    nopeSurgeActivationsRef.current = nopeSurgeActivations;
+  }, [nopeSurgeActivations]);
+
+  useEffect(() => {
+    nopeSurgeEndsAtRef.current = nopeSurgeEndsAt;
+    window.localStorage.setItem(STORAGE_KEYS.nopeSurgeActive, String(nopeSurgeEndsAt > Date.now()));
+
+    if (nopeSurgeEndsAt <= Date.now()) {
+      return undefined;
+    }
+
+    function updateNopeSurgeRemaining() {
+      const nextRemaining = Math.max(0, nopeSurgeEndsAt - Date.now());
+      setNopeSurgeRemainingMs(nextRemaining);
+
+      if (nextRemaining <= 0) {
+        nopeSurgeEndsAtRef.current = 0;
+        setNopeSurgeEndsAt(0);
+        window.localStorage.setItem(STORAGE_KEYS.nopeSurgeActive, "false");
+        addInstantNopeLine("surge expired. normal disappointment resumed.");
+        addInstantNopeLine("NOPE SURGE EXPIRED. green disappointment restored.");
+      }
+    }
+
+    updateNopeSurgeRemaining();
+    const surgeTimer = window.setInterval(updateNopeSurgeRemaining, 500);
+
+    return () => window.clearInterval(surgeTimer);
+  // Surge expiry only needs the active deadline; terminal helpers read latest state safely here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nopeSurgeEndsAt]);
+
+  useEffect(() => {
     scoreHeatRef.current = scoreHeat;
   }, [scoreHeat]);
 
@@ -1253,7 +1477,34 @@ export default function App() {
   }, [scoreHudPosition]);
 
   useEffect(() => {
+    window.localStorage.removeItem(LEGACY_SCORE_HUD_POSITION_KEY);
+
+    if (!canDragScoreHud()) {
+      return undefined;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      if (!canDragScoreHud()) {
+        return;
+      }
+
+      const nextPosition = clampScoreHudPosition(getDefaultScoreHudPosition());
+      scoreHudPositionRef.current = nextPosition;
+      setScoreHudPosition(nextPosition);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  useEffect(() => {
     function handleScoreHudResize() {
+      if (canDragScoreHud()) {
+        const nextPosition = clampScoreHudPosition(getDefaultScoreHudPosition());
+        scoreHudPositionRef.current = nextPosition;
+        setScoreHudPosition(nextPosition);
+        return;
+      }
+
       setScoreHudPosition((currentPosition) => clampScoreHudPosition(currentPosition));
     }
 
@@ -1573,7 +1824,7 @@ export default function App() {
   }, [nextBadges.length]);
 
   useEffect(() => {
-    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || activeZTokenPopup || activeZSignalChargePopup || showZChamberTeaserPopup || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || achievementQueue.length > 0) {
+    if (!pendingFirstStickerPopup || activeAchievement || activeStickerInspectEntity || activeAchievementInspect || activeZTokenPopup || activeZSignalChargePopup || showZChamberTeaserPopup || isZChamberOpen || activeZRollResult || showGrinderReadyPrompt || activeBadIdeaCompletion || showBadIdeaDetails || showNopeSurgePopup || achievementQueue.length > 0) {
       return undefined;
     }
 
@@ -1584,80 +1835,90 @@ export default function App() {
     }, 0);
 
     return () => window.clearTimeout(popupTimer);
-  }, [activeAchievement, activeAchievementInspect, activeStickerInspectEntity, activeZRollResult, activeZSignalChargePopup, activeZTokenPopup, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showGrinderReadyPrompt, showZChamberTeaserPopup]);
+  }, [activeAchievement, activeAchievementInspect, activeBadIdeaCompletion, activeStickerInspectEntity, activeZRollResult, activeZSignalChargePopup, activeZTokenPopup, achievementQueue.length, isZChamberOpen, pendingFirstStickerPopup, showBadIdeaDetails, showGrinderReadyPrompt, showNopeSurgePopup, showZChamberTeaserPopup]);
 
   useEffect(() => {
-    if (showIntro) {
+    if (showIntro || feedSeededRef.current) {
+      return;
+    }
+
+    feedSeededRef.current = true;
+    setLines(INITIAL_FEED_LINES.map((text) => createLine("nope", text)));
+  }, [showIntro, showBootPopup]);
+
+  useEffect(() => {
+    if (showIntro || !showBootPopup) {
       return undefined;
     }
 
     let isCancelled = false;
     const runId = bootRunRef.current + 1;
     bootRunRef.current = runId;
+    clearBootPopupTimers();
 
-    async function typeBootLine(bootLine) {
-      const lineId = lineIdRef.current;
-      lineIdRef.current += 1;
+    function sleepBoot(ms) {
+      return new Promise((resolve) => {
+        const timer = window.setTimeout(() => {
+          bootPopupTimersRef.current = bootPopupTimersRef.current.filter((currentTimer) => currentTimer !== timer);
+          resolve();
+        }, ms);
 
-      setLines((currentLines) => [
-        ...currentLines,
-        {
-          id: lineId,
-          speaker: "system",
-          text: "",
-          isTyping: true,
-          important: Boolean(bootLine.important),
-        },
-      ]);
+        bootPopupTimersRef.current.push(timer);
+      });
+    }
 
-      for (let index = 1; index <= bootLine.text.length; index += 1) {
+    async function typeBootNotice() {
+      await sleepBoot(220);
+
+      for (let lineIndex = 0; lineIndex < BOOT_POPUP_LINES.length; lineIndex += 1) {
+        const bootLine = BOOT_POPUP_LINES[lineIndex];
+        const lineTiming = BOOT_POPUP_LINE_TIMING[bootLine] ?? {};
+        const typeDelay = lineTiming.typeDelay ?? BOOT_POPUP_DEFAULT_TIMING.typeDelay;
+        const holdDelay = Array.isArray(lineTiming.hold)
+          ? randomBetween(lineTiming.hold[0], lineTiming.hold[1])
+          : lineTiming.hold ?? randomBetween(BOOT_POPUP_DEFAULT_TIMING.hold[0], BOOT_POPUP_DEFAULT_TIMING.hold[1]);
+
         if (isCancelled || bootRunRef.current !== runId) {
           return;
         }
 
-        await sleep(bootLine.important ? randomBetween(18, 34) : randomBetween(3, 9));
+        setBootPopupPhase("typing");
+        setBootPopupText("");
 
-        setLines((currentLines) =>
-          currentLines.map((line) =>
-            line.id === lineId ? { ...line, text: bootLine.text.slice(0, index) } : line,
-          ),
-        );
-      }
+        for (let charIndex = 1; charIndex <= bootLine.length; charIndex += 1) {
+          await sleepBoot(randomBetween(typeDelay[0], typeDelay[1]));
 
-      setLines((currentLines) =>
-        currentLines.map((line) =>
-          line.id === lineId ? { ...line, isTyping: false } : line,
-        ),
-      );
-    }
+          if (isCancelled || bootRunRef.current !== runId) {
+            return;
+          }
 
-    async function runBootSequence() {
-      setLines([]);
-      setIsBooting(true);
+          setBootPopupText(bootLine.slice(0, charIndex));
+        }
 
-      await sleep(280);
+        setBootPopupPhase("holding");
+        await sleepBoot(holdDelay);
 
-      for (const bootLine of bootLines) {
         if (isCancelled || bootRunRef.current !== runId) {
           return;
         }
 
-        await typeBootLine(bootLine);
+        if (lineIndex === BOOT_POPUP_LINES.length - 1) {
+          setBootPopupPhase("done");
+          return;
+        }
 
-        await sleep(bootLine.pause ?? randomBetween(35, 105));
-      }
-
-      if (!isCancelled && bootRunRef.current === runId) {
-        setIsBooting(false);
+        setBootPopupPhase("exiting");
+        await sleepBoot(randomBetween(BOOT_POPUP_DEFAULT_TIMING.exit[0], BOOT_POPUP_DEFAULT_TIMING.exit[1]));
       }
     }
 
-    runBootSequence();
+    typeBootNotice();
 
     return () => {
       isCancelled = true;
+      clearBootPopupTimers();
     };
-  }, [showIntro]);
+  }, [showIntro, showBootPopup]);
 
   useEffect(() => {
     if (showIntro || isBooting) {
@@ -2010,15 +2271,18 @@ export default function App() {
 
   function getDiscoveryMessage(entity, alreadyCollected) {
     if (alreadyCollected && entity.type === "uber") {
-      return `duplicate UBER NOPE detected: ${entity.name}. probability wasted harder.`;
+      return `same trash. different disappointment. ${entity.name} again.`;
     }
 
     if (alreadyCollected && entity.type === "mythic") {
-      return `duplicate MYTHIC NOPE detected: ${entity.name}. probability wasted.`;
+      return `duplicate detected. emotional recycling available. ${entity.name} again.`;
     }
 
     if (alreadyCollected) {
-      return `duplicate: ${entity.name}. disappointment increased.`;
+      return pickRandom([
+        `duplicate detected. emotional recycling available. ${entity.name} again.`,
+        `same trash. different disappointment. ${entity.name} again.`,
+      ]);
     }
 
     if (entity.type === "uber") {
@@ -2033,7 +2297,10 @@ export default function App() {
       return `${getLoopFoundTitle(entity)}: ${entity.name}. added to NOPEDEX.`;
     }
 
-    return `new trash discovered: ${entity.name}. value gained: zero.`;
+    return pickRandom([
+      `new trash recovered. ego risk increased. ${entity.name} added.`,
+      `sticker acquired. value did not improve. ${entity.name} added.`,
+    ]);
   }
 
   function isForcedStickerBookFind(entity, alreadyCollected) {
@@ -2108,7 +2375,7 @@ export default function App() {
       [materialTier]: (currentMaterials[materialTier] ?? 0) + 1,
     }));
     const nextStats = updateAchievementStats({ duplicateMaterialEarnedCount: 1 });
-    addInstantNopeLine(`duplicate ${DUPLICATE_MATERIAL_LABELS[materialTier]} converted into grinder fuel. probably legal.`);
+    addInstantNopeLine("duplicate trash became machine food.");
 
     return nextStats;
   }
@@ -2141,6 +2408,151 @@ export default function App() {
     addLine(createLine("nope", text));
   }
 
+  function setCurrentBadIdeaProgressSynced(nextProgress) {
+    const progress = typeof nextProgress === "function" ? nextProgress(currentBadIdeaProgressRef.current) : nextProgress;
+    const normalizedProgress = Math.max(0, Math.floor(Number(progress) || 0));
+    currentBadIdeaProgressRef.current = normalizedProgress;
+    setCurrentBadIdeaProgress(normalizedProgress);
+
+    return normalizedProgress;
+  }
+
+  function setCurrentBadIdeaSynced(nextMissionId) {
+    currentBadIdeaIdRef.current = nextMissionId;
+    setCurrentBadIdeaId(nextMissionId);
+    setCurrentBadIdeaProgressSynced(0);
+  }
+
+  function setNopeSurgeChargeSynced(nextCharge) {
+    const charge = typeof nextCharge === "function" ? nextCharge(nopeSurgeChargeRef.current) : nextCharge;
+    const normalizedCharge = Math.min(NOPE_SURGE_CHARGE_TARGET, Math.max(0, Math.floor(Number(charge) || 0)));
+    nopeSurgeChargeRef.current = normalizedCharge;
+    setNopeSurgeCharge(normalizedCharge);
+
+    return normalizedCharge;
+  }
+
+  function showNopeSurgeChargeFeedback(amount) {
+    const percentGain = Math.min(100, (amount / NOPE_SURGE_CHARGE_TARGET) * 100);
+    const displayPercent = Math.round(percentGain);
+    const tier = percentGain >= 25 ? "huge" : percentGain >= 10 ? "big" : "small";
+    const feedback = {
+      id: Date.now(),
+      label: displayPercent >= 1 ? `SURGE +${displayPercent}%` : "",
+      tier,
+    };
+
+    window.clearTimeout(nopeSurgeChargeFeedbackTimerRef.current);
+    setNopeSurgeChargeFeedback(feedback);
+    nopeSurgeChargeFeedbackTimerRef.current = window.setTimeout(() => {
+      setNopeSurgeChargeFeedback((currentFeedback) => (
+        currentFeedback?.id === feedback.id ? null : currentFeedback
+      ));
+    }, tier === "huge" ? 1400 : tier === "big" ? 1200 : 900);
+  }
+
+  function chargeNopeSurge(amount) {
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0 ||
+      isNopeSurgeReadyRef.current ||
+      nopeSurgeEndsAtRef.current > Date.now()
+    ) {
+      return;
+    }
+
+    const chargeAmount = Math.floor(amount);
+    const nextCharge = setNopeSurgeChargeSynced(nopeSurgeChargeRef.current + chargeAmount);
+    showNopeSurgeChargeFeedback(chargeAmount);
+
+    if (nextCharge >= NOPE_SURGE_CHARGE_TARGET && !isNopeSurgeReadyRef.current) {
+      isNopeSurgeReadyRef.current = true;
+      setIsNopeSurgeReady(true);
+      addInstantNopeLine("NOPE SURGE charged. terrible timing available.");
+    }
+  }
+
+  function startNopeSurge({ isDev = false } = {}) {
+    const nextEndsAt = Date.now() + NOPE_SURGE_DURATION_MS;
+    nopeSurgeEndsAtRef.current = nextEndsAt;
+    setNopeSurgeEndsAt(nextEndsAt);
+    setNopeSurgeRemainingMs(NOPE_SURGE_DURATION_MS);
+    setShowNopeSurgePopup(true);
+    setNopeSurgeChargeSynced(0);
+    isNopeSurgeReadyRef.current = false;
+    setIsNopeSurgeReady(false);
+    window.clearTimeout(nopeSurgeChargeFeedbackTimerRef.current);
+    setNopeSurgeChargeFeedback(null);
+
+    if (isDev) {
+      addInstantNopeLine("dev surge injected. background dignity failed.");
+      return;
+    }
+
+    const nextActivations = nopeSurgeActivationsRef.current + 1;
+    nopeSurgeActivationsRef.current = nextActivations;
+    setNopeSurgeActivations(nextActivations);
+    addInstantNopeLine("NOPE SURGE activated. background dignity failed.");
+    const nextStats = updateAchievementStats({ nopeSurgeTriggerCount: 1, nopeSurgeActivationCount: 1 });
+    queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }), 0, { skipCombo: true, skipScore: true });
+  }
+
+  function activateNopeSurge() {
+    if (!isNopeSurgeReadyRef.current || nopeSurgeEndsAtRef.current > Date.now()) {
+      return;
+    }
+
+    startNopeSurge();
+  }
+
+  function forceNopeSurge() {
+    startNopeSurge({ isDev: true });
+  }
+
+  function advanceCurrentBadIdea(type, amount = 1, { isDev = false } = {}) {
+    if (isDev || activeBadIdeaCompletionRef.current) {
+      return;
+    }
+
+    const mission = getCurrentBadIdeaById(currentBadIdeaIdRef.current);
+    if (!mission || mission.type !== type) {
+      return;
+    }
+
+    const nextProgress = Math.min(mission.target, currentBadIdeaProgressRef.current + amount);
+    setCurrentBadIdeaProgressSynced(nextProgress);
+
+    if (nextProgress >= mission.target) {
+      const completion = { mission };
+      activeBadIdeaCompletionRef.current = completion;
+      setActiveBadIdeaCompletion(completion);
+      addInstantNopeLine("bad idea completed. regrettably efficient.");
+    }
+  }
+
+  function acceptBadIdeaCompletion() {
+    const mission = activeBadIdeaCompletion?.mission;
+    if (!mission) {
+      return;
+    }
+
+    awardNopeScore(mission.reward, "bad-idea", {
+      displayLabel: "BAD IDEA COMPLETE",
+      qualifiesForCombo: true,
+      qualifiesForZCharge: true,
+    });
+
+    const nextCompletedCount = badIdeasCompletedRef.current + 1;
+    badIdeasCompletedRef.current = nextCompletedCount;
+    setBadIdeasCompleted(nextCompletedCount);
+    const nextStats = updateAchievementStats({ badIdeaCompletedCount: 1 });
+    queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }));
+    activeBadIdeaCompletionRef.current = null;
+    setActiveBadIdeaCompletion(null);
+    setCurrentBadIdeaSynced(pickNextBadIdeaId(mission.id));
+    addInstantNopeLine("bad idea loaded. follow it or don't.");
+  }
+
   function getCollectionCounts(ids) {
     return {
       commonCollectedCount: ids.filter((id) => rarityPools.common.some((entity) => entity.id === id)).length,
@@ -2164,6 +2576,8 @@ export default function App() {
       "ascended-into-nope": [snapshot.uberCollectedCount, UBER_TOTAL, "Uber NOPEs"],
       "ash-collector": [snapshot.sacrificeCount, 10, "sacrifices"],
       "absolute-degenerate": [snapshot.uberSacrificeCount, 1, "Uber sacrifices"],
+      "bad-idea-addict": [snapshot.badIdeaCompletedCount, 5, "bad ideas"],
+      "bad-idea-enjoyer": [snapshot.badIdeaCompletedCount, 1, "bad ideas"],
       "burn-notice": [snapshot.sacrificeCount, 1, "sacrifices"],
       "burn-pile-curator": [snapshot.burnPileCount, 10, "burn pile NOPEs"],
       "big-number-still-zero": [snapshot.comboBigScoreEventCount, 1, "big score events"],
@@ -2207,6 +2621,8 @@ export default function App() {
       "peeked-at-the-z": [snapshot.zChamberTeaserSeen, 1, "forbidden previews"],
       "phoenix-nopedex": [snapshot.restoredFromBurnCount, 5, "restored NOPEs"],
       "public-embarrassment": [snapshot.shareCount, 5, "shares"],
+      "purple-problem": [snapshot.nopeSurgeActivationCount ?? snapshot.nopeSurgeTriggerCount, 1, "surges"],
+      "save-it-for-what": [snapshot.nopeSurgeActivationCount, 1, "surges"],
       "keep-on-rolling": [snapshot.scoreRollingFiveSecondCount, 1, "rolling streaks"],
       "overcharged-nothing": [snapshot.zSignalChargeFillCount, 5, "Z charges"],
       "rubbish-with-range": [snapshot.uncommonCollectedCount, 10, "uncommon trash stickers"],
@@ -2216,6 +2632,7 @@ export default function App() {
       "spread-the-disease": [snapshot.shareCount, 1, "shares"],
       "static-addict": [snapshot.signalFragmentClickCount, 5, "static signals"],
       "sticker-gremlin": [snapshot.normalCollectedCount, 50, "stickers"],
+      "surge-abuser": [snapshot.nopeSurgeScoreEventCount, 10, "surge scores"],
       "ten-z-rolls-zero-z": [snapshot.zRollFailures, 10, "failed Z rolls"],
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
       "the-number-wont-stop": [snapshot.scoreRollingTenSecondCount, 1, "rolling streaks"],
@@ -2267,19 +2684,19 @@ export default function App() {
   }
 
   function getScoreVisualTier(amount) {
-    if (amount >= NOPE_SCORE_VALUES.zNope) {
+    if (amount >= 1000000) {
       return "z";
     }
 
-    if (amount >= 1000) {
+    if (amount >= 100000) {
       return "huge";
     }
 
-    if (amount >= 250) {
+    if (amount >= 10000) {
       return "large";
     }
 
-    if (amount >= 50) {
+    if (amount >= 1000) {
       return "medium";
     }
 
@@ -2344,16 +2761,18 @@ export default function App() {
     }, type === "online" ? 1800 : 1300);
   }
 
-  function addScoreBurst(amount, reason, tier, { baseAmount = amount, comboApplied = false, context = "score", position = null } = {}) {
+  function addScoreBurst(amount, reason, tier, { baseAmount = amount, comboApplied = false, context = "score", position = null, surgeApplied = false } = {}) {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const burst = {
       amount,
       baseAmount,
       comboApplied,
       context,
+      formattedAmount: formatScoreAmount(amount),
       id,
       position,
       reason: formatScoreReason(reason),
+      surgeApplied,
       tier,
     };
 
@@ -2382,7 +2801,15 @@ export default function App() {
     const qualifiesForCombo = options.qualifiesForCombo ?? (reason !== "press" && !options.skipCombo);
     const currentCombo = scoreComboRef.current;
     const comboApplied = qualifiesForCombo && currentCombo.activeHitsLeft > 0;
-    const scoreGain = comboApplied ? Math.ceil(baseScoreGain * NOPE_COMBO_MULTIPLIER) : baseScoreGain;
+    const qualifiesForSurge = options.qualifiesForSurge ?? (
+      reason !== "press" &&
+      !options.skipSurge &&
+      !options.isDev &&
+      !options.skipScore
+    );
+    const surgeApplied = qualifiesForSurge && nopeSurgeEndsAtRef.current > Date.now();
+    const comboScoreGain = comboApplied ? Math.ceil(baseScoreGain * NOPE_COMBO_MULTIPLIER) : baseScoreGain;
+    const scoreGain = surgeApplied ? comboScoreGain * NOPE_SURGE_SCORE_MULTIPLIER : comboScoreGain;
     const nextComboHitsLeft = comboApplied ? Math.max(0, currentCombo.activeHitsLeft - 1) : currentCombo.activeHitsLeft;
     const nextScore = nopeScoreRef.current + scoreGain;
     const heatGain = scoreGain >= 100000000 ? 10 : scoreGain >= 1000000 ? 6 : scoreGain >= 100000 ? 3 : comboApplied ? 2 : 1;
@@ -2444,6 +2871,7 @@ export default function App() {
       context: burstContext,
       comboApplied,
       position: options.burstPosition ?? null,
+      surgeApplied,
     });
     const qualifiesForZCharge = options.qualifiesForZCharge ?? (
       qualifiesForCombo &&
@@ -2455,6 +2883,15 @@ export default function App() {
 
     if (qualifiesForZCharge) {
       chargeZSignal(scoreGain);
+    }
+
+    if (qualifiesForSurge) {
+      chargeNopeSurge(scoreGain);
+    }
+
+    if (surgeApplied) {
+      const nextStats = updateAchievementStats({ nopeSurgeScoreEventCount: 1 });
+      queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }), 0, { skipCombo: true, skipScore: true });
     }
 
     if (scoreGain >= 1000) {
@@ -2501,6 +2938,26 @@ export default function App() {
     };
 
     return rarityScores[entity.rarity] ?? NOPE_SCORE_VALUES.newCommon;
+  }
+
+  function getDiscoveryScoreLabel(entity, alreadyCollected) {
+    if (alreadyCollected) {
+      return entity.type === "gif" ? "DUPLICATE LOOP" : "DUPLICATE NOPE";
+    }
+
+    if (entity.type === "gif") {
+      return entity.rarityLabel ?? "LOOP NOPE";
+    }
+
+    if (entity.type === "uber") {
+      return "UBER NOPE";
+    }
+
+    if (entity.type === "mythic" || entity.rarity === "mythic") {
+      return "MYTHIC NOPE";
+    }
+
+    return entity.rarityLabel ?? "COMMON NOPE";
   }
 
   function getAchievementScore(achievement) {
@@ -2692,13 +3149,14 @@ export default function App() {
       burstContext: "fragment",
       burstPosition: { left: fragment.left, top: fragment.top },
     });
+    advanceCurrentBadIdea("signal");
     setActiveSignalFragment({
       ...message,
       fragment,
       scoreBonus: signalScore,
     });
-    addInstantNopeLine(SIGNAL_FRAGMENT_SCORE_LINES[signalType] ?? SIGNAL_FRAGMENT_SCORE_LINES.normal);
-    addInstantNopeLine(`SIGNAL DECODED: +${signalScore} NOPE SCORE.`);
+    addInstantNopeLine("background static clicked. it noticed.");
+    addInstantNopeLine(`SIGNAL DECODED: +${formatScoreAmount(signalScore)} NOPE SCORE.`);
 
     const statKeyByType = {
       normal: "signalNormalClickCount",
@@ -2722,6 +3180,7 @@ export default function App() {
       window.localStorage.setItem(STORAGE_KEYS.zSignalRollsLeaked, String(nextLeakCount));
       addInstantNopeLine("Z signal leaked a roll. probability is annoyed.");
     }
+
   }
 
   function shouldShowZChamberTeaser(achievement) {
@@ -3011,14 +3470,16 @@ export default function App() {
     }, isUber ? 1300 : 900);
 
     if (isUber) {
-      addInstantNopeLine("UBER NOPE sacrificed. probability is filing a complaint.");
+      addInstantNopeLine("active collection damaged successfully.");
     } else {
-      addInstantNopeLine(`${entity.name} fed to the grinder.`);
+      addInstantNopeLine("burn pile received another bad idea.");
     }
 
-    const sacrificeScore = awardNopeScore(getSacrificeScore(entity, isUber), "burn");
-    addInstantNopeLine(`${isUber ? "UBER BURN" : "BURN"} BONUS: +${sacrificeScore} NOPE SCORE.`);
-    addInstantNopeLine("active collection decreased. brilliant work.");
+    const sacrificeScore = awardNopeScore(getSacrificeScore(entity, isUber), "burn", {
+      displayLabel: isUber ? "UBER BURN BONUS" : "BURN BONUS",
+    });
+    advanceCurrentBadIdea("burn");
+    addInstantNopeLine(`${isUber ? "UBER BURN" : "BURN"} BONUS: +${formatScoreAmount(sacrificeScore)} NOPE SCORE.`);
     queueAchievementUnlocks(buildAchievementSnapshot({
       achievementStats: nextStats,
       collectedIds: nextCollectedIds,
@@ -3042,6 +3503,14 @@ export default function App() {
     window.location.reload();
   }
 
+  function closeBootPopup() {
+    bootRunRef.current += 1;
+    clearBootPopupTimers();
+    window.localStorage.setItem(STORAGE_KEYS.bootPopupSeen, "true");
+    setShowBootPopup(false);
+    setIsBooting(false);
+  }
+
   function handleModalBackdropClick(event, onBackdropClose, { respectImportantDelay = false } = {}) {
     if (event.target !== event.currentTarget) {
       return;
@@ -3052,6 +3521,41 @@ export default function App() {
     }
 
     onBackdropClose();
+  }
+
+  function openBadIdeaDetails() {
+    setShowBadIdeaDetails(true);
+  }
+
+  function handleBadIdeaPanelKeyDown(event) {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    openBadIdeaDetails();
+  }
+
+  function handleNopeSurgeActivateClick(event) {
+    event.stopPropagation();
+    activateNopeSurge();
+  }
+
+  function toggleStatsPanel() {
+    setIsStatsExpanded((isExpanded) => !isExpanded);
+  }
+
+  function handleStatsPanelKeyDown(event) {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    toggleStatsPanel();
   }
 
   function resetNopeIdleTimer() {
@@ -3074,10 +3578,6 @@ export default function App() {
   function canDragScoreHud() {
     return typeof window !== "undefined" &&
       window.matchMedia("(min-width: 701px) and (pointer: fine)").matches;
-  }
-
-  function saveScoreHudPosition(position) {
-    window.localStorage.setItem(STORAGE_KEYS.scoreHudPosition, JSON.stringify(position));
   }
 
   function handleScoreHudPointerDown(event) {
@@ -3115,16 +3615,15 @@ export default function App() {
 
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     setIsScoreHudDragging(false);
-    saveScoreHudPosition(scoreHudPositionRef.current);
   }
 
   function resetScoreHudPosition() {
+    window.localStorage.removeItem(LEGACY_SCORE_HUD_POSITION_KEY);
     const defaultPosition = getDefaultScoreHudPosition();
     const nextPosition = clampScoreHudPosition(defaultPosition);
 
     scoreHudPositionRef.current = nextPosition;
     setScoreHudPosition(nextPosition);
-    window.localStorage.removeItem(STORAGE_KEYS.scoreHudPosition);
   }
 
   function triggerTelegramHaptic(style = "light") {
@@ -3217,7 +3716,11 @@ export default function App() {
       awardNopeScore(
         getDiscoveryScore(discoveredEntity, alreadyCollected),
         alreadyCollected ? `duplicate:${discoveredEntity.id}` : `discovery:${discoveredEntity.id}`,
+        { displayLabel: getDiscoveryScoreLabel(discoveredEntity, alreadyCollected) },
       );
+      if (!alreadyCollected) {
+        advanceCurrentBadIdea(discoveredEntity.type === "gif" ? "loop" : "newSticker");
+      }
     }
     addInstantNopeLine(getDiscoveryMessage(discoveredEntity, alreadyCollected));
 
@@ -3316,12 +3819,17 @@ export default function App() {
 
     setDuplicateMaterialsSynced(nextMaterials);
     const nextStats = updateAchievementStats(getGrinderAchievementUpdates(recipe.target));
-    const grinderScore = awardNopeScore(getGrinderScore(recipe.target), "grinder");
-    addInstantNopeLine(`duplicate grinder consumed ${recipe.cost} ${DUPLICATE_MATERIAL_LABELS[recipe.source]} fuel.`);
-    addInstantNopeLine(`recycled output generated: ${resultEntity.name}.`);
-    addInstantNopeLine(`GRINDER BONUS: +${grinderScore} NOPE SCORE.`);
+    const grinderScoreLabel = recipe.target === "uber" ? "GRINDER JACKPOT" : "GRINDER BONUS";
+    const grinderScore = awardNopeScore(getGrinderScore(recipe.target), "grinder", {
+      displayLabel: grinderScoreLabel,
+    });
+    advanceCurrentBadIdea("grinder");
+    addInstantNopeLine("grinder hunger increasing.");
+    addInstantNopeLine("duplicate trash became machine food.");
+    addInstantNopeLine(`GRINDER BONUS: +${formatScoreAmount(grinderScore)} NOPE SCORE.`);
     setActiveCraftResultSynced({
       entity: resultEntity,
+      scoreLabel: grinderScoreLabel,
       scoreBonus: grinderScore,
       shouldOpenGoodFind: isForcedStickerBookFind(resultEntity, !wasNew),
       wasNew,
@@ -3393,6 +3901,7 @@ export default function App() {
     isZChamberOpenRef.current = true;
     setZChamberMode("real");
     setIsZChamberOpen(true);
+    addInstantNopeLine("Z Chamber breathing.");
   }
 
   function enterZChamberTeaser() {
@@ -3487,9 +3996,11 @@ export default function App() {
     const nextStats = updateAchievementStats({ zNopeAcquired: 1, ...(countAttempt ? { zRollAttempts: 1 } : {}) });
     setLatestDiscoveryId(zNopeEntity.id);
     addInstantNopeLine("Z NOPE acquired. probability has stopped taking calls.");
-    const scoreBonus = skipScore ? 0 : awardNopeScore(NOPE_SCORE_VALUES.zNope, "z-nope");
+    const scoreBonus = skipScore ? 0 : awardNopeScore(NOPE_SCORE_VALUES.zNope, "z-nope", {
+      displayLabel: "Z NOPE JACKPOT",
+    });
     if (scoreBonus > 0) {
-      addInstantNopeLine(`Z NOPE BONUS: +${scoreBonus} NOPE SCORE.`);
+      addInstantNopeLine(`Z NOPE BONUS: +${formatScoreAmount(scoreBonus)} NOPE SCORE.`);
     }
     activeZRollResultRef.current = { result, scoreBonus, type: "success" };
     setActiveZRollResult({ result, scoreBonus, type: "success" });
@@ -3541,7 +4052,9 @@ export default function App() {
     const nextStats = updateAchievementStats({ zRollAttempts: 1, zRollFailures: 1 });
     addInstantNopeLine(`Z Chamber rolled ${result}. that is not 1.`);
     const scoreBonus = awardNopeScore(NOPE_SCORE_VALUES.zRollFailure, "z-roll-failure");
-    addInstantNopeLine(`Z FAILURE BONUS: +${scoreBonus} NOPE SCORE. you lost correctly.`);
+    advanceCurrentBadIdea("zFail");
+    addInstantNopeLine(`Z FAILURE BONUS: +${formatScoreAmount(scoreBonus)} NOPE SCORE. you lost correctly.`);
+    addInstantNopeLine("Z said no. statistically rude.");
     activeZRollResultRef.current = { result, scoreBonus, type: "failure" };
     setActiveZRollResult({ result, scoreBonus, type: "failure" });
     queueAchievementUnlocks(buildAchievementSnapshot({
@@ -3573,6 +4086,7 @@ export default function App() {
   function pressNope() {
     triggerTelegramHaptic("light");
     resetNopeIdleTimer();
+    addInstantNopeLine("press detected. standards lowered.");
 
     const nextLabel = pickRandom(nopeLabels);
     const discoveredEntity = getNextDiscoveryEntity();
@@ -3584,6 +4098,15 @@ export default function App() {
     setNopeCount(nextCount);
     pendingGlobalNopesRef.current += 1;
     awardNopeScore(NOPE_SCORE_VALUES.press, "press");
+    advanceCurrentBadIdea("press");
+
+    if (nextCount === 3) {
+      addInstantNopeLine("user continues. concerning.");
+    } else if (nextCount === 10) {
+      addInstantNopeLine("press velocity increasing.");
+    } else if (nextCount > 0 && nextCount % 50 === 0) {
+      addInstantNopeLine("button abuse detected.");
+    }
 
     if (globalNopeCountRef.current !== null) {
       const optimisticGlobalCount = globalNopeCountRef.current + 1;
@@ -3597,7 +4120,11 @@ export default function App() {
     } else {
       setDuplicateStreak(0);
       showBreachOverlay(getCollectedGifChaosEvent());
-      addInstantNopeLine(pickRandom(noHitMessages));
+      addInstantNopeLine(pickRandom([
+        "empty pull. emotional damage applied.",
+        "nothing happened. impressive.",
+        ...noHitMessages,
+      ]));
 
       queueAchievementUnlocks(
         buildAchievementSnapshot({
@@ -3997,6 +4524,8 @@ ${shareUrl}`;
       "accidental-skill",
       "ash-collector",
       "ashes-to-nopedex",
+      "bad-idea-addict",
+      "bad-idea-enjoyer",
       "big-number-still-zero",
       "burn-notice",
       "burn-pile-curator",
@@ -4016,12 +4545,15 @@ ${shareUrl}`;
       "machine-is-hungry",
       "overcharged-nothing",
       "phoenix-nopedex",
+      "purple-problem",
       "rarely-worth-it",
       "red-flag-clicker",
       "scorched-earth",
+      "save-it-for-what",
       "signal-goblin",
       "signal-battery",
       "static-addict",
+      "surge-abuser",
       "the-number-wont-stop",
       "trash-alchemist",
       "upgraded-nothing",
@@ -4378,37 +4910,64 @@ ${shareUrl}`;
 
   function renderZChamberPanel() {
     const isAcquired = znopeAcquired || collectedIds.includes("znope");
+    const zSignalStatus = isAcquired ? "acquired" : zRollTokens > 0 ? "ready" : "unresolved";
+    const zSignalCopy = isAcquired
+      ? "Z NOPE documented. probability remains upset."
+      : zRollTokens > 0
+        ? "Z Chamber access available. terrible idea."
+        : "Z NOPE is not in the normal machine.";
 
     return (
-      <section className={`z-chamber-panel ${isAcquired ? "acquired" : zRollTokens > 0 ? "ready" : "locked"}`} aria-label="Z Chamber">
-        <strong>{isAcquired ? "Z SIGNAL DETECTED" : "Z SIGNAL"}</strong>
-        <span>
-          {isAcquired
-            ? "Z NOPE ACQUIRED"
-            : zRollTokens > 0
-              ? `rolls available: ${zRollTokens}`
-              : "status: unresolved"}
-        </span>
-        {isAcquired && <em>the rarest refusal has entered the NOPEDEX.</em>}
-        {!isAcquired && <em>source: Z CHAMBER only // odds: 1%</em>}
-        {isAcquired && zNopeEntity ? (
-          <div className="z-chamber-card-wrap">{renderStickerCard(zNopeEntity, 0)}</div>
-        ) : (
-          <div className="z-signal-teaser">
-            <b>Z SIGNAL</b>
-            <small>status: unresolved</small>
+      <section className={`z-chamber-panel ${isAcquired ? "acquired" : zRollTokens > 0 ? "ready" : "locked"} ${isZSignalExpanded ? "expanded" : "collapsed"}`} aria-label="Z Signal">
+        <div className="z-signal-compact">
+          <div className="z-signal-compact-main">
+            <strong>Z SIGNAL // {zSignalStatus}</strong>
+            <span>charge: {zSignalChargePercent}%</span>
+            <span>rolls: {zRollTokens}</span>
             <small>source: Z CHAMBER only</small>
-            <small>odds: 1%</small>
-            <span>The final NOPE is not in the normal machine.</span>
-            <span>Earn a Z Roll.</span>
-            <span>Roll 1.</span>
-            <span>Probably don't.</span>
           </div>
-        )}
-        {zRollTokens > 0 && !isAcquired && (
-          <button type="button" onClick={openZChamber}>
-            [ ENTER Z CHAMBER ]
+          <p>{isAcquired ? "Z NOPE acquired. the final refusal has been documented." : zSignalCopy}</p>
+          {!isAcquired && (
+            <em>
+              Earn a Z Roll. Roll 1. Probably don't.
+            </em>
+          )}
+          <button type="button" onClick={() => setIsZSignalExpanded((isExpanded) => !isExpanded)} aria-expanded={isZSignalExpanded}>
+            {isZSignalExpanded ? "COLLAPSE Z SIGNAL" : isAcquired ? "VIEW Z SIGNAL" : "OPEN Z SIGNAL"}
           </button>
+        </div>
+        {isZSignalExpanded && (
+          <div className="z-signal-expanded">
+            <strong>{isAcquired ? "Z SIGNAL DETECTED" : "Z SIGNAL"}</strong>
+            <span>Z Signal Charge: {zSignalChargePercent}%</span>
+            <span>Z Rolls: {zRollTokens}</span>
+            <em>source: Z CHAMBER only // odds: 1%</em>
+            {isAcquired && <em>the rarest refusal has entered the NOPEDEX.</em>}
+            {isAcquired && zNopeEntity ? (
+              <div className="z-chamber-card-wrap">{renderStickerCard(zNopeEntity, 0)}</div>
+            ) : (
+              <div className="z-signal-teaser">
+                <b>Z SIGNAL</b>
+                <small>status: unresolved</small>
+                <small>source: Z CHAMBER only</small>
+                <small>odds: 1%</small>
+                <span>The final NOPE is not in the normal machine.</span>
+                <span>Earn a Z Roll.</span>
+                <span>Roll 1.</span>
+                <span>Probably don't.</span>
+              </div>
+            )}
+            <div className="z-signal-expanded-actions">
+              {zRollTokens > 0 && !isAcquired && (
+                <button type="button" onClick={openZChamber}>
+                  [ ENTER Z CHAMBER ]
+                </button>
+              )}
+              <button type="button" onClick={() => setIsZSignalExpanded(false)}>
+                COLLAPSE Z SIGNAL
+              </button>
+            </div>
+          </div>
         )}
       </section>
     );
@@ -4445,7 +5004,7 @@ ${shareUrl}`;
               <span>rarity: Z NOPE</span>
               <em>odds: 1%</em>
               <em>source: Z CHAMBER</em>
-              {activeZRollResult.scoreBonus > 0 && <b>Z NOPE BONUS: +{activeZRollResult.scoreBonus} NOPE SCORE</b>}
+              {activeZRollResult.scoreBonus > 0 && <b>Z NOPE BONUS: +{formatScoreAmount(activeZRollResult.scoreBonus)} NOPE SCORE</b>}
               <b>value: still zero</b>
               <small>The rarest refusal has entered your NOPEDEX.</small>
               <small>Probability has stopped taking calls.</small>
@@ -4473,16 +5032,13 @@ ${shareUrl}`;
           ) : isFailure ? (
             <>
               <p>Z SAID NOPE</p>
-              <strong>ROLL RESULT: {activeZRollResult.result} / 100</strong>
               <span>You needed 1.</span>
-              <span>You got {activeZRollResult.result}.</span>
-              {activeZRollResult.scoreBonus > 0 && <b>Z FAILURE BONUS: +{activeZRollResult.scoreBonus} NOPE SCORE</b>}
+              <span>You rolled {activeZRollResult.result}.</span>
               <b>That is not 1.</b>
-              {zRollTokens <= 0 && (
+              {activeZRollResult.scoreBonus > 0 && (
                 <>
-                  <small>The chamber is empty.</small>
-                  <small>The machine suggests regret everything.</small>
-                  <small>This is not financial advice. It is worse.</small>
+                  <strong>Z FAILURE BONUS</strong>
+                  <b>+{formatScoreAmount(activeZRollResult.scoreBonus)} NOPE SCORE</b>
                 </>
               )}
               <div className="z-chamber-actions">
@@ -4766,7 +5322,7 @@ ${shareUrl}`;
 
   return (
     <main
-      className={`nope-page ${isTelegramMiniApp ? "telegram-mini-app" : ""} ${isGlitching ? "is-glitching" : ""} ${isAmbientGlitch ? "ambient-glitch" : ""} ${isNopeIdle ? "nope-idle" : ""}`}
+      className={`nope-page ${isTelegramMiniApp ? "telegram-mini-app" : ""} ${isGlitching ? "is-glitching" : ""} ${isAmbientGlitch ? "ambient-glitch" : ""} ${isNopeIdle ? "nope-idle" : ""} ${isNopeSurgeActive ? "nope-surge-active" : ""}`}
     >
       <div className="crt-noise" />
       <div className="app-code-rain" aria-hidden="true">
@@ -4785,8 +5341,8 @@ ${shareUrl}`;
                 "--context-score-y": burst.position ? `${burst.position.top}%` : "44%",
               }}
             >
-              <span>+{burst.amount}</span>
-              <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
+              <span>+{burst.formattedAmount}</span>
+              <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}{burst.surgeApplied ? " // SURGE x2" : ""}</small>
             </b>
           ))}
         </div>
@@ -4810,6 +5366,25 @@ ${shareUrl}`;
         </div>
       )}
       {ambientWarning && <div className="glitch-warning">{ambientWarning}</div>}
+      {showBootPopup && (
+        <section className="boot-popup-overlay" aria-modal="true" role="dialog" aria-labelledby="boot-popup-title">
+          <div className="boot-popup-card">
+            <div className="boot-popup-titlebar">
+              <span className="terminal-light red" />
+              <span className="terminal-light yellow" />
+              <span className="terminal-light green" />
+              <p id="boot-popup-title">NOPE OS BOOT NOTICE</p>
+            </div>
+            <div className="boot-popup-text" data-boot-phase={bootPopupPhase}>
+              <span>{bootPopupText || " "}</span>
+              {bootPopupPhase === "typing" && <span className="terminal-cursor" />}
+            </div>
+            <button type="button" onClick={closeBootPopup}>
+              TAKE ME TO THE FUCKING BUTTON
+            </button>
+          </div>
+        </section>
+      )}
       <aside
         className={`nope-score ${isScoreHudDragging ? "is-dragging" : ""}`}
         aria-label="NOPE score"
@@ -4841,8 +5416,8 @@ ${shareUrl}`;
                   key={burst.id}
                   style={{ "--burst-index": scoreBursts.length - index - 1 }}
                 >
-                  <span>+{burst.amount}</span>
-                  <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}</small>
+                  <span>+{burst.formattedAmount}</span>
+                  <small>{burst.reason}{burst.comboApplied ? ` // COMBO x${NOPE_COMBO_MULTIPLIER}` : ""}{burst.surgeApplied ? " // SURGE x2" : ""}</small>
                 </b>
               ))}
             </div>
@@ -4860,7 +5435,7 @@ ${shareUrl}`;
             <span className="terminal-light red" />
             <span className="terminal-light yellow" />
             <span className="terminal-light green" />
-            <p>NOPE MACHINE.exe</p>
+            <p>NOPE OS FEED</p>
           </div>
 
           <div className="terminal-screen">
@@ -4961,6 +5536,12 @@ ${shareUrl}`;
             {comboNotice.type === "online" && <b>x{NOPE_COMBO_MULTIPLIER} NOPE SCORE</b>}
           </div>
         )}
+        {showFirstPressPrompt && (
+          <div className="first-press-prompt" aria-hidden="true">
+            <span>PRESS THE BIG STUPID BUTTON</span>
+            <b>↓ ↓ ↓</b>
+          </div>
+        )}
         <button
           className="mega-nope image-nope-button"
           type="button"
@@ -4969,26 +5550,91 @@ ${shareUrl}`;
         >
           <img src="/images/nopebutton.png" alt="NOPE" />
         </button>
-        <div className="status-panel">
+        <aside
+          className={`status-panel ${isStatsExpanded ? "expanded" : "collapsed"}`}
+          aria-label="NOPE progress stats"
+          aria-expanded={isStatsExpanded}
+          role="button"
+          tabIndex={0}
+          onClick={toggleStatsPanel}
+          onKeyDown={handleStatsPanelKeyDown}
+        >
           <div className="status-row status-counts">
             <span className="stat-chunk">YOUR NOPES: {formattedCount}</span>
             <span className={`stat-chunk worldwide-nopes ${globalCountPulse ? "is-updating" : ""}`}>
               WORLDWIDE NOPES: {formattedGlobalCount}
             </span>
+            <span className="status-toggle-hint">{isStatsExpanded ? "hide stats" : "decode stats"}</span>
           </div>
-          <div className="status-row status-stats">
-            <span className="stat-chunk">GARBAGE: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL}</span>
-            <span className="stat-chunk">LOOPS: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL}</span>
-            <span className="stat-chunk">MYTHIC: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")}</span>
-            <span className="stat-chunk">UBER: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")}</span>
-            <span className="stat-chunk">ACHIEVEMENTS: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}</span>
+          <div className="status-expanded-rows" aria-hidden={!isStatsExpanded}>
+            <div className="status-row status-stats">
+              <span className="stat-chunk">GARBAGE: {normalCollectedCount.toString().padStart(3, "0")}/{NORMAL_TOTAL}</span>
+              <span className="stat-chunk">LOOPS: {gifCollectedCount.toString().padStart(3, "0")}/{GIF_TOTAL}</span>
+              <span className="stat-chunk">MYTHIC: {mythicCollectedCount.toString().padStart(3, "0")}/{MYTHIC_TOTAL.toString().padStart(3, "0")}</span>
+              <span className="stat-chunk">UBER: {uberCollectedCount.toString().padStart(3, "0")}/{UBER_TOTAL.toString().padStart(3, "0")}</span>
+              <span className="stat-chunk">ACHIEVEMENTS: {unlockedAchievementCount.toString().padStart(3, "0")}/{achievements.length.toString().padStart(3, "0")}</span>
+            </div>
+            <div className="status-row status-latest">
+              <span className="stat-chunk">
+                LATEST: {latestDiscovery ? `${latestDiscovery.type === "uber" ? "UBER - " : latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "NONE. PRESS THE STUPID BUTTON."}
+              </span>
+            </div>
           </div>
-          <div className="status-row status-latest">
-            <span className="stat-chunk">
-              LATEST: {latestDiscovery ? `${latestDiscovery.type === "uber" ? "UBER - " : latestDiscovery.type === "mythic" ? "MYTHIC - " : ""}${latestDiscovery.name}` : "NONE. PRESS THE STUPID BUTTON."}
-            </span>
-          </div>
-        </div>
+        </aside>
+        <aside
+          className={`bad-idea-panel ${isNopeSurgeActive ? "surge-online" : ""}`}
+          aria-label="Current Bad Idea"
+          role={activeBadIdea ? "button" : undefined}
+          tabIndex={activeBadIdea ? 0 : undefined}
+          onClick={activeBadIdea ? openBadIdeaDetails : undefined}
+          onKeyDown={activeBadIdea ? handleBadIdeaPanelKeyDown : undefined}
+        >
+          {activeBadIdea ? (
+            <>
+              <div>
+                <span>CURRENT BAD IDEA</span>
+                <strong>{activeBadIdea.title}</strong>
+              </div>
+              <p>
+                {currentBadIdeaDisplayProgress} / {activeBadIdea.target}
+              </p>
+              <small>reward: +{formatScoreAmount(activeBadIdea.reward)} NOPE SCORE</small>
+              <div
+                className={`nope-surge-meter ${isNopeSurgeReady ? "ready" : ""} ${isNopeSurgeActive ? "active" : ""} ${nopeSurgeChargeFeedback ? `charging ${nopeSurgeChargeFeedback.tier}` : ""}`}
+                data-surge-help={NOPE_SURGE_HELP_TEXT}
+                style={{ "--surge-charge": isNopeSurgeActive ? "100%" : `${nopeSurgeChargePercent}%` }}
+                title={NOPE_SURGE_HELP_TEXT}
+              >
+                <span>{isNopeSurgeActive ? "NOPE SURGE ACTIVE" : isNopeSurgeReady ? "NOPE SURGE READY" : "NOPE SURGE CHARGE"}</span>
+                <strong>{isNopeSurgeActive ? formattedNopeSurgeTime : `${nopeSurgeChargePercent}%`}</strong>
+                {nopeSurgeChargeFeedback?.label && !isNopeSurgeActive && (
+                  <em className="nope-surge-charge-pop">{nopeSurgeChargeFeedback.label}</em>
+                )}
+              </div>
+              {isNopeSurgeReady && !isNopeSurgeActive && (
+                <button className="nope-surge-activate-button" type="button" onClick={handleNopeSurgeActivateClick}>
+                  ACTIVATE NOPE SURGE
+                </button>
+              )}
+              {isNopeSurgeReady && !isNopeSurgeActive && (
+                <em>purple mode loaded. use it before the machine develops standards.</em>
+              )}
+              {isNopeSurgeActive && (
+                <b>
+                  NOPE SURGE ACTIVE // x2 SCORE // {formattedNopeSurgeTime}
+                </b>
+              )}
+            </>
+          ) : (
+            <>
+              <div>
+                <span>CURRENT BAD IDEA</span>
+                <strong>NO BAD IDEA LOADED</strong>
+              </div>
+              <small>machine briefly developed standards.</small>
+            </>
+          )}
+        </aside>
         <button className="next-badge-strip" type="button" onClick={openAchievementsTab}>
           {activeNextBadge ? (
             <>
@@ -5033,14 +5679,17 @@ ${shareUrl}`;
       </section>
 
       <footer className="footer-links">
-        <a href="#" onClick={(event) => event.preventDefault()}>
-          Telegram
+        <a href="https://t.me/notpepetelegram" target="_blank" rel="noopener noreferrer">
+          <svg className="footer-telegram-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M21.9 4.3 18.7 19c-.2 1-1 1.2-1.8.7l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.3L6.1 12.2l-5-1.6c-1-.3-1-1 .2-1.5L20.8 1.6c.9-.3 1.7.2 1.1 2.7Z" />
+          </svg>
+          <span>Telegram</span>
         </a>
-        <a href="#" onClick={(event) => event.preventDefault()}>
+        <a href="https://dexscreener.com/ton/EQApjQK1qpZ3BjECMaK0GkseWS7qfnhA5YXdP-YKUkK2Hnon" target="_blank" rel="noopener noreferrer">
           Chart
         </a>
-        <a href="#" onClick={(event) => event.preventDefault()}>
-          Buy? lol
+        <a href="https://t.me/dtrade?start=1Ea1QVDEuW" target="_blank" rel="noopener noreferrer">
+          Dtrade
         </a>
         <a href="#" onClick={copyContract}>
           contract
@@ -5072,12 +5721,73 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={forceZSuccess}>
           [ force z success ]
         </button>
+        <button className="dev-reset-button" type="button" onClick={forceNopeSurge}>
+          [ force nope surge ]
+        </button>
         {zRollTokens > 0 && !znopeAcquired && (
           <button className="dev-reset-button" type="button" onClick={openZChamber}>
             [ enter z chamber ]
           </button>
         )}
       </footer>
+
+      {activeBadIdeaCompletion && (
+        <section className="bad-idea-modal-overlay" aria-modal="true" role="dialog">
+          <div className="bad-idea-modal-card">
+            <p>BAD IDEA COMPLETE</p>
+            <strong>{activeBadIdeaCompletion.mission.title}</strong>
+            <span>reward:</span>
+            <b>+{formatScoreAmount(activeBadIdeaCompletion.mission.reward)} NOPE SCORE</b>
+            <button type="button" onClick={acceptBadIdeaCompletion}>
+              ACCEPT TERRIBLE PROGRESS
+            </button>
+          </div>
+        </section>
+      )}
+
+      {showBadIdeaDetails && activeBadIdea && (
+        <section
+          className="bad-idea-modal-overlay"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => handleModalBackdropClick(event, () => setShowBadIdeaDetails(false))}
+        >
+          <div className="bad-idea-modal-card bad-idea-detail-card">
+            <p>CURRENT BAD IDEA</p>
+            <strong>{activeBadIdea.title}</strong>
+            <span>task:</span>
+            <b>{getBadIdeaTaskText(activeBadIdea)}</b>
+            <span>progress:</span>
+            <b>
+              {currentBadIdeaDisplayProgress} / {activeBadIdea.target}
+            </b>
+            <span>reward:</span>
+            <b>+{formatScoreAmount(activeBadIdea.reward)} NOPE SCORE</b>
+            <span>NOPE SURGE:</span>
+            <b>meaningful score fills it. larger mistakes fill it faster.</b>
+            <small>NOPE SURGE fills from meaningful score. Find trash, grind trash, burn trash, click static, fail Z rolls. Button spam barely helps. Obviously.</small>
+            <small>The machine has suggested a terrible objective. Following it is optional. Unfortunately, numbers may go up.</small>
+            <button type="button" onClick={() => setShowBadIdeaDetails(false)}>
+              RETURN TO BAD DECISIONS
+            </button>
+          </div>
+        </section>
+      )}
+
+      {showNopeSurgePopup && (
+        <section className="nope-surge-modal-overlay" aria-modal="true" role="dialog" onClick={(event) => handleModalBackdropClick(event, () => setShowNopeSurgePopup(false))}>
+          <div className="nope-surge-modal-card">
+            <p>NOPE SURGE ONLINE</p>
+            <strong>The matrix has gone purple.</strong>
+            <span>That is probably not good.</span>
+            <b>x2 score for 45 seconds.</b>
+            <small>Use it badly.</small>
+            <button type="button" onClick={() => setShowNopeSurgePopup(false)}>
+              ABUSE THE MALFUNCTION
+            </button>
+          </div>
+        </section>
+      )}
 
       {activeSignalFragment && (
         <section
@@ -5092,7 +5802,7 @@ ${shareUrl}`;
             {activeSignalFragment.body.map((line) => (
               <p key={line}>{line}</p>
             ))}
-            {activeSignalFragment.scoreBonus > 0 && <b>SIGNAL DECODED: +{activeSignalFragment.scoreBonus} NOPE SCORE</b>}
+            {activeSignalFragment.scoreBonus > 0 && <b>SIGNAL DECODED: +{formatScoreAmount(activeSignalFragment.scoreBonus)} NOPE SCORE</b>}
             <small>fragments decoded: {signalFragmentsFound.toString().padStart(3, "0")}</small>
             <button type="button" onClick={() => setActiveSignalFragment(null)}>
               [ {activeSignalFragment.button} ]
@@ -5298,7 +6008,12 @@ ${shareUrl}`;
             <span>{activeCraftResult.entity.name}</span>
             <em>{activeCraftResult.entity.rarityLabel} // odds: {formatDropChance(activeCraftResult.entity.dropChance)}</em>
             <em>value: still zero</em>
-            {activeCraftResult.scoreBonus > 0 && <b>GRINDER BONUS: +{activeCraftResult.scoreBonus} NOPE SCORE</b>}
+            {activeCraftResult.scoreBonus > 0 && (
+              <>
+                <strong>{activeCraftResult.scoreLabel ?? "GRINDER BONUS"}</strong>
+                <b>+{formatScoreAmount(activeCraftResult.scoreBonus)} NOPE SCORE</b>
+              </>
+            )}
             <b>{activeCraftResult.wasNew ? "NEW NOPE ADDED TO NOPEDEX" : "DUPLICATE GENERATED - you upgraded disappointment."}</b>
             <button type="button" onClick={dismissCraftResult}>
               [ accept recycled disappointment ]
@@ -5376,7 +6091,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !activeZSignalChargePopup && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && (
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !activeZSignalChargePopup && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && !activeBadIdeaCompletion && !showBadIdeaDetails && !showNopeSurgePopup && (
         <section
           className="achievement-modal-overlay"
           aria-modal="true"
@@ -5389,7 +6104,7 @@ ${shareUrl}`;
             <strong>{activeAchievement.name}</strong>
             <span>{activeAchievement.description}</span>
             <em>reward: {activeAchievement.reward}</em>
-            {activeAchievement.pendingScoreBonus > 0 && <b>ACHIEVEMENT BONUS: +{activeAchievement.pendingScoreBonus} NOPE SCORE</b>}
+            {activeAchievement.pendingScoreBonus > 0 && <b>ACHIEVEMENT BONUS: +{formatScoreAmount(activeAchievement.pendingScoreBonus)} NOPE SCORE</b>}
             <b>value gained: zero</b>
             <button type="button" onClick={dismissAchievement} disabled={!isImportantModalActionReady}>
               [ erm... yea... nope ]

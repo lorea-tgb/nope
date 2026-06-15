@@ -46,6 +46,10 @@ export const defaultAchievementStats = {
   zRollAttempts: 0,
   zRollFailures: 0,
   zSignalChargeFillCount: 0,
+  badIdeaCompletedCount: 0,
+  nopeSurgeActivationCount: 0,
+  nopeSurgeScoreEventCount: 0,
+  nopeSurgeTriggerCount: 0,
 };
 
 const UBER_IDS = [
@@ -488,6 +492,11 @@ export const achievements = [
   { id: "the-number-wont-stop", name: "THE NUMBER WON'T STOP", description: "kept the NOPE SCORE rolling for 10 seconds.", reward: "unnecessary momentum", check: ({ scoreRollingTenSecondCount }) => scoreRollingTenSecondCount >= 1 },
   { id: "signal-battery", name: "SIGNAL BATTERY", description: "charged the Z signal to 100%.", reward: "leaked probability", check: ({ zSignalChargeFillCount }) => zSignalChargeFillCount >= 1 },
   { id: "overcharged-nothing", name: "OVERCHARGED NOTHING", description: "charged the Z signal 5 times.", reward: "recurring mistake", check: ({ zSignalChargeFillCount }) => zSignalChargeFillCount >= 5 },
+  { id: "bad-idea-enjoyer", name: "BAD IDEA ENJOYER", description: "completed 1 Current Bad Idea.", reward: "questionable direction", check: ({ badIdeaCompletedCount }) => badIdeaCompletedCount >= 1 },
+  { id: "bad-idea-addict", name: "BAD IDEA ADDICT", description: "completed 5 Current Bad Ideas.", reward: "structured regret", check: ({ badIdeaCompletedCount }) => badIdeaCompletedCount >= 5 },
+  { id: "purple-problem", name: "PURPLE PROBLEM", description: "activated NOPE SURGE once.", reward: "temporary malfunction", check: ({ nopeSurgeActivationCount, nopeSurgeTriggerCount }) => (nopeSurgeActivationCount ?? nopeSurgeTriggerCount) >= 1 },
+  { id: "surge-abuser", name: "SURGE ABUSER", description: "earned score during NOPE SURGE 10 times.", reward: "purple fingers", check: ({ nopeSurgeScoreEventCount }) => nopeSurgeScoreEventCount >= 10 },
+  { id: "save-it-for-what", name: "SAVE IT FOR WHAT?", description: "activated NOPE SURGE while the meter was full.", reward: "delayed bad decision", check: ({ nopeSurgeActivationCount }) => nopeSurgeActivationCount >= 1 },
   { id: "terminal-idiot-press", name: "TERMINAL IDIOT", description: "pressed NOPE 25 times.", reward: "questionable pride", check: ({ nopeCount }) => nopeCount >= 25 },
   { id: "nope-enjoyer-press", name: "NOPE ENJOYER", description: "pressed NOPE 50 times.", reward: "absolutely nothing", check: ({ nopeCount }) => nopeCount >= 50 },
   { id: "high-priest-press", name: "HIGH PRIEST OF NO", description: "pressed NOPE 100 times.", reward: "ceremonial regret", check: ({ nopeCount }) => nopeCount >= 100 },

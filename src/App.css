@@ -4623,12 +4623,34 @@ button {
   font-size: 0.76rem;
 }
 
-.footer-telegram-icon {
+.footer-link-icon {
   width: 0.78rem;
   height: 0.78rem;
   flex: 0 0 auto;
+  align-self: baseline;
+}
+
+.footer-telegram-icon {
   fill: var(--ton-blue);
   filter: drop-shadow(0 0 5px rgba(0, 152, 234, 0.28));
+}
+
+.footer-chart-icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #6ee7c8;
+  filter: drop-shadow(0 0 4px rgba(110, 231, 200, 0.2));
+}
+
+.footer-dtrade-logo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px rgba(0, 152, 234, 0.22));
 }
 
 .footer-links a + a::before {
@@ -4647,6 +4669,11 @@ button {
 .footer-links a:hover .footer-telegram-icon,
 .footer-links a:focus-visible .footer-telegram-icon {
   fill: #89dcff;
+}
+
+.footer-links a:hover .footer-chart-icon,
+.footer-links a:focus-visible .footer-chart-icon {
+  color: currentColor;
 }
 
 .dev-reset-button {

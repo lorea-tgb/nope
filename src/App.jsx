@@ -5680,16 +5680,26 @@ ${shareUrl}`;
 
       <footer className="footer-links">
         <a href="https://t.me/notpepetelegram" target="_blank" rel="noopener noreferrer">
-          <svg className="footer-telegram-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <svg className="footer-link-icon footer-telegram-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M21.9 4.3 18.7 19c-.2 1-1 1.2-1.8.7l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5.1 9.3-8.4c.4-.4-.1-.6-.6-.3L6.1 12.2l-5-1.6c-1-.3-1-1 .2-1.5L20.8 1.6c.9-.3 1.7.2 1.1 2.7Z" />
           </svg>
           <span>Telegram</span>
         </a>
         <a href="https://dexscreener.com/ton/EQApjQK1qpZ3BjECMaK0GkseWS7qfnhA5YXdP-YKUkK2Hnon" target="_blank" rel="noopener noreferrer">
-          Chart
+          <svg className="footer-link-icon footer-chart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M4 19h16" />
+            <path d="M7 15V9" />
+            <path d="M7 7V5" />
+            <path d="M12 17v-4" />
+            <path d="M12 11V7" />
+            <path d="M17 14V8" />
+            <path d="M17 6V4" />
+          </svg>
+          <span>Chart</span>
         </a>
         <a href="https://t.me/dtrade?start=1Ea1QVDEuW" target="_blank" rel="noopener noreferrer">
-          Dtrade
+          <img className="footer-link-icon footer-dtrade-logo" src="/images/dtradelogo.png" alt="Dtrade" />
+          <span>Dtrade</span>
         </a>
         <a href="#" onClick={copyContract}>
           contract

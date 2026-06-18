@@ -161,6 +161,7 @@ const TELEGRAM_LOGIN_BOT_USERNAME = "NotPepeNopeBot";
 const TELEGRAM_LOGIN_CALLBACK_NAME = "__nopeTelegramLogin";
 const TELEGRAM_LOGIN_WIDGET_SRC = "https://telegram.org/js/telegram-widget.js";
 const TELEGRAM_AUTH_VERIFY_ENDPOINT = "/api/telegram-auth/verify";
+const IS_DEV_MODE = import.meta.env.DEV;
 const CURRENT_BAD_IDEAS = [
   {
     id: "press_25",
@@ -3767,6 +3768,23 @@ export default function App() {
     window.location.reload();
   }
 
+  function resetLocalNopeScoreForDev() {
+    window.cancelAnimationFrame(scoreAnimationFrameRef.current);
+    window.clearTimeout(scoreSettledTimerRef.current);
+    scoreBurstTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scoreBurstTimersRef.current = [];
+    nopeScoreRef.current = 0;
+    displayedNopeScoreRef.current = 0;
+    scoreHeatRef.current = 0;
+    window.localStorage.setItem(STORAGE_KEYS.nopeScore, "0");
+    setNopeScore(0);
+    setDisplayedNopeScore(0);
+    setScoreBursts([]);
+    setScoreHeat(0);
+    setIsScoreSettled(true);
+    addInstantNopeLine("NOPE > local score wiped. dignity unchanged.");
+  }
+
   function closeBootPopup() {
     bootRunRef.current += 1;
     clearBootPopupTimers();
@@ -6115,6 +6133,11 @@ ${shareUrl}`;
         <button className="dev-reset-button" type="button" onClick={() => setShowResetConfirm(true)}>
           [ regret everything ]
         </button>
+        {IS_DEV_MODE && (
+          <button className="dev-reset-button" type="button" onClick={resetLocalNopeScoreForDev}>
+            [dev] reset score
+          </button>
+        )}
         <button className="dev-reset-button" type="button" onClick={forceUberDiscovery}>
           [ force uber ]
         </button>

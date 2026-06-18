@@ -125,6 +125,7 @@ export default async function handler(req) {
   return jsonResponse({
     telegramId: payload.id,
     username,
+    ...(typeof payload.photo_url === "string" && payload.photo_url.trim() ? { photoUrl: payload.photo_url.trim() } : {}),
     connectedAt: new Date().toISOString(),
     source: "telegram-web-login",
   });

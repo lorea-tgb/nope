@@ -40,6 +40,7 @@ export const defaultAchievementStats = {
   signalNormalClickCount: 0,
   signalTonClickCount: 0,
   signalZClickCount: 0,
+  telegramConnectCount: 0,
   uberSacrificeCount: 0,
   zChamberTeaserSeen: 0,
   zNopeAcquired: 0,
@@ -517,6 +518,7 @@ export const ranks = [
 
 export const achievements = [
   { id: "first-bad-decision", name: "FIRST BAD DECISION", description: "pressed NOPE once.", reward: "nothing", check: ({ nopeCount }) => nopeCount >= 1 },
+  { id: "telegram_public_shame", name: "PUBLIC SHAME ENABLED", description: "connected Telegram so NOPE can remember the username.", reward: "+10,000 NOPE SCORE", check: ({ telegramConnectCount }) => telegramConnectCount >= 1 },
   { id: "mild-regret", name: "MILD REGRET", description: "pressed NOPE 10 times.", reward: "still nothing", check: ({ nopeCount }) => nopeCount >= 10 },
   { id: "peeked-at-the-z", name: "PEEKED AT THE Z", description: "entered the Z Chamber before you deserved it.", reward: "forbidden preview", check: ({ zChamberTeaserSeen }) => zChamberTeaserSeen >= 1 },
   { id: "found-the-static", name: "FOUND THE STATIC", description: "clicked a background signal you should have ignored.", reward: "corrupted curiosity", check: ({ signalFragmentClickCount }) => signalFragmentClickCount >= 1 },

@@ -62,6 +62,7 @@ const STORAGE_KEYS = {
   signalTypeClicks: "nope_signal_type_clicks",
   scoreCombo: "nope_score_combo",
   telegramPlayer: "nope_telegram_player",
+  telegramConnectSeen: "nope_telegram_connect_seen",
   zSignalCharge: "nope_z_signal_charge",
 };
 const LEGACY_SCORE_HUD_POSITION_KEY = "nope_score_hud_position";
@@ -676,8 +677,29 @@ function normalizeTelegramUsername(username) {
   return username.trim().replace(/^@+/, "");
 }
 
+function normalizeTelegramPhotoUrl(photoUrl) {
+  if (typeof photoUrl !== "string") {
+    return "";
+  }
+
+  const trimmedPhotoUrl = photoUrl.trim();
+
+  if (!trimmedPhotoUrl) {
+    return "";
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedPhotoUrl);
+
+    return parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:" ? parsedUrl.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
 function createTelegramPlayer(user, source = "telegram-mini-app") {
   const username = normalizeTelegramUsername(user?.username);
+  const photoUrl = normalizeTelegramPhotoUrl(user?.photo_url);
 
   if (!user?.id || !username) {
     return null;
@@ -686,6 +708,7 @@ function createTelegramPlayer(user, source = "telegram-mini-app") {
   return {
     telegramId: user.id,
     username,
+    ...(photoUrl ? { photoUrl } : {}),
     connectedAt: new Date().toISOString(),
     source,
   };
@@ -693,6 +716,7 @@ function createTelegramPlayer(user, source = "telegram-mini-app") {
 
 function normalizeVerifiedTelegramPlayer(player) {
   const username = normalizeTelegramUsername(player?.username);
+  const photoUrl = normalizeTelegramPhotoUrl(player?.photoUrl);
   const source = player?.source === "telegram-web-login" ? "telegram-web-login" : "telegram-mini-app";
 
   if (!player?.telegramId || !username) {
@@ -702,6 +726,7 @@ function normalizeVerifiedTelegramPlayer(player) {
   return {
     telegramId: player.telegramId,
     username,
+    ...(photoUrl ? { photoUrl } : {}),
     connectedAt: player.connectedAt || new Date().toISOString(),
     source,
   };
@@ -724,6 +749,7 @@ function readStoredTelegramPlayer() {
     return normalizeVerifiedTelegramPlayer({
       telegramId: parsedValue.telegramId,
       username,
+      photoUrl: parsedValue.photoUrl,
       connectedAt: parsedValue.connectedAt,
       source: parsedValue.source,
     });
@@ -845,6 +871,7 @@ export default function App() {
   const [showTelegramLoginModal, setShowTelegramLoginModal] = useState(false);
   const [telegramLoginModalMode, setTelegramLoginModalMode] = useState("browser");
   const [isTelegramLoginVerifying, setIsTelegramLoginVerifying] = useState(false);
+  const [activeTelegramConnectPopup, setActiveTelegramConnectPopup] = useState(null);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   const [activeSignalFragment, setActiveSignalFragment] = useState(null);
   const [visibleSignalFragments, setVisibleSignalFragments] = useState([]);
@@ -1016,6 +1043,7 @@ export default function App() {
     activeStickerInspectEntity ||
     activeAchievementInspect ||
     showTelegramLoginModal ||
+    activeTelegramConnectPopup ||
     showLeaderboardModal ||
     isZChamberOpen ||
     activeZTokenPopup ||
@@ -1039,16 +1067,20 @@ export default function App() {
   const telegramDiscoveryHapticTimerRef = useRef(null);
   const telegramSignalLineRef = useRef(false);
   const telegramWidgetContainerRef = useRef(null);
+  const telegramPostConnectRef = useRef(null);
+  const hadStoredTelegramPlayerRef = useRef(Boolean(telegramPlayer));
+  const activeTelegramConnectPopupRef = useRef(activeTelegramConnectPopup);
   const isTelegramMiniApp = Boolean(telegramWebApp?.initData && telegramWebApp?.initDataUnsafe?.user);
   const telegramUser = telegramWebApp?.initDataUnsafe?.user ?? null;
   const telegramUsername = telegramPlayer?.username ?? "";
+  const telegramPhotoUrl = telegramPlayer?.photoUrl ?? "";
   const isTelegramConnected = Boolean(telegramUsername);
 
   const persistTelegramPlayer = useCallback((player) => {
     const nextTelegramPlayer = normalizeVerifiedTelegramPlayer(player);
 
     if (!nextTelegramPlayer) {
-      return false;
+      return null;
     }
 
     setTelegramPlayer(nextTelegramPlayer);
@@ -1059,8 +1091,57 @@ export default function App() {
       // Local identity is a convenience layer only; gameplay stays anonymous if storage fails.
     }
 
-    return true;
+    return nextTelegramPlayer;
   }, []);
+
+  useEffect(() => {
+    if (!hadStoredTelegramPlayerRef.current) {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.telegramConnectSeen, "true");
+    } catch {
+      // Existing connected players should not get a delayed first-connect popup.
+    }
+  }, []);
+
+  useEffect(() => {
+    activeTelegramConnectPopupRef.current = activeTelegramConnectPopup;
+  }, [activeTelegramConnectPopup]);
+
+  useEffect(() => {
+    telegramPostConnectRef.current = (connectedTelegramPlayer) => {
+      if (!connectedTelegramPlayer) {
+        return;
+      }
+
+      const hasAlreadySeenConnect = hadStoredTelegramPlayerRef.current || readStoredString(STORAGE_KEYS.telegramConnectSeen) === "true";
+      hadStoredTelegramPlayerRef.current = true;
+
+      try {
+        window.localStorage.setItem(STORAGE_KEYS.telegramConnectSeen, "true");
+      } catch {
+        // The popup is cosmetic; Telegram identity is already stored for this session.
+      }
+
+      if (!hasAlreadySeenConnect) {
+        activeTelegramConnectPopupRef.current = { username: connectedTelegramPlayer.username };
+        setActiveTelegramConnectPopup({ username: connectedTelegramPlayer.username });
+      }
+
+      const hasTelegramAchievement = unlockedAchievementsRef.current.includes("telegram_public_shame");
+      const nextStats = (achievementStatsRef.current.telegramConnectCount ?? 0) < 1
+        ? updateAchievementStats({ telegramConnectCount: 1 })
+        : achievementStatsRef.current;
+
+      if (!hasTelegramAchievement) {
+        queueAchievementUnlocks(buildAchievementSnapshot({ achievementStats: nextStats }), 450, { skipCombo: true });
+      }
+
+      addInstantNopeLine(`Telegram connected as @${connectedTelegramPlayer.username}. public shame layer armed.`);
+    };
+  });
 
   const openTelegramMissingUsernameMessage = useCallback(() => {
     setIsTelegramLoginVerifying(false);
@@ -1097,11 +1178,14 @@ export default function App() {
         return;
       }
 
-      if (!persistTelegramPlayer(verifiedPlayer)) {
+      const connectedTelegramPlayer = persistTelegramPlayer(verifiedPlayer);
+
+      if (!connectedTelegramPlayer) {
         openTelegramMissingUsernameMessage();
         return;
       }
 
+      telegramPostConnectRef.current?.(connectedTelegramPlayer);
       setIsTelegramLoginVerifying(false);
       setShowTelegramLoginModal(false);
     } catch {
@@ -2268,6 +2352,7 @@ export default function App() {
         showGrinderReadyPromptRef.current ||
         activeZTokenPopupRef.current ||
         showZChamberTeaserPopupRef.current ||
+        activeTelegramConnectPopupRef.current ||
         activeStickerInspectEntity ||
         activeAchievementInspect ||
         isZChamberOpenRef.current ||
@@ -2815,6 +2900,7 @@ export default function App() {
       "terminal-idiot-press": [snapshot.nopeCount, 25, "NOPE presses"],
       "the-number-wont-stop": [snapshot.scoreRollingTenSecondCount, 1, "rolling streaks"],
       "the-final-no": [snapshot.zNopeAcquired, 1, "Z NOPE"],
+      telegram_public_shame: [snapshot.telegramConnectCount, 1, "Telegram connections"],
       "trash-alchemist": [snapshot.grinderUseCount, 1, "grinder uses"],
       "total-nopeification": [
         snapshot.normalCollectedCount + snapshot.gifCollectedCount + snapshot.mythicCollectedCount,
@@ -4724,6 +4810,7 @@ ${shareUrl}`;
       "overcharged-nothing",
       "phoenix-nopedex",
       "purple-problem",
+      "telegram_public_shame",
       "rarely-worth-it",
       "red-flag-clicker",
       "scorched-earth",
@@ -5345,6 +5432,12 @@ ${shareUrl}`;
     setShowTelegramLoginModal(false);
   }
 
+  function closeTelegramConnectPopup() {
+    activeTelegramConnectPopupRef.current = null;
+    setActiveTelegramConnectPopup(null);
+    startNextAchievement(250);
+  }
+
   function openTelegramBrowserConnectionMessage() {
     setIsTelegramLoginVerifying(false);
     setTelegramLoginModalMode("browser");
@@ -5368,7 +5461,14 @@ ${shareUrl}`;
       return;
     }
 
-    persistTelegramPlayer(nextTelegramPlayer);
+    const connectedTelegramPlayer = persistTelegramPlayer(nextTelegramPlayer);
+
+    if (!connectedTelegramPlayer) {
+      openTelegramMissingUsernameMessage();
+      return;
+    }
+
+    telegramPostConnectRef.current?.(connectedTelegramPlayer);
     setShowTelegramLoginModal(false);
   }
 
@@ -5427,6 +5527,30 @@ ${shareUrl}`;
               </button>
             </>
           )}
+        </div>
+      </section>
+    );
+  }
+
+  function renderTelegramConnectPopup() {
+    if (!activeTelegramConnectPopup) {
+      return null;
+    }
+
+    return (
+      <section
+        className="telegram-connect-popup-overlay"
+        aria-modal="true"
+        role="dialog"
+        onClick={(event) => handleModalBackdropClick(event, closeTelegramConnectPopup)}
+      >
+        <div className="telegram-connect-popup-card">
+          <p>TELEGRAM WITNESSED THIS</p>
+          <strong>@{activeTelegramConnectPopup.username} is now connected.</strong>
+          <span>bad decisions may now be public.</span>
+          <button type="button" onClick={closeTelegramConnectPopup}>
+            CONTINUE MAKING THEM
+          </button>
         </div>
       </section>
     );
@@ -5770,14 +5894,35 @@ ${shareUrl}`;
         <div className="nope-cta-row">
           <p>PRESS NOPE. COLLECT WORTHLESS TRASH.</p>
           <div className="telegram-login-control">
-            <button className="telegram-login-button" type="button" onClick={handleTelegramLoginClick}>
-              {isTelegramConnected ? `CONNECTED AS @${telegramUsername}` : "LOG IN WITH TELEGRAM"}
-            </button>
-            <span>{isTelegramConnected ? "bad decisions may now be public" : "optional public shame layer"}</span>
-            {isTelegramConnected && (
-              <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
-                DISCONNECT
-              </button>
+            {isTelegramConnected ? (
+              <div className="telegram-identity-badge" aria-label={`Connected as @${telegramUsername}`}>
+                <div className="telegram-identity-avatar" aria-hidden="true">
+                  {telegramPhotoUrl && (
+                    <img
+                      src={telegramPhotoUrl}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.parentElement?.classList.add("avatar-fallback-active");
+                      }}
+                    />
+                  )}
+                  <span>@</span>
+                </div>
+                <div className="telegram-identity-copy">
+                  <strong>@{telegramUsername}</strong>
+                  <span>PUBLIC SHAME ENABLED</span>
+                </div>
+                <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
+                  DISCONNECT
+                </button>
+              </div>
+            ) : (
+              <>
+                <button className="telegram-login-button" type="button" onClick={handleTelegramLoginClick}>
+                  LOG IN WITH TELEGRAM
+                </button>
+                <span>optional public shame layer</span>
+              </>
             )}
           </div>
         </div>
@@ -6141,6 +6286,7 @@ ${shareUrl}`;
         </section>
       )}
       {renderZChamberModal()}
+      {renderTelegramConnectPopup()}
       {renderTelegramLoginModal()}
       {renderLeaderboardModal()}
 
@@ -6354,7 +6500,7 @@ ${shareUrl}`;
         </section>
       )}
 
-      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !activeZSignalChargePopup && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && !activeBadIdeaCompletion && !showBadIdeaDetails && !showNopeSurgePopup && (
+      {activeAchievement && !activeSacrificeEntity && !activeUberSacrificeEntity && !activeCraftResult && !activeGoodFindModal && !activeZSignalChargePopup && !showZChamberTeaserPopup && !isZChamberOpen && !activeZRollResult && !showGrinderReadyPrompt && !activeBadIdeaCompletion && !showBadIdeaDetails && !showNopeSurgePopup && !activeTelegramConnectPopup && (
         <section
           className="achievement-modal-overlay"
           aria-modal="true"

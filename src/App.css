@@ -2597,6 +2597,7 @@ button {
 }
 
 .telegram-placeholder-modal-overlay,
+.telegram-connect-popup-overlay,
 .leaderboard-modal {
   position: fixed;
   inset: 0;
@@ -2618,6 +2619,7 @@ button {
 }
 
 .telegram-placeholder-modal-card,
+.telegram-connect-popup-card,
 .leaderboard-modal-card {
   width: min(500px, 100%);
   display: grid;
@@ -2651,6 +2653,7 @@ button {
 }
 
 .telegram-placeholder-modal-card p,
+.telegram-connect-popup-card p,
 .leaderboard-modal-card p {
   margin: 0;
   padding: 6px 8px 5px;
@@ -2668,6 +2671,7 @@ button {
 }
 
 .telegram-placeholder-modal-card span,
+.telegram-connect-popup-card span,
 .leaderboard-modal-card span,
 .leaderboard-modal-card small {
   margin: 0;
@@ -2679,6 +2683,17 @@ button {
 .leaderboard-modal-card small {
   color: #89dcff;
   font-weight: 900;
+}
+
+.telegram-connect-popup-card strong {
+  margin: 0;
+  color: rgba(216, 255, 226, 0.96);
+  font-size: clamp(0.94rem, 3vw, 1.12rem);
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+  text-shadow:
+    1px 0 rgba(0, 152, 234, 0.45),
+    0 0 14px rgba(57, 255, 20, 0.18);
 }
 
 .telegram-widget-slot {
@@ -2732,6 +2747,7 @@ button {
 
 .telegram-placeholder-modal-card a,
 .telegram-placeholder-modal-card button,
+.telegram-connect-popup-card button,
 .leaderboard-modal-card button {
   justify-self: center;
   margin-top: 4px;
@@ -2764,6 +2780,8 @@ button {
 .telegram-placeholder-modal-card a:focus-visible,
 .telegram-placeholder-modal-card button:hover,
 .telegram-placeholder-modal-card button:focus-visible,
+.telegram-connect-popup-card button:hover,
+.telegram-connect-popup-card button:focus-visible,
 .leaderboard-modal-card button:hover,
 .leaderboard-modal-card button:focus-visible {
   outline: 2px solid var(--ton-blue);
@@ -3792,7 +3810,7 @@ button {
 .telegram-login-control {
   grid-column: 3;
   justify-self: start;
-  width: min(248px, 100%);
+  width: min(318px, 100%);
   min-width: 0;
   display: grid;
   gap: 3px;
@@ -3847,6 +3865,117 @@ button {
   color: rgba(216, 255, 226, 0.94);
   border-color: rgba(57, 255, 20, 0.44);
   filter: brightness(1.16) saturate(1.12);
+}
+
+.telegram-identity-badge {
+  position: relative;
+  width: min(318px, 100%);
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px;
+  overflow: hidden;
+  border: 1px solid rgba(57, 255, 20, 0.5);
+  color: rgba(216, 255, 226, 0.92);
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(137, 220, 255, 0.055) 0,
+      rgba(137, 220, 255, 0.055) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    linear-gradient(90deg, rgba(0, 152, 234, 0.13), rgba(57, 255, 20, 0.08)),
+    rgba(0, 12, 8, 0.84);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.78),
+    0 0 16px rgba(57, 255, 20, 0.12),
+    inset 0 0 14px rgba(0, 152, 234, 0.1);
+}
+
+.telegram-identity-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(57, 255, 20, 0.13), transparent);
+  opacity: 0;
+  transform: translateX(-75%);
+  transition: opacity 0.36s steps(2, end), transform 0.36s steps(2, end);
+}
+
+.telegram-identity-badge:hover::after,
+.telegram-identity-badge:focus-within::after {
+  opacity: 0.32;
+  transform: translateX(70%);
+}
+
+.telegram-identity-avatar {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(137, 220, 255, 0.72);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(57, 255, 20, 0.2), transparent 62%),
+    rgba(0, 7, 5, 0.94);
+  box-shadow:
+    0 0 0 1px #000,
+    0 0 12px rgba(0, 152, 234, 0.28),
+    inset 0 0 9px rgba(57, 255, 20, 0.12);
+}
+
+.telegram-identity-avatar img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.telegram-identity-avatar.avatar-fallback-active img {
+  display: none;
+}
+
+.telegram-identity-avatar span {
+  position: relative;
+  z-index: 0;
+  color: rgba(57, 255, 20, 0.88);
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
+}
+
+.telegram-identity-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.telegram-identity-copy strong {
+  min-width: 0;
+  color: rgba(216, 255, 226, 0.96);
+  font-size: 0.72rem;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-shadow: 1px 0 rgba(0, 152, 234, 0.38);
+}
+
+.telegram-identity-copy span {
+  color: rgba(137, 220, 255, 0.7);
+  font-size: 0.52rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .button-zone p {
@@ -9840,13 +9969,24 @@ button {
     grid-column: 1;
     justify-self: center;
     justify-items: center;
-    width: min(92vw, 270px);
+    width: min(92vw, 318px);
     text-align: center;
   }
 
   .telegram-login-control .telegram-login-button {
     max-width: 100%;
     text-align: center;
+  }
+
+  .telegram-identity-badge {
+    width: 100%;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    justify-self: center;
+    text-align: left;
+  }
+
+  .telegram-disconnect-button {
+    min-height: 30px;
   }
 
   .first-press-prompt {
@@ -10085,12 +10225,14 @@ button {
   }
 
   .telegram-placeholder-modal-overlay,
+  .telegram-connect-popup-overlay,
   .leaderboard-modal {
     padding: 10px;
     overflow-x: hidden;
   }
 
   .telegram-placeholder-modal-card,
+  .telegram-connect-popup-card,
   .leaderboard-modal-card {
     width: min(92vw, 520px);
     max-height: 85vh;

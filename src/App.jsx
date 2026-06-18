@@ -5545,11 +5545,17 @@ ${shareUrl}`;
         onClick={(event) => handleModalBackdropClick(event, closeTelegramConnectPopup)}
       >
         <div className="telegram-connect-popup-card">
-          <p>TELEGRAM WITNESSED THIS</p>
-          <strong>@{activeTelegramConnectPopup.username} is now connected.</strong>
-          <span>bad decisions may now be public.</span>
+          <p>PUBLIC SHAME ENABLED</p>
+          <strong>You connected Telegram.</strong>
+          <span>Future big wins may now be dragged into NOPE TG for everyone to witness.</span>
+          <span>You agreed to this.</span>
+          <span>Probably.</span>
+          <span>Sorry.</span>
+          <span>Not sorry.</span>
+          <em>reward: +10,000 NOPE SCORE</em>
+          <b>value gained: still zero</b>
           <button type="button" onClick={closeTelegramConnectPopup}>
-            CONTINUE MAKING THEM
+            continue making bad decisions
           </button>
         </div>
       </section>

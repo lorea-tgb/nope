@@ -2696,6 +2696,24 @@ button {
     0 0 14px rgba(57, 255, 20, 0.18);
 }
 
+.telegram-connect-popup-card em,
+.telegram-connect-popup-card b {
+  margin: 0;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.18;
+  text-transform: uppercase;
+}
+
+.telegram-connect-popup-card em {
+  color: rgba(137, 220, 255, 0.86);
+}
+
+.telegram-connect-popup-card b {
+  color: rgba(57, 255, 20, 0.82);
+}
+
 .telegram-widget-slot {
   position: relative;
   min-height: 54px;

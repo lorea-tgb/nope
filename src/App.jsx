@@ -1073,6 +1073,7 @@ export default function App() {
   const isTelegramMiniApp = Boolean(telegramWebApp?.initData && telegramWebApp?.initDataUnsafe?.user);
   const telegramUser = telegramWebApp?.initDataUnsafe?.user ?? null;
   const telegramUsername = telegramPlayer?.username ?? "";
+  const telegramPhotoUrl = telegramPlayer?.photoUrl ?? "";
   const isTelegramConnected = Boolean(telegramUsername);
 
   const persistTelegramPlayer = useCallback((player) => {
@@ -5901,13 +5902,26 @@ ${shareUrl}`;
           <div className="telegram-login-control">
             {isTelegramConnected ? (
               <div className="telegram-connected-badge" aria-label={`Connected as @${telegramUsername}`}>
-                <div className="telegram-connected-main">
-                  <span className="telegram-username">@{telegramUsername}</span>
-                  <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
-                    DISCONNECT
-                  </button>
+                <div className="telegram-avatar-wrap" aria-hidden="true">
+                  {telegramPhotoUrl && (
+                    <img
+                      className="telegram-avatar"
+                      src={telegramPhotoUrl}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.parentElement?.classList.add("avatar-fallback-active");
+                      }}
+                    />
+                  )}
+                  <span>@</span>
                 </div>
-                <div className="telegram-status">PUBLIC SHAME ENABLED</div>
+                <div className="telegram-identity-copy">
+                  <div className="telegram-username">@{telegramUsername}</div>
+                  <div className="telegram-status">PUBLIC SHAME ENABLED</div>
+                </div>
+                <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
+                  DISCONNECT
+                </button>
               </div>
             ) : (
               <>

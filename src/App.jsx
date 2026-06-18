@@ -61,6 +61,7 @@ const STORAGE_KEYS = {
   signalFragmentsClicked: "nope_signal_fragments_clicked",
   signalTypeClicks: "nope_signal_type_clicks",
   scoreCombo: "nope_score_combo",
+  telegramPlayer: "nope_telegram_player",
   zSignalCharge: "nope_z_signal_charge",
 };
 const LEGACY_SCORE_HUD_POSITION_KEY = "nope_score_hud_position";
@@ -155,6 +156,10 @@ const NOPE_SURGE_DURATION_MS = 45000;
 const NOPE_SURGE_SCORE_MULTIPLIER = 2;
 const NOPE_SURGE_CHARGE_TARGET = 500000;
 const NOPE_SURGE_HELP_TEXT = "NOPE SURGE fills from meaningful score. Find trash, grind trash, burn trash, click static, fail Z rolls. Button spam barely helps. Obviously.";
+const TELEGRAM_LOGIN_BOT_USERNAME = "NotPepeNopeBot";
+const TELEGRAM_LOGIN_CALLBACK_NAME = "__nopeTelegramLogin";
+const TELEGRAM_LOGIN_WIDGET_SRC = "https://telegram.org/js/telegram-widget.js";
+const TELEGRAM_AUTH_VERIFY_ENDPOINT = "/api/telegram-auth/verify";
 const CURRENT_BAD_IDEAS = [
   {
     id: "press_25",
@@ -663,6 +668,70 @@ function readStoredString(key) {
   return window.localStorage.getItem(key);
 }
 
+function normalizeTelegramUsername(username) {
+  if (typeof username !== "string") {
+    return "";
+  }
+
+  return username.trim().replace(/^@+/, "");
+}
+
+function createTelegramPlayer(user, source = "telegram-mini-app") {
+  const username = normalizeTelegramUsername(user?.username);
+
+  if (!user?.id || !username) {
+    return null;
+  }
+
+  return {
+    telegramId: user.id,
+    username,
+    connectedAt: new Date().toISOString(),
+    source,
+  };
+}
+
+function normalizeVerifiedTelegramPlayer(player) {
+  const username = normalizeTelegramUsername(player?.username);
+  const source = player?.source === "telegram-web-login" ? "telegram-web-login" : "telegram-mini-app";
+
+  if (!player?.telegramId || !username) {
+    return null;
+  }
+
+  return {
+    telegramId: player.telegramId,
+    username,
+    connectedAt: player.connectedAt || new Date().toISOString(),
+    source,
+  };
+}
+
+function readStoredTelegramPlayer() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const storedValue = window.localStorage.getItem(STORAGE_KEYS.telegramPlayer);
+    const parsedValue = storedValue ? JSON.parse(storedValue) : null;
+    const username = normalizeTelegramUsername(parsedValue?.username);
+
+    if (!parsedValue || !username) {
+      return null;
+    }
+
+    return normalizeVerifiedTelegramPlayer({
+      telegramId: parsedValue.telegramId,
+      username,
+      connectedAt: parsedValue.connectedAt,
+      source: parsedValue.source,
+    });
+  } catch {
+    return null;
+  }
+}
+
 function readStoredComboState() {
   const fallback = {
     activeHitsLeft: 0,
@@ -772,7 +841,10 @@ export default function App() {
   const [activeUberSacrificeEntity, setActiveUberSacrificeEntity] = useState(null);
   const [activeStickerInspectEntity, setActiveStickerInspectEntity] = useState(null);
   const [activeAchievementInspect, setActiveAchievementInspect] = useState(null);
+  const [telegramPlayer, setTelegramPlayer] = useState(() => readStoredTelegramPlayer());
   const [showTelegramLoginModal, setShowTelegramLoginModal] = useState(false);
+  const [telegramLoginModalMode, setTelegramLoginModalMode] = useState("browser");
+  const [isTelegramLoginVerifying, setIsTelegramLoginVerifying] = useState(false);
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
   const [activeSignalFragment, setActiveSignalFragment] = useState(null);
   const [visibleSignalFragments, setVisibleSignalFragments] = useState([]);
@@ -966,8 +1038,76 @@ export default function App() {
   const telegramDiscoveryHapticCooldownRef = useRef(false);
   const telegramDiscoveryHapticTimerRef = useRef(null);
   const telegramSignalLineRef = useRef(false);
-  const isTelegramMiniApp = Boolean(telegramWebApp);
+  const telegramWidgetContainerRef = useRef(null);
+  const isTelegramMiniApp = Boolean(telegramWebApp?.initData && telegramWebApp?.initDataUnsafe?.user);
   const telegramUser = telegramWebApp?.initDataUnsafe?.user ?? null;
+  const telegramUsername = telegramPlayer?.username ?? "";
+  const isTelegramConnected = Boolean(telegramUsername);
+
+  const persistTelegramPlayer = useCallback((player) => {
+    const nextTelegramPlayer = normalizeVerifiedTelegramPlayer(player);
+
+    if (!nextTelegramPlayer) {
+      return false;
+    }
+
+    setTelegramPlayer(nextTelegramPlayer);
+
+    try {
+      window.localStorage.setItem(STORAGE_KEYS.telegramPlayer, JSON.stringify(nextTelegramPlayer));
+    } catch {
+      // Local identity is a convenience layer only; gameplay stays anonymous if storage fails.
+    }
+
+    return true;
+  }, []);
+
+  const openTelegramMissingUsernameMessage = useCallback(() => {
+    setIsTelegramLoginVerifying(false);
+    setTelegramLoginModalMode("missing-username");
+    setShowTelegramLoginModal(true);
+  }, []);
+
+  const openTelegramFailureMessage = useCallback(() => {
+    setIsTelegramLoginVerifying(false);
+    setTelegramLoginModalMode("failure");
+    setShowTelegramLoginModal(true);
+  }, []);
+
+  const verifyTelegramWebLogin = useCallback(async (telegramLoginPayload) => {
+    setIsTelegramLoginVerifying(true);
+
+    try {
+      const response = await fetch(TELEGRAM_AUTH_VERIFY_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(telegramLoginPayload),
+      });
+      const verifiedPlayer = await response.json().catch(() => null);
+
+      if (verifiedPlayer?.error === "missing_username") {
+        openTelegramMissingUsernameMessage();
+        return;
+      }
+
+      if (!response.ok) {
+        openTelegramFailureMessage();
+        return;
+      }
+
+      if (!persistTelegramPlayer(verifiedPlayer)) {
+        openTelegramMissingUsernameMessage();
+        return;
+      }
+
+      setIsTelegramLoginVerifying(false);
+      setShowTelegramLoginModal(false);
+    } catch {
+      openTelegramFailureMessage();
+    }
+  }, [openTelegramFailureMessage, openTelegramMissingUsernameMessage, persistTelegramPlayer]);
 
   const formattedCount = useMemo(
     () => nopeCount.toString().padStart(6, "0"),
@@ -1157,9 +1297,47 @@ export default function App() {
     telegramSignalLineRef.current = true;
     addLine(createLine(
       "nope",
-      `Telegram signal detected${telegramUser?.first_name ? `: ${telegramUser.first_name}` : ""}. suspicious.`,
+      "Telegram signal detected. suspicious.",
     ));
-  }, [telegramUser?.first_name, telegramWebApp]);
+  }, [telegramWebApp]);
+
+  useEffect(() => {
+    if (!showTelegramLoginModal || telegramLoginModalMode !== "browser" || isTelegramMiniApp || isTelegramConnected) {
+      return undefined;
+    }
+
+    const widgetContainer = telegramWidgetContainerRef.current;
+
+    if (!widgetContainer || typeof window === "undefined") {
+      return undefined;
+    }
+
+    widgetContainer.textContent = "";
+    window[TELEGRAM_LOGIN_CALLBACK_NAME] = verifyTelegramWebLogin;
+
+    const widgetScript = document.createElement("script");
+    widgetScript.async = true;
+    widgetScript.src = TELEGRAM_LOGIN_WIDGET_SRC;
+    widgetScript.setAttribute("data-telegram-login", TELEGRAM_LOGIN_BOT_USERNAME);
+    widgetScript.setAttribute("data-size", "large");
+    widgetScript.setAttribute("data-userpic", "false");
+    widgetScript.setAttribute("data-onauth", `${TELEGRAM_LOGIN_CALLBACK_NAME}(user)`);
+    widgetScript.onerror = openTelegramFailureMessage;
+
+    widgetContainer.appendChild(widgetScript);
+
+    return () => {
+      widgetContainer.textContent = "";
+      delete window[TELEGRAM_LOGIN_CALLBACK_NAME];
+    };
+  }, [
+    isTelegramConnected,
+    isTelegramMiniApp,
+    openTelegramFailureMessage,
+    showTelegramLoginModal,
+    telegramLoginModalMode,
+    verifyTelegramWebLogin,
+  ]);
 
   useEffect(() => {
     const terminalLog = terminalLogRef.current;
@@ -5163,25 +5341,92 @@ ${shareUrl}`;
     );
   }
 
+  function closeTelegramLoginModal() {
+    setShowTelegramLoginModal(false);
+  }
+
+  function openTelegramBrowserConnectionMessage() {
+    setIsTelegramLoginVerifying(false);
+    setTelegramLoginModalMode("browser");
+    setShowTelegramLoginModal(true);
+  }
+
+  function handleTelegramLoginClick() {
+    if (isTelegramConnected) {
+      return;
+    }
+
+    if (!isTelegramMiniApp) {
+      openTelegramBrowserConnectionMessage();
+      return;
+    }
+
+    const nextTelegramPlayer = createTelegramPlayer(telegramUser);
+
+    if (!nextTelegramPlayer) {
+      openTelegramMissingUsernameMessage();
+      return;
+    }
+
+    persistTelegramPlayer(nextTelegramPlayer);
+    setShowTelegramLoginModal(false);
+  }
+
+  function disconnectTelegramPlayer() {
+    setTelegramPlayer(null);
+
+    try {
+      window.localStorage.removeItem(STORAGE_KEYS.telegramPlayer);
+    } catch {
+      // Ignore storage failures; state is already disconnected for this session.
+    }
+  }
+
   function renderTelegramLoginModal() {
     if (!showTelegramLoginModal) {
       return null;
     }
+
+    const isMissingUsername = telegramLoginModalMode === "missing-username";
+    const isFailure = telegramLoginModalMode === "failure";
 
     return (
       <section
         className="telegram-placeholder-modal-overlay"
         aria-modal="true"
         role="dialog"
-        onClick={(event) => handleModalBackdropClick(event, () => setShowTelegramLoginModal(false))}
+        onClick={(event) => handleModalBackdropClick(event, closeTelegramLoginModal)}
       >
         <div className="telegram-placeholder-modal-card">
-          <p>TELEGRAM LOGIN NOT CONNECTED YET</p>
-          <span>soon you will be able to attach your Telegram identity.</span>
-          <span>for now, please remain anonymous trash.</span>
-          <button type="button" onClick={() => setShowTelegramLoginModal(false)}>
-            OK. REMAIN TRASH.
-          </button>
+          {isMissingUsername ? (
+            <>
+              <p>NO @USERNAME DETECTED</p>
+              <span>Set a Telegram username first if you want public NOPE shame.</span>
+              <button type="button" onClick={closeTelegramLoginModal}>
+                STAY ANONYMOUS
+              </button>
+            </>
+          ) : isFailure ? (
+            <>
+              <p>TELEGRAM SAID NOPE</p>
+              <span>identity not connected.</span>
+              <span>probably safer.</span>
+              <button type="button" onClick={closeTelegramLoginModal}>
+                STAY ANONYMOUS
+              </button>
+            </>
+          ) : (
+            <>
+              <p>TELEGRAM CONNECTION</p>
+              <span>Telegram will ask if you want to let NOPE witness this.</span>
+              <div className="telegram-widget-slot" ref={telegramWidgetContainerRef}>
+                <span>{isTelegramLoginVerifying ? "verifying Telegram signal..." : "loading Telegram login..."}</span>
+              </div>
+              <button type="button" onClick={closeTelegramLoginModal}>
+                STAY ANONYMOUS
+              </button>
+            </>
+          )}
         </div>
       </section>
     );
@@ -5524,9 +5769,17 @@ ${shareUrl}`;
       <section className="button-zone" aria-label="NOPE button">
         <div className="nope-cta-row">
           <p>PRESS NOPE. COLLECT WORTHLESS TRASH.</p>
-          <button className="telegram-login-button" type="button" onClick={() => setShowTelegramLoginModal(true)}>
-            LOG IN WITH TELEGRAM
-          </button>
+          <div className="telegram-login-control">
+            <button className="telegram-login-button" type="button" onClick={handleTelegramLoginClick}>
+              {isTelegramConnected ? `CONNECTED AS @${telegramUsername}` : "LOG IN WITH TELEGRAM"}
+            </button>
+            <span>{isTelegramConnected ? "bad decisions may now be public" : "optional public shame layer"}</span>
+            {isTelegramConnected && (
+              <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
+                DISCONNECT
+              </button>
+            )}
+          </div>
         </div>
         {renderTelegramLeaderboardShell()}
         {comboNotice && (

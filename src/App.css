@@ -2628,6 +2628,21 @@ button {
   font-weight: 900;
 }
 
+.telegram-widget-slot {
+  min-height: 42px;
+  display: grid;
+  place-items: center;
+  margin: 4px 0;
+}
+
+.telegram-widget-slot span {
+  color: #89dcff;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.telegram-placeholder-modal-card a,
 .telegram-placeholder-modal-card button,
 .leaderboard-modal-card button {
   justify-self: center;
@@ -2643,6 +2658,12 @@ button {
     3px 3px 0 #000;
 }
 
+.telegram-placeholder-modal-card a {
+  text-decoration: none;
+}
+
+.telegram-placeholder-modal-card a:hover,
+.telegram-placeholder-modal-card a:focus-visible,
 .telegram-placeholder-modal-card button:hover,
 .telegram-placeholder-modal-card button:focus-visible,
 .leaderboard-modal-card button:hover,
@@ -3614,6 +3635,51 @@ button {
 .nope-cta-row .telegram-login-button {
   grid-column: 3;
   justify-self: start;
+}
+
+.telegram-login-control {
+  grid-column: 3;
+  justify-self: start;
+  width: min(238px, 100%);
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+}
+
+.telegram-login-control .telegram-login-button {
+  grid-column: 1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
+.telegram-login-control span {
+  color: rgba(216, 255, 226, 0.56);
+  font-size: 0.56rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.telegram-disconnect-button {
+  padding: 0;
+  border: 0;
+  color: rgba(0, 152, 234, 0.72);
+  background: transparent;
+  font-size: 0.56rem;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.telegram-disconnect-button:hover,
+.telegram-disconnect-button:focus-visible {
+  outline: 1px dotted rgba(83, 219, 255, 0.56);
+  outline-offset: 2px;
+  color: rgba(216, 255, 226, 0.94);
 }
 
 .button-zone p {
@@ -9601,6 +9667,17 @@ button {
   .nope-cta-row p,
   .nope-cta-row .telegram-login-button {
     grid-column: 1;
+  }
+
+  .nope-cta-row .telegram-login-control {
+    grid-column: 1;
+    justify-self: center;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .telegram-login-control .telegram-login-button {
+    text-align: center;
   }
 
   .first-press-prompt {

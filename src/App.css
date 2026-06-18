@@ -3885,15 +3885,13 @@ button {
   filter: brightness(1.16) saturate(1.12);
 }
 
-.telegram-identity-badge {
+.telegram-connected-badge {
   position: relative;
   width: min(318px, 100%);
   min-width: 0;
   display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 6px;
+  gap: 3px;
+  padding: 5px 7px;
   overflow: hidden;
   border: 1px solid rgba(57, 255, 20, 0.5);
   color: rgba(216, 255, 226, 0.92);
@@ -3909,11 +3907,11 @@ button {
     rgba(0, 12, 8, 0.84);
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.78),
-    0 0 16px rgba(57, 255, 20, 0.12),
-    inset 0 0 14px rgba(0, 152, 234, 0.1);
+    0 0 10px rgba(57, 255, 20, 0.08),
+    inset 0 0 10px rgba(0, 152, 234, 0.08);
 }
 
-.telegram-identity-badge::after {
+.telegram-connected-badge::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -3924,75 +3922,37 @@ button {
   transition: opacity 0.36s steps(2, end), transform 0.36s steps(2, end);
 }
 
-.telegram-identity-badge:hover::after,
-.telegram-identity-badge:focus-within::after {
-  opacity: 0.32;
+.telegram-connected-badge:hover::after,
+.telegram-connected-badge:focus-within::after {
+  opacity: 0.22;
   transform: translateX(70%);
 }
 
-.telegram-identity-avatar {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  display: grid;
-  flex: 0 0 auto;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(137, 220, 255, 0.72);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(57, 255, 20, 0.2), transparent 62%),
-    rgba(0, 7, 5, 0.94);
-  box-shadow:
-    0 0 0 1px #000,
-    0 0 12px rgba(0, 152, 234, 0.28),
-    inset 0 0 9px rgba(57, 255, 20, 0.12);
-}
-
-.telegram-identity-avatar img {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.telegram-identity-avatar.avatar-fallback-active img {
-  display: none;
-}
-
-.telegram-identity-avatar span {
-  position: relative;
-  z-index: 0;
-  color: rgba(57, 255, 20, 0.88);
-  font-size: 0.92rem;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 0 8px rgba(57, 255, 20, 0.3);
-}
-
-.telegram-identity-copy {
+.telegram-connected-main {
   min-width: 0;
   display: grid;
-  gap: 1px;
-  text-align: left;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
 }
 
-.telegram-identity-copy strong {
+.telegram-username {
   min-width: 0;
+  display: block;
   color: rgba(216, 255, 226, 0.96);
   font-size: 0.72rem;
-  line-height: 1.05;
+  font-weight: 900;
+  line-height: 1.1;
   overflow-wrap: anywhere;
   text-shadow: 1px 0 rgba(0, 152, 234, 0.38);
 }
 
-.telegram-identity-copy span {
+.telegram-status {
   color: rgba(137, 220, 255, 0.7);
   font-size: 0.52rem;
   font-weight: 900;
   line-height: 1.1;
+  text-align: left;
   text-transform: uppercase;
 }
 
@@ -9996,9 +9956,8 @@ button {
     text-align: center;
   }
 
-  .telegram-identity-badge {
+  .telegram-connected-badge {
     width: 100%;
-    grid-template-columns: 32px minmax(0, 1fr) auto;
     justify-self: center;
     text-align: left;
   }
@@ -10331,6 +10290,15 @@ button {
 
   .telegram-login-button {
     padding: 5px 8px 5px 19px;
+  }
+
+  .telegram-connected-main {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .telegram-disconnect-button {
+    justify-self: start;
   }
 
   .leaderboard-preview {

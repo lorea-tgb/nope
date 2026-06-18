@@ -1073,7 +1073,6 @@ export default function App() {
   const isTelegramMiniApp = Boolean(telegramWebApp?.initData && telegramWebApp?.initDataUnsafe?.user);
   const telegramUser = telegramWebApp?.initDataUnsafe?.user ?? null;
   const telegramUsername = telegramPlayer?.username ?? "";
-  const telegramPhotoUrl = telegramPlayer?.photoUrl ?? "";
   const isTelegramConnected = Boolean(telegramUsername);
 
   const persistTelegramPlayer = useCallback((player) => {
@@ -5901,26 +5900,14 @@ ${shareUrl}`;
           <p>PRESS NOPE. COLLECT WORTHLESS TRASH.</p>
           <div className="telegram-login-control">
             {isTelegramConnected ? (
-              <div className="telegram-identity-badge" aria-label={`Connected as @${telegramUsername}`}>
-                <div className="telegram-identity-avatar" aria-hidden="true">
-                  {telegramPhotoUrl && (
-                    <img
-                      src={telegramPhotoUrl}
-                      alt=""
-                      onError={(event) => {
-                        event.currentTarget.parentElement?.classList.add("avatar-fallback-active");
-                      }}
-                    />
-                  )}
-                  <span>@</span>
+              <div className="telegram-connected-badge" aria-label={`Connected as @${telegramUsername}`}>
+                <div className="telegram-connected-main">
+                  <span className="telegram-username">@{telegramUsername}</span>
+                  <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
+                    DISCONNECT
+                  </button>
                 </div>
-                <div className="telegram-identity-copy">
-                  <strong>@{telegramUsername}</strong>
-                  <span>PUBLIC SHAME ENABLED</span>
-                </div>
-                <button className="telegram-disconnect-button" type="button" onClick={disconnectTelegramPlayer}>
-                  DISCONNECT
-                </button>
+                <div className="telegram-status">PUBLIC SHAME ENABLED</div>
               </div>
             ) : (
               <>

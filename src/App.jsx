@@ -5401,7 +5401,7 @@ ${shareUrl}`;
           {isMissingUsername ? (
             <>
               <p>NO @USERNAME DETECTED</p>
-              <span>Set a Telegram username first if you want public NOPE shame.</span>
+              <span>set a Telegram username first if you want public NOPE shame.</span>
               <button type="button" onClick={closeTelegramLoginModal}>
                 STAY ANONYMOUS
               </button>
